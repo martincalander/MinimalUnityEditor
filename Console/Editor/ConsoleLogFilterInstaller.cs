@@ -14,6 +14,7 @@ namespace Essentials.Console.Editor
     {
         private const double SyncIntervalSeconds = 0.5d;
         private const double ConsoleRescanIntervalSeconds = 0.25d;
+        private const double StartupForceRefilterSeconds = 30d;
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
         private static readonly DeclutteredFilterLogHandler s_cleanStackFilteringLogHandler = new();
@@ -31,9 +32,15 @@ namespace Essentials.Console.Editor
         private static readonly FieldInfo s_logEntryMessageField = s_logEntryType?.GetField("message", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryModeField = s_logEntryType?.GetField("mode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryFileField = s_logEntryType?.GetField("file", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly int s_warningModeMask = BuildModeMask("Warning", "AssetImportWarning", "ScriptingWarning", "ScriptCompileWarning");
-        private static readonly int s_errorModeMask = BuildModeMask("Error", "Assert", "Fatal", "AssetImportError", "ScriptingError", "ScriptCompileError", "StickyError", "ScriptingException", "GraphCompileError", "ScriptingAssertion", "VisualScriptingError");
-        private static readonly int s_logModeMask = BuildModeMask("Log", "ScriptingLog");
+        private static readonly int s_warningModeMask = BuildModeMask(modeName =>
+            modeName.IndexOf("Warning", StringComparison.OrdinalIgnoreCase) >= 0);
+        private static readonly int s_errorModeMask = BuildModeMask(modeName =>
+            modeName.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            modeName.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            modeName.IndexOf("Assert", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            modeName.IndexOf("Fatal", StringComparison.OrdinalIgnoreCase) >= 0);
+        private static readonly int s_logModeMask = BuildModeMask(modeName =>
+            modeName.IndexOf("Log", StringComparison.OrdinalIgnoreCase) >= 0);
 
         private static double s_nextSyncTime;
         private static double s_nextConsoleRescanTime;
@@ -41,6 +48,8 @@ namespace Essentials.Console.Editor
         private static bool s_hasConsoleFingerprint;
         private static (int rows, int errors, int warnings, int logs) s_consoleFingerprint;
         private static IFilteringLogHandler s_activeFilteringLogHandler = s_cleanStackFilteringLogHandler;
+        private static bool s_cleanStackTracesEnabled = true;
+        private static readonly double s_forceRefilterUntilTime = EditorApplication.timeSinceStartup + StartupForceRefilterSeconds;
 
         static ConsoleLogFilterInstaller()
         {
@@ -97,6 +106,7 @@ namespace Essentials.Console.Editor
         {
             var snapshot = ConsoleLogFilterSettings.Snapshot;
             var compiledRules = BuildCompiledRules(snapshot.rules);
+            s_cleanStackTracesEnabled = snapshot.cleanStackTraces;
             SelectActiveLogHandler(snapshot.cleanStackTraces);
             s_activeFilteringLogHandler.Configure(snapshot.enabled, snapshot.warningsOnly, compiledRules);
             EnsureLogHandlerState();
@@ -248,16 +258,20 @@ namespace Essentials.Console.Editor
                 null);
         }
 
-        private static int BuildModeMask(params string[] modeNames)
+        private static int BuildModeMask(Predicate<string> includeModeName)
         {
-            if (s_consoleWindowModeType == null || modeNames == null || modeNames.Length == 0)
+            if (s_consoleWindowModeType == null || includeModeName == null)
                 return 0;
 
             var mask = 0;
-            for (var i = 0; i < modeNames.Length; i++)
+            var modeFields = s_consoleWindowModeType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            for (var i = 0; i < modeFields.Length; i++)
             {
-                var modeField = s_consoleWindowModeType.GetField(modeNames[i], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                var modeField = modeFields[i];
                 if (modeField == null)
+                    continue;
+
+                if (!includeModeName(modeField.Name))
                     continue;
 
                 try
@@ -299,6 +313,14 @@ namespace Essentials.Console.Editor
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
+            var shouldForceRefilter = EditorApplication.isUpdating || EditorApplication.timeSinceStartup <= s_forceRefilterUntilTime;
+            if (shouldForceRefilter && s_activeFilteringLogHandler.FilteringEnabled)
+            {
+                TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
+                RefreshConsoleFingerprint();
+                return;
+            }
+
             if (!TryGetConsoleFingerprint(out var currentFingerprint))
                 return;
 

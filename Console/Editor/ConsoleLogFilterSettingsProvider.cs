@@ -23,6 +23,7 @@ namespace Essentials.Console.Editor
         private static readonly GUIContent PatternContent = new(
             "Pattern",
             "String or regex pattern to hide.");
+        private static readonly GUIContent RemoveRuleContent = BuildRemoveRuleContent();
 
         [MenuItem("Window/Analysis/Console Preferences", false, 3200)]
         private static void OpenSettings()
@@ -48,6 +49,21 @@ namespace Essentials.Console.Editor
                     "stack trace"
                 }
             };
+        }
+
+        private static GUIContent BuildRemoveRuleContent()
+        {
+            const string tooltip = "Remove this rule.";
+
+            var trashIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
+            if (trashIcon?.image != null)
+                return new GUIContent(trashIcon.image, tooltip);
+
+            var darkTrashIcon = EditorGUIUtility.IconContent("d_TreeEditor.Trash");
+            if (darkTrashIcon?.image != null)
+                return new GUIContent(darkTrashIcon.image, tooltip);
+
+            return new GUIContent("X", tooltip);
         }
 
         private static void DrawGUI(string searchContext)
@@ -87,9 +103,33 @@ namespace Essentials.Console.Editor
 
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    EditorGUI.BeginChangeCheck();
+                    var removeRule = false;
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        rule.enabled = EditorGUILayout.ToggleLeft("Enabled", rule.enabled);
+                        if (EditorGUI.EndChangeCheck())
+                            changed = true;
 
-                    rule.enabled = EditorGUILayout.ToggleLeft("Enabled", rule.enabled);
+                        if (GUILayout.Button(
+                                RemoveRuleContent,
+                                EditorStyles.miniButton,
+                                GUILayout.Width(24f),
+                                GUILayout.Height(EditorGUIUtility.singleLineHeight)))
+                        {
+                            removeRule = true;
+                        }
+                    }
+
+                    if (removeRule)
+                    {
+                        settings.rules.RemoveAt(i);
+                        changed = true;
+                        i--;
+                        continue;
+                    }
+
+                    EditorGUI.BeginChangeCheck();
                     rule.matchType = (ConsoleLogFilterMatchType)EditorGUILayout.EnumPopup("Match Type", rule.matchType);
                     rule.caseSensitive = EditorGUILayout.ToggleLeft("Case Sensitive", rule.caseSensitive);
                     rule.pattern = EditorGUILayout.TextField(PatternContent, rule.pattern);
@@ -102,13 +142,6 @@ namespace Essentials.Console.Editor
                         !ConsoleLogFilterInstaller.TryCreateRegex(rule.pattern, rule.caseSensitive, out _, out var regexError))
                     {
                         EditorGUILayout.HelpBox(regexError, MessageType.Error);
-                    }
-
-                    if (GUILayout.Button("Remove Rule"))
-                    {
-                        settings.rules.RemoveAt(i);
-                        changed = true;
-                        i--;
                     }
                 }
             }

@@ -107,17 +107,18 @@ namespace Essentials.Console.Editor
                 {
                     var isWarning = IsWarningMode(mode);
                     var isError = IsErrorMode(mode);
-                    var isLog = IsLogMode(mode);
+                    var looksLikeCompilerWarning = IsCompilerWarningMessage(message);
 
-                    // Unknown mode values from native warnings are allowed through this gate.
-                    if (!isWarning && (isError || isLog))
+                    // Keep true error rows visible even when warning filtering is enabled.
+                    // Mixed mode rows (some compiler/import warnings) are treated as warning-capable.
+                    if (isError && !isWarning && !looksLikeCompilerWarning)
                         return false;
                 }
 
                 return MatchesRules(message);
             }
 
-            private bool ShouldSuppressLogType(LogType logType, string message)
+            protected bool ShouldSuppressLogType(LogType logType, string message)
             {
                 if (!m_enabled)
                     return false;
@@ -143,6 +144,16 @@ namespace Essentials.Console.Editor
                 return false;
             }
 
+            private static bool IsCompilerWarningMessage(string message)
+            {
+                if (string.IsNullOrEmpty(message))
+                    return false;
+
+                return message.IndexOf(" warning CS", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       message.IndexOf("): warning ", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                       message.IndexOf(": warning ", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
             public abstract void LogException(Exception exception, Object context);
             public abstract void LogFormat(LogType logType, Object context, string format, params object[] args);
         }
@@ -165,13 +176,27 @@ namespace Essentials.Console.Editor
             [HideInCallstack]
             public override void LogException(Exception exception, Object context)
             {
-                LogExceptionCore(exception, context);
+                var inner = Inner;
+                if (inner == null || ReferenceEquals(inner, this))
+                    return;
+
+                if (ShouldSuppressLogType(LogType.Exception, exception?.ToString()))
+                    return;
+
+                inner.LogException(exception, context);
             }
 
             [HideInCallstack]
             public override void LogFormat(LogType logType, Object context, string format, params object[] args)
             {
-                LogFormatCore(logType, context, format, args);
+                var inner = Inner;
+                if (inner == null || ReferenceEquals(inner, this))
+                    return;
+
+                if (ShouldSuppressLogType(logType, FormatMessage(format, args)))
+                    return;
+
+                inner.LogFormat(logType, context, format, args);
             }
         }
     }

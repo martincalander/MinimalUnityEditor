@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace Essentials.Console.Editor
 {
@@ -17,7 +18,8 @@ namespace Essentials.Console.Editor
                 return false;
             }
 
-            if (!s_activeFilteringLogHandler.FilteringEnabled)
+            var canSuppressByRule = s_activeFilteringLogHandler.FilteringEnabled;
+            if (!canSuppressByRule && !s_cleanStackTracesEnabled)
             {
                 message = "Enable hidden log filters and add at least one active rule first.";
                 return false;
@@ -36,6 +38,7 @@ namespace Essentials.Console.Editor
 
             var keptEntries = new List<object>();
             var removedCount = 0;
+            var cleanedStackTraceCount = 0;
             var started = false;
 
             try
@@ -61,15 +64,19 @@ namespace Essentials.Console.Editor
                         var entryMessage = ReadLogEntryMessage(entry);
                         var entryMode = ReadLogEntryMode(entry);
 
-                        if (s_activeFilteringLogHandler.ShouldSuppressMode(entryMode, entryMessage))
+                        if (canSuppressByRule && s_activeFilteringLogHandler.ShouldSuppressMode(entryMode, entryMessage))
                         {
                             removedCount++;
                             continue;
                         }
 
-                        var clonedEntry = CloneLogEntry(entry);
+                        var clonedEntry = CloneLogEntry(entry, out var cleanedStackTrace);
                         if (clonedEntry != null)
+                        {
                             keptEntries.Add(clonedEntry);
+                            if (cleanedStackTrace)
+                                cleanedStackTraceCount++;
+                        }
                     }
                     catch
                     {
@@ -97,7 +104,7 @@ namespace Essentials.Console.Editor
                 }
             }
 
-            if (removedCount <= 0)
+            if (removedCount <= 0 && cleanedStackTraceCount <= 0)
             {
                 if (force)
                     message = "No currently shown logs matched active rules.";
@@ -134,13 +141,26 @@ namespace Essentials.Console.Editor
                 s_isUpdatingConsoleEntries = false;
             }
 
-            removedAny = true;
-            message = $"Removed {removedCount} matching console entr{(removedCount == 1 ? "y" : "ies")}.";
+            removedAny = removedCount > 0;
+            if (removedCount > 0 && cleanedStackTraceCount > 0)
+            {
+                message = $"Removed {removedCount} matching console entr{(removedCount == 1 ? "y" : "ies")} and cleaned stack traces on {cleanedStackTraceCount} entr{(cleanedStackTraceCount == 1 ? "y" : "ies")}.";
+            }
+            else if (removedCount > 0)
+            {
+                message = $"Removed {removedCount} matching console entr{(removedCount == 1 ? "y" : "ies")}.";
+            }
+            else
+            {
+                message = $"Cleaned stack traces on {cleanedStackTraceCount} console entr{(cleanedStackTraceCount == 1 ? "y" : "ies")}.";
+            }
+
             return true;
         }
 
-        private static object CloneLogEntry(object entry)
+        private static object CloneLogEntry(object entry, out bool cleanedStackTrace)
         {
+            cleanedStackTrace = false;
             if (entry == null || s_logEntryType == null)
                 return null;
 
@@ -166,6 +186,16 @@ namespace Essentials.Console.Editor
                     if (ReferenceEquals(field, s_logEntryMessageField) || ReferenceEquals(field, s_logEntryFileField))
                         value ??= string.Empty;
 
+                    if (s_cleanStackTracesEnabled && value is string stringValue && IsStackTraceField(field.Name))
+                    {
+                        var cleaned = CleanStackTrace(stringValue);
+                        if (!string.Equals(cleaned, stringValue, StringComparison.Ordinal))
+                        {
+                            value = cleaned;
+                            cleanedStackTrace = true;
+                        }
+                    }
+
                     field.SetValue(clone, value);
                 }
                 catch
@@ -175,6 +205,51 @@ namespace Essentials.Console.Editor
             }
 
             return clone;
+        }
+
+        private static bool IsStackTraceField(string fieldName)
+        {
+            if (string.IsNullOrEmpty(fieldName))
+                return false;
+
+            return fieldName.IndexOf("stack", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string CleanStackTrace(string stackTrace)
+        {
+            if (string.IsNullOrEmpty(stackTrace))
+                return stackTrace;
+
+            var lines = stackTrace.Replace("\r\n", "\n").Split('\n');
+            var builder = new StringBuilder(stackTrace.Length);
+            var keptLineCount = 0;
+
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (ShouldStripStackTraceLine(line))
+                    continue;
+
+                if (keptLineCount > 0)
+                    builder.Append('\n');
+
+                builder.Append(line);
+                keptLineCount++;
+            }
+
+            if (keptLineCount == lines.Length)
+                return stackTrace;
+
+            return builder.ToString().Trim('\n');
+        }
+
+        private static bool ShouldStripStackTraceLine(string line)
+        {
+            if (string.IsNullOrEmpty(line))
+                return false;
+
+            return line.IndexOf("Essentials.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
+                   line.IndexOf("Packages/com.martincalander.essentials/Console/Editor/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string ReadLogEntryMessage(object entry)
