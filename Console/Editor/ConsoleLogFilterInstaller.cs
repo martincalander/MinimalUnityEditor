@@ -30,6 +30,7 @@ namespace Essentials.Console.Editor
         private static readonly MethodInfo s_logEntriesAddMessageMethod = GetLogEntriesMethod("AddMessageWithDoubleClickCallback", s_logEntryType);
         private static readonly FieldInfo[] s_logEntryFields = s_logEntryType?.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) ?? Array.Empty<FieldInfo>();
         private static readonly FieldInfo s_logEntryMessageField = s_logEntryType?.GetField("message", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo s_logEntryConditionField = s_logEntryType?.GetField("condition", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryModeField = s_logEntryType?.GetField("mode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryFileField = s_logEntryType?.GetField("file", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly int s_warningModeMask = BuildModeMask(modeName =>
@@ -169,6 +170,24 @@ namespace Essentials.Console.Editor
         {
             var activeHandler = s_activeFilteringLogHandler ?? s_cleanStackFilteringLogHandler;
             var currentHandler = Debug.unityLogger.logHandler;
+
+            // In clean-stack mode we avoid wrapping Unity's logger to prevent handler frames
+            // from entering stack traces; filtering/cleanup is done by console-entry rescans.
+            if (s_cleanStackTracesEnabled)
+            {
+                if (!IsManagedFilteringHandler(currentHandler))
+                    return;
+
+                if (currentHandler is IFilteringLogHandler filteringHandler)
+                {
+                    var cleanStackFallbackHandler = filteringHandler.Inner;
+                    if (cleanStackFallbackHandler != null && !IsManagedFilteringHandler(cleanStackFallbackHandler))
+                        Debug.unityLogger.logHandler = cleanStackFallbackHandler;
+                }
+
+                return;
+            }
+
             if (activeHandler.FilteringEnabled)
             {
                 if (ReferenceEquals(currentHandler, activeHandler))
@@ -314,7 +333,7 @@ namespace Essentials.Console.Editor
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
             var shouldForceRefilter = EditorApplication.isUpdating || EditorApplication.timeSinceStartup <= s_forceRefilterUntilTime;
-            if (shouldForceRefilter && s_activeFilteringLogHandler.FilteringEnabled)
+            if (shouldForceRefilter && (s_activeFilteringLogHandler.FilteringEnabled || s_cleanStackTracesEnabled))
             {
                 TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
                 RefreshConsoleFingerprint();
@@ -327,7 +346,7 @@ namespace Essentials.Console.Editor
             if (s_hasConsoleFingerprint && currentFingerprint == s_consoleFingerprint)
                 return;
 
-            if (!s_activeFilteringLogHandler.FilteringEnabled)
+            if (!s_activeFilteringLogHandler.FilteringEnabled && !s_cleanStackTracesEnabled)
             {
                 s_consoleFingerprint = currentFingerprint;
                 s_hasConsoleFingerprint = true;

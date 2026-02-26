@@ -183,7 +183,9 @@ namespace Essentials.Console.Editor
                 try
                 {
                     var value = field.GetValue(entry);
-                    if (ReferenceEquals(field, s_logEntryMessageField) || ReferenceEquals(field, s_logEntryFileField))
+                    if (ReferenceEquals(field, s_logEntryMessageField) ||
+                        ReferenceEquals(field, s_logEntryConditionField) ||
+                        ReferenceEquals(field, s_logEntryFileField))
                         value ??= string.Empty;
 
                     if (s_cleanStackTracesEnabled && value is string stringValue && IsStackTraceField(field.Name))
@@ -249,15 +251,36 @@ namespace Essentials.Console.Editor
                 return false;
 
             return line.IndexOf("Essentials.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
-                   line.IndexOf("Packages/com.martincalander.essentials/Console/Editor/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0;
+                   line.IndexOf("Packages/com.martincalander.essentials/Console/Editor/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   line.IndexOf("UnityEngine.DebugLogHandler:LogFormat", StringComparison.Ordinal) >= 0;
         }
 
         private static string ReadLogEntryMessage(object entry)
         {
-            if (entry == null || s_logEntryMessageField == null)
+            if (entry == null)
                 return string.Empty;
 
-            return s_logEntryMessageField.GetValue(entry) as string ?? string.Empty;
+            var message = ReadLogEntryStringField(entry, s_logEntryMessageField);
+            var condition = ReadLogEntryStringField(entry, s_logEntryConditionField);
+            var file = ReadLogEntryStringField(entry, s_logEntryFileField);
+
+            if (string.IsNullOrEmpty(message))
+                message = condition;
+            else if (!string.IsNullOrEmpty(condition) && message.IndexOf(condition, StringComparison.Ordinal) < 0)
+                message = message + "\n" + condition;
+
+            if (!string.IsNullOrEmpty(file) && message.IndexOf(file, StringComparison.OrdinalIgnoreCase) < 0)
+                message = string.IsNullOrEmpty(message) ? file : message + "\n" + file;
+
+            return message ?? string.Empty;
+        }
+
+        private static string ReadLogEntryStringField(object entry, System.Reflection.FieldInfo field)
+        {
+            if (entry == null || field == null)
+                return string.Empty;
+
+            return field.GetValue(entry) as string ?? string.Empty;
         }
 
         private static int ReadLogEntryMode(object entry)
