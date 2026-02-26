@@ -14,6 +14,7 @@ namespace Essentials.Console.Editor
     {
         private const double SyncIntervalSeconds = 0.5d;
         private const double ConsoleRescanIntervalSeconds = 0.25d;
+        private const double PeriodicRescanIntervalSeconds = 2d;
         private const double StartupForceRefilterSeconds = 30d;
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
@@ -27,7 +28,7 @@ namespace Essentials.Console.Editor
         private static readonly MethodInfo s_logEntriesStartGettingEntriesMethod = GetLogEntriesMethod("StartGettingEntries");
         private static readonly MethodInfo s_logEntriesEndGettingEntriesMethod = GetLogEntriesMethod("EndGettingEntries");
         private static readonly MethodInfo s_logEntriesGetEntryInternalMethod = GetLogEntriesMethod("GetEntryInternal");
-        private static readonly MethodInfo s_logEntriesAddMessageMethod = GetLogEntriesMethod("AddMessageWithDoubleClickCallback", s_logEntryType);
+        private static readonly MethodInfo s_logEntriesAddMessageMethod = GetLogEntriesAddMessageMethod();
         private static readonly FieldInfo[] s_logEntryFields = s_logEntryType?.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance) ?? Array.Empty<FieldInfo>();
         private static readonly FieldInfo s_logEntryMessageField = s_logEntryType?.GetField("message", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryConditionField = s_logEntryType?.GetField("condition", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -45,6 +46,7 @@ namespace Essentials.Console.Editor
 
         private static double s_nextSyncTime;
         private static double s_nextConsoleRescanTime;
+        private static double s_nextPeriodicRescanTime;
         private static bool s_isUpdatingConsoleEntries;
         private static bool s_hasConsoleFingerprint;
         private static (int rows, int errors, int warnings, int logs) s_consoleFingerprint;
@@ -111,6 +113,7 @@ namespace Essentials.Console.Editor
             SelectActiveLogHandler(snapshot.cleanStackTraces);
             s_activeFilteringLogHandler.Configure(snapshot.enabled, snapshot.warningsOnly, compiledRules);
             EnsureLogHandlerState();
+            s_nextPeriodicRescanTime = 0d;
             ResetConsoleFingerprint();
             TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out _);
         }
@@ -277,6 +280,45 @@ namespace Essentials.Console.Editor
                 null);
         }
 
+        private static MethodInfo GetLogEntriesAddMessageMethod()
+        {
+            if (s_logEntriesType == null)
+                return null;
+
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+            var candidateNames = new[]
+            {
+                "AddMessageWithDoubleClickCallback",
+                "AddMessage",
+                "AddMessageWithDoubleClickCallbackInternal"
+            };
+
+            var methods = s_logEntriesType.GetMethods(flags);
+            for (var nameIndex = 0; nameIndex < candidateNames.Length; nameIndex++)
+            {
+                var candidateName = candidateNames[nameIndex];
+                for (var i = 0; i < methods.Length; i++)
+                {
+                    var method = methods[i];
+                    if (!string.Equals(method.Name, candidateName, StringComparison.Ordinal))
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 1)
+                        continue;
+
+                    if (s_logEntryType == null)
+                        return method;
+
+                    var parameterType = parameters[0].ParameterType;
+                    if (parameterType == s_logEntryType || parameterType.IsAssignableFrom(s_logEntryType))
+                        return method;
+                }
+            }
+
+            return null;
+        }
+
         private static int BuildModeMask(Predicate<string> includeModeName)
         {
             if (s_consoleWindowModeType == null || includeModeName == null)
@@ -332,8 +374,25 @@ namespace Essentials.Console.Editor
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
+            var isFeatureActive = s_activeFilteringLogHandler.FilteringEnabled || s_cleanStackTracesEnabled;
+            if (!isFeatureActive)
+            {
+                if (TryGetConsoleFingerprint(out var inactiveFingerprint))
+                {
+                    s_consoleFingerprint = inactiveFingerprint;
+                    s_hasConsoleFingerprint = true;
+                }
+
+                return;
+            }
+
             var shouldForceRefilter = EditorApplication.isUpdating || EditorApplication.timeSinceStartup <= s_forceRefilterUntilTime;
-            if (shouldForceRefilter && (s_activeFilteringLogHandler.FilteringEnabled || s_cleanStackTracesEnabled))
+            var time = EditorApplication.timeSinceStartup;
+            var shouldRunPeriodicRescan = time >= s_nextPeriodicRescanTime;
+            if (shouldRunPeriodicRescan)
+                s_nextPeriodicRescanTime = time + PeriodicRescanIntervalSeconds;
+
+            if (shouldForceRefilter || shouldRunPeriodicRescan)
             {
                 TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
                 RefreshConsoleFingerprint();
@@ -345,13 +404,6 @@ namespace Essentials.Console.Editor
 
             if (s_hasConsoleFingerprint && currentFingerprint == s_consoleFingerprint)
                 return;
-
-            if (!s_activeFilteringLogHandler.FilteringEnabled && !s_cleanStackTracesEnabled)
-            {
-                s_consoleFingerprint = currentFingerprint;
-                s_hasConsoleFingerprint = true;
-                return;
-            }
 
             TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
             RefreshConsoleFingerprint();
