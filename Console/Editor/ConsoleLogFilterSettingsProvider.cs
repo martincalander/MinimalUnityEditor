@@ -18,15 +18,11 @@ namespace Essentials.Console.Editor
 
         private static readonly GUIContent CleanStackTracesContent = new(
             "Clean Stack Traces",
-            "Hides Essentials Console filter frames from stack traces so logs focus on your code.");
+            "Hides Console filter frames from stack traces so logs focus on your code.");
 
         private static readonly GUIContent PatternContent = new(
             "Pattern",
             "String or regex pattern to hide.");
-
-        private static readonly GUIContent UpdateCurrentLogsContent = new(
-            "Update Current Logs",
-            "Reapplies active hidden-log rules to logs currently visible in the Console.");
 
         [MenuItem("Window/Analysis/Console Preferences", false, 3200)]
         private static void OpenSettings()
@@ -49,8 +45,7 @@ namespace Essentials.Console.Editor
                     "regex",
                     "filter",
                     "hide",
-                    "stack trace",
-                    "essentials"
+                    "stack trace"
                 }
             };
         }
@@ -63,15 +58,6 @@ namespace Essentials.Console.Editor
             EditorGUILayout.HelpBox(
                 "Matching logs are hidden before they are written to Console. Current rows are also re-filtered while the editor is open.",
                 MessageType.Info);
-
-            using (new EditorGUI.DisabledScope(!settings.enabled || settings.rules.Count == 0))
-            {
-                if (GUILayout.Button(UpdateCurrentLogsContent))
-                {
-                    if (!ConsoleLogFilterInstaller.TryUpdateCurrentLogs(out var message))
-                        EditorUtility.DisplayDialog("Console", $"Failed to update logs:\n\n{message}", "OK");
-                }
-            }
 
             EditorGUI.BeginChangeCheck();
             settings.enabled = EditorGUILayout.ToggleLeft(EnableFiltersContent, settings.enabled);
@@ -90,7 +76,7 @@ namespace Essentials.Console.Editor
 
             if (settings.rules.Count == 0)
             {
-                EditorGUILayout.HelpBox("No rules yet. Add a string or regex rule below.", MessageType.None);
+                EditorGUILayout.HelpBox("No rules yet. Add a rule below.", MessageType.None);
             }
 
             for (var i = 0; i < settings.rules.Count; i++)
@@ -127,37 +113,29 @@ namespace Essentials.Console.Editor
                 }
             }
 
-            using (new EditorGUILayout.HorizontalScope())
+            if (GUILayout.Button("Add Rule"))
             {
-                if (GUILayout.Button("Add String Rule"))
+                settings.rules.Add(new ConsoleLogFilterRuleData
                 {
-                    settings.rules.Add(new ConsoleLogFilterRuleData
-                    {
-                        enabled = true,
-                        matchType = ConsoleLogFilterMatchType.Contains,
-                        caseSensitive = false,
-                        pattern = string.Empty
-                    });
-                    changed = true;
-                }
-
-                if (GUILayout.Button("Add Regex Rule"))
-                {
-                    settings.rules.Add(new ConsoleLogFilterRuleData
-                    {
-                        enabled = true,
-                        matchType = ConsoleLogFilterMatchType.Regex,
-                        caseSensitive = false,
-                        pattern = string.Empty
-                    });
-                    changed = true;
-                }
+                    enabled = true,
+                    matchType = ConsoleLogFilterMatchType.Contains,
+                    caseSensitive = false,
+                    pattern = string.Empty
+                });
+                changed = true;
             }
 
             if (settings.rules.Count > 0 && GUILayout.Button("Clear All Rules"))
             {
-                settings.rules.Clear();
-                changed = true;
+                if (EditorUtility.DisplayDialog(
+                        "Console",
+                        "Clear all rules?",
+                        "Clear All Rules",
+                        "Cancel"))
+                {
+                    settings.rules.Clear();
+                    changed = true;
+                }
             }
 
             if (!changed)
