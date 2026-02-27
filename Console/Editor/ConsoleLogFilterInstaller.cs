@@ -374,7 +374,8 @@ namespace Essentials.Console.Editor
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
-            var isFeatureActive = s_activeFilteringLogHandler.FilteringEnabled || s_cleanStackTracesEnabled;
+            var filteringEnabled = s_activeFilteringLogHandler.FilteringEnabled;
+            var isFeatureActive = filteringEnabled || s_cleanStackTracesEnabled;
             if (!isFeatureActive)
             {
                 if (TryGetConsoleFingerprint(out var inactiveFingerprint))
@@ -383,6 +384,15 @@ namespace Essentials.Console.Editor
                     s_hasConsoleFingerprint = true;
                 }
 
+                return;
+            }
+
+            // Always rescan while filtering is enabled so matching rows are removed
+            // even when Unity's visible-count fingerprint does not change.
+            if (filteringEnabled)
+            {
+                TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
+                RefreshConsoleFingerprint();
                 return;
             }
 
