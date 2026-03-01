@@ -21,6 +21,21 @@
             "name": "com.unity.ugui",
             "expression": "2.0.0",
             "define": "HAS_TMP"
+        },
+        {
+            "name": "com.unity.modules.terrain",
+            "expression": "0.0",
+            "define": "HAS_UNITY_TERRAIN"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "0.0",
+            "define": "HAS_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.cloud.gltfast",
+            "expression": "0.0",
+            "define": "HAS_GLTFAST"
         }
     ],
     "noEngineReferences": false

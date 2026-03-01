@@ -112,6 +112,119 @@ namespace Essentials.MenuItem.Editor
                     "Assets/Create/Vulkan Settings"
                 }));
 
+#if HAS_UNITY_TERRAIN
+            bundles.Add(new MenuItemBundleDefinition(
+                "terrain",
+                "Terrain",
+                true,
+                true,
+                new[]
+                {
+                    "Assets/Create/Terrain"
+                }));
+#else
+            bundles.Add(new MenuItemBundleDefinition(
+                "terrain",
+                "Terrain",
+                false,
+                false,
+                Array.Empty<string>()));
+#endif
+
+#if HAS_INPUT_SYSTEM
+            bundles.Add(new MenuItemBundleDefinition(
+                "xr_options",
+                "XR Options",
+                true,
+                true,
+                new[]
+                {
+                    "Component/XR"
+                }));
+#else
+            bundles.Add(new MenuItemBundleDefinition(
+                "xr_options",
+                "XR Options",
+                false,
+                false,
+                Array.Empty<string>()));
+#endif
+
+#if HAS_GLTFAST
+            bundles.Add(new MenuItemBundleDefinition(
+                "gltf_importer",
+                "glTF Importer",
+                true,
+                true,
+                new[]
+                {
+                    "GameObject/Export glTF",
+                    "Assets/Export glTF"
+                }));
+#else
+            bundles.Add(new MenuItemBundleDefinition(
+                "gltf_importer",
+                "glTF Importer",
+                false,
+                false,
+                Array.Empty<string>()));
+#endif
+
+            bundles.Add(new MenuItemBundleDefinition(
+                "assets_extra",
+                "Assets Extra",
+                true,
+                true,
+                new[]
+                {
+                    "Assets/Open C# Project",
+                    "Assets/View in Import Activity Window",
+                    "Assets/Update UXML Schema",
+                    "Assets/Extract Material SubAsset"
+                }));
+
+            bundles.Add(new MenuItemBundleDefinition(
+                "assets_dependencies",
+                "Assets Dependencies",
+                true,
+                true,
+                new[]
+                {
+                    "Assets/Find References In Scene",
+                    "Assets/Find References In Project",
+                    "Assets/Select Dependencies"
+                }));
+
+            bundles.Add(new MenuItemBundleDefinition(
+                "gameobject_extra",
+                "GameObject Extra",
+                true,
+                true,
+                new[]
+                {
+                    "GameObject/Set as first sibling",
+                    "GameObject/Set as last sibling",
+                    "GameObject/Move To View",
+                    "GameObject/Align With View",
+                    "GameObject/Align View to Selected",
+                    "GameObject/Toggle Active State",
+                    "GameObject/Create Empty Child",
+                    "GameObject/Create Empty Parent",
+                    "GameObject/Center On Children",
+                    "GameObject/Make Parent",
+                    "GameObject/Clear Parent"
+                }));
+
+            bundles.Add(new MenuItemBundleDefinition(
+                "version_control",
+                "Version Control",
+                true,
+                true,
+                new[]
+                {
+                    "Window/Version Control"
+                }));
+
             return bundles;
         }
 
@@ -356,7 +469,12 @@ namespace Essentials.MenuItem.Editor
                     "toolkit",
                     "tmp",
                     "vulkan",
-                    "d3d12"
+                    "d3d12",
+                    "terrain",
+                    "xr",
+                    "gltf",
+                    "dependencies",
+                    "version control"
                 }
             };
         }
