@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -49,6 +50,7 @@ namespace Essentials.MenuItem.Editor
                     "Component/UI (Canvas)/Legacy*",
                     "Component/UI/Legacy",
                     "Component/Mesh/Legacy",
+                    "GameObject/3D Object/Legacy",
                     "GameObject/UI (Canvas)/Legacy*",
                     "GameObject/UI/Legacy",
                     "Window/Text",
@@ -132,34 +134,37 @@ namespace Essentials.MenuItem.Editor
 
     internal static class MenuItemModuleSettings
     {
-        const string ModuleEnabledKey = "Essentials.MenuItem.ModuleEnabled";
-        const string BundleEnabledPrefix = "Essentials.MenuItem.Bundle.";
-        const string CustomDefinitionsEnabledKey = "Essentials.MenuItem.CustomDefinitionsEnabled";
-        const string CustomDefinitionsTextKey = "Essentials.MenuItem.CustomDefinitionsText";
-        const string AdvancedSettingsExpandedKey = "Essentials.MenuItem.AdvancedSettingsExpanded";
+        const string ScopedKeyPrefixRoot = "Essentials.MenuItem.Project.";
+        const string ModuleEnabledLeaf = "ModuleEnabled";
+        const string BundleLeafPrefix = "Bundle.";
+        const string CustomDefinitionsEnabledLeaf = "CustomDefinitionsEnabled";
+        const string CustomDefinitionsTextLeaf = "CustomDefinitionsText";
+        const string AdvancedSettingsExpandedLeaf = "AdvancedSettingsExpanded";
+
+        static readonly string ScopedKeyPrefix = BuildScopedKeyPrefix();
 
         internal static bool ModuleEnabled
         {
-            get => EditorPrefs.GetBool(ModuleEnabledKey, true);
-            set => EditorPrefs.SetBool(ModuleEnabledKey, value);
+            get => GetScopedBool(ModuleEnabledLeaf, true);
+            set => SetScopedBool(ModuleEnabledLeaf, value);
         }
 
         internal static bool CustomDefinitionsEnabled
         {
-            get => EditorPrefs.GetBool(CustomDefinitionsEnabledKey, false);
-            set => EditorPrefs.SetBool(CustomDefinitionsEnabledKey, value);
+            get => GetScopedBool(CustomDefinitionsEnabledLeaf, false);
+            set => SetScopedBool(CustomDefinitionsEnabledLeaf, value);
         }
 
         internal static string CustomDefinitionsText
         {
-            get => EditorPrefs.GetString(CustomDefinitionsTextKey, string.Empty);
-            set => EditorPrefs.SetString(CustomDefinitionsTextKey, NormalizeDefinitionText(value));
+            get => GetScopedString(CustomDefinitionsTextLeaf, string.Empty);
+            set => SetScopedString(CustomDefinitionsTextLeaf, NormalizeDefinitionText(value));
         }
 
         internal static bool AdvancedSettingsExpanded
         {
-            get => EditorPrefs.GetBool(AdvancedSettingsExpandedKey, false);
-            set => EditorPrefs.SetBool(AdvancedSettingsExpandedKey, value);
+            get => GetScopedBool(AdvancedSettingsExpandedLeaf, false);
+            set => SetScopedBool(AdvancedSettingsExpandedLeaf, value);
         }
 
         internal static bool GetBundleEnabled(string bundleId)
@@ -167,7 +172,7 @@ namespace Essentials.MenuItem.Editor
             var bundle = MenuItemBundleCatalog.Find(bundleId);
             if (bundle == null) return false;
 
-            return EditorPrefs.GetBool(BundleEnabledPrefix + bundle.Id, bundle.DefaultEnabled);
+            return GetScopedBool(BundleLeafPrefix + bundle.Id, bundle.DefaultEnabled);
         }
 
         internal static void SetBundleEnabled(string bundleId, bool enabled)
@@ -175,7 +180,7 @@ namespace Essentials.MenuItem.Editor
             var bundle = MenuItemBundleCatalog.Find(bundleId);
             if (bundle == null) return;
 
-            EditorPrefs.SetBool(BundleEnabledPrefix + bundle.Id, enabled);
+            SetScopedBool(BundleLeafPrefix + bundle.Id, enabled);
         }
 
         internal static IReadOnlyList<string> ResolveBundlePaths()
@@ -263,6 +268,67 @@ namespace Essentials.MenuItem.Editor
             if (string.IsNullOrEmpty(text)) return string.Empty;
             return text.Replace("\r\n", "\n").Replace('\r', '\n');
         }
+
+        static string BuildScopedKeyPrefix()
+        {
+            string projectRoot = null;
+            try
+            {
+                var dataPath = Application.dataPath;
+                if (!string.IsNullOrEmpty(dataPath))
+                {
+                    projectRoot = Path.GetDirectoryName(dataPath);
+                }
+            }
+            catch
+            {
+                // Fallback below.
+            }
+
+            if (string.IsNullOrEmpty(projectRoot))
+            {
+                return ScopedKeyPrefixRoot + "unknown.";
+            }
+
+            var normalized = projectRoot.Replace('\\', '/').ToLowerInvariant();
+
+            unchecked
+            {
+                uint hash = 2166136261;
+                for (var i = 0; i < normalized.Length; i++)
+                {
+                    hash ^= normalized[i];
+                    hash *= 16777619;
+                }
+
+                return ScopedKeyPrefixRoot + hash.ToString("x8") + ".";
+            }
+        }
+
+        static string ScopedKey(string leaf)
+        {
+            return ScopedKeyPrefix + leaf;
+        }
+
+        static bool GetScopedBool(string leaf, bool defaultValue)
+        {
+            return EditorPrefs.GetBool(ScopedKey(leaf), defaultValue);
+        }
+
+        static void SetScopedBool(string leaf, bool value)
+        {
+            EditorPrefs.SetBool(ScopedKey(leaf), value);
+        }
+
+        static string GetScopedString(string leaf, string defaultValue)
+        {
+            return EditorPrefs.GetString(ScopedKey(leaf), defaultValue);
+        }
+
+        static void SetScopedString(string leaf, string value)
+        {
+            EditorPrefs.SetString(ScopedKey(leaf), value ?? string.Empty);
+        }
     }
 
     internal static class MenuItemPreferencesProvider
@@ -315,7 +381,7 @@ namespace Essentials.MenuItem.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Apply Now", GUILayout.Width(100f)))
                 {
-                    MenuItemHider.Apply();
+                    MenuItemHider.ApplyWithMenuProxy();
                 }
             }
 
@@ -385,14 +451,20 @@ namespace Essentials.MenuItem.Editor
                         "Detected entries: " + MenuItemModuleSettings.CustomDefinitionEntryCount(),
                         EditorStyles.miniLabel);
 
-                    var textAreaWidth = Mathf.Max(120f, EditorGUIUtility.currentViewWidth - 80f);
                     var customDefinitionsText = MenuItemModuleSettings.CustomDefinitionsText;
                     EditorGUI.BeginChangeCheck();
-                    customDefinitionsText = EditorGUILayout.TextArea(
-                        customDefinitionsText,
+                    var textAreaRect = GUILayoutUtility.GetRect(
+                        GUIContent.none,
                         GetCustomDefinitionsTextAreaStyle(),
-                        GUILayout.Width(textAreaWidth),
-                        GUILayout.MinHeight(180f));
+                        GUILayout.ExpandWidth(true),
+                        GUILayout.MinHeight(180f),
+                        GUILayout.MaxHeight(260f));
+                    var boundedWidth = Mathf.Min(540f, textAreaRect.width);
+                    textAreaRect.width = boundedWidth;
+                    customDefinitionsText = EditorGUI.TextArea(
+                        textAreaRect,
+                        customDefinitionsText,
+                        GetCustomDefinitionsTextAreaStyle());
                     if (EditorGUI.EndChangeCheck())
                     {
                         MenuItemModuleSettings.CustomDefinitionsText = customDefinitionsText;

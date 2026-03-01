@@ -8,6 +8,8 @@ namespace Essentials.MenuItem.Editor
     [InitializeOnLoad]
     internal static class MenuItemHider
     {
+        const string ApplyProxyMenuPath = "Tools/Essentials/Internal/Apply Menu Item Hider";
+
         static bool s_active = MenuItemModuleSettings.ModuleEnabled;
         static Func<bool> s_activeInput;
 
@@ -138,9 +140,37 @@ namespace Essentials.MenuItem.Editor
             ApplyCore(force: true, rebuildMenus: true);
         }
 
+        internal static void ApplyWithMenuProxy()
+        {
+            EditorApplication.delayCall += ExecuteApplyProxy;
+        }
+
+        [UnityEditor.MenuItem(ApplyProxyMenuPath, false, 30000)]
+        static void ApplyFromProxyMenuItem()
+        {
+            ApplyCore(force: true, rebuildMenus: true);
+        }
+
         static void OnProjectChanged()
         {
             ApplyCore(force: false, rebuildMenus: true);
+        }
+
+        static void ExecuteApplyProxy()
+        {
+            try
+            {
+                if (EditorApplication.ExecuteMenuItem(ApplyProxyMenuPath))
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // Fall through to direct apply fallback.
+            }
+
+            Apply();
         }
 
         static void ApplyCore(bool force, bool rebuildMenus)
