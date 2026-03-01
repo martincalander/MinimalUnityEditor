@@ -245,39 +245,86 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         }
     }
 
+    [Serializable]
+    internal sealed class BundleState
+    {
+        [SerializeField] internal string id;
+        [SerializeField] internal bool enabled;
+    }
+
+    [Serializable]
+    internal sealed class MenuItemSettingsData
+    {
+        [SerializeField] internal bool moduleEnabled = true;
+        [SerializeField] internal bool customDefinitionsEnabled;
+        [SerializeField] internal string customDefinitionsText = string.Empty;
+        [SerializeField] internal List<BundleState> bundles = new List<BundleState>();
+
+        internal bool GetBundleEnabled(string bundleId, bool defaultValue)
+        {
+            if (string.IsNullOrEmpty(bundleId)) return defaultValue;
+            for (var i = 0; i < bundles.Count; i++)
+            {
+                if (string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
+                    return bundles[i].enabled;
+            }
+            return defaultValue;
+        }
+
+        internal void SetBundleEnabled(string bundleId, bool enabled)
+        {
+            if (string.IsNullOrEmpty(bundleId)) return;
+            for (var i = 0; i < bundles.Count; i++)
+            {
+                if (string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
+                {
+                    bundles[i].enabled = enabled;
+                    return;
+                }
+            }
+            bundles.Add(new BundleState { id = bundleId, enabled = enabled });
+        }
+    }
+
     internal static class MenuItemModuleSettings
     {
-        const string ScopedKeyPrefixRoot = "MartinCalander.Essentials.MenuItem.Project.";
-        const string ModuleEnabledLeaf = "ModuleEnabled";
-        const string BundleLeafPrefix = "Bundle.";
-        const string CustomDefinitionsEnabledLeaf = "CustomDefinitionsEnabled";
-        const string CustomDefinitionsTextLeaf = "CustomDefinitionsText";
-        const string AdvancedSettingsExpandedLeaf = "AdvancedSettingsExpanded";
+        const string SettingsPath = "ProjectSettings/MenuItemSettings.json";
+        const string AdvancedSettingsExpandedKey = "MartinCalander.Essentials.MenuItem.AdvancedExpanded";
 
-        static readonly string ScopedKeyPrefix = BuildScopedKeyPrefix();
+        static MenuItemSettingsData s_data;
+
+        static MenuItemSettingsData Data
+        {
+            get
+            {
+                if (s_data == null) Load();
+                return s_data;
+            }
+        }
 
         internal static bool ModuleEnabled
         {
-            get => GetScopedBool(ModuleEnabledLeaf, true);
-            set => SetScopedBool(ModuleEnabledLeaf, value);
+            get => Data.moduleEnabled;
+            set { Data.moduleEnabled = value; Save(); }
         }
 
         internal static bool CustomDefinitionsEnabled
         {
-            get => GetScopedBool(CustomDefinitionsEnabledLeaf, false);
-            set => SetScopedBool(CustomDefinitionsEnabledLeaf, value);
+            get => Data.customDefinitionsEnabled;
+            set { Data.customDefinitionsEnabled = value; Save(); }
         }
 
         internal static string CustomDefinitionsText
         {
-            get => GetScopedString(CustomDefinitionsTextLeaf, string.Empty);
-            set => SetScopedString(CustomDefinitionsTextLeaf, NormalizeDefinitionText(value));
+            get => Data.customDefinitionsText ?? string.Empty;
+            set { Data.customDefinitionsText = NormalizeDefinitionText(value); Save(); }
         }
 
+        // UI-only per-user preference — stays in EditorPrefs intentionally.
         internal static bool AdvancedSettingsExpanded
         {
-            get => GetScopedBool(AdvancedSettingsExpandedLeaf, false);
-            set => SetScopedBool(AdvancedSettingsExpandedLeaf, value);
+            get => EditorPrefs.GetBool(AdvancedSettingsExpandedKey, false);
+            set => EditorPrefs.SetBool(AdvancedSettingsExpandedKey, value);
         }
 
         internal static bool GetBundleEnabled(string bundleId)
@@ -285,7 +332,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             var bundle = MenuItemBundleCatalog.Find(bundleId);
             if (bundle == null) return false;
 
-            return GetScopedBool(BundleLeafPrefix + bundle.Id, bundle.DefaultEnabled);
+            return Data.GetBundleEnabled(bundle.Id, bundle.DefaultEnabled);
         }
 
         internal static void SetBundleEnabled(string bundleId, bool enabled)
@@ -293,7 +340,8 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             var bundle = MenuItemBundleCatalog.Find(bundleId);
             if (bundle == null) return;
 
-            SetScopedBool(BundleLeafPrefix + bundle.Id, enabled);
+            Data.SetBundleEnabled(bundle.Id, enabled);
+            Save();
         }
 
         internal static IReadOnlyList<string> ResolveBundlePaths()
@@ -382,65 +430,39 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             return text.Replace("\r\n", "\n").Replace('\r', '\n');
         }
 
-        static string BuildScopedKeyPrefix()
+        static void Load()
         {
-            string projectRoot = null;
+            s_data = new MenuItemSettingsData();
             try
             {
-                var dataPath = Application.dataPath;
-                if (!string.IsNullOrEmpty(dataPath))
+                if (!File.Exists(SettingsPath)) return;
+                var json = File.ReadAllText(SettingsPath);
+                if (string.IsNullOrWhiteSpace(json)) return;
+                JsonUtility.FromJsonOverwrite(json, s_data);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[MenuItemSettings] Failed to load settings: " + e.Message);
+            }
+        }
+
+        static void Save()
+        {
+            if (s_data == null) return;
+            try
+            {
+                var json = JsonUtility.ToJson(s_data, true);
+                var directory = Path.GetDirectoryName(SettingsPath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
-                    projectRoot = Path.GetDirectoryName(dataPath);
+                    Directory.CreateDirectory(directory);
                 }
+                File.WriteAllText(SettingsPath, json);
             }
-            catch
+            catch (Exception e)
             {
-                // Fallback below.
+                Debug.LogWarning("[MenuItemSettings] Failed to save settings: " + e.Message);
             }
-
-            if (string.IsNullOrEmpty(projectRoot))
-            {
-                return ScopedKeyPrefixRoot + "unknown.";
-            }
-
-            var normalized = projectRoot.Replace('\\', '/').ToLowerInvariant();
-
-            unchecked
-            {
-                uint hash = 2166136261;
-                for (var i = 0; i < normalized.Length; i++)
-                {
-                    hash ^= normalized[i];
-                    hash *= 16777619;
-                }
-
-                return ScopedKeyPrefixRoot + hash.ToString("x8") + ".";
-            }
-        }
-
-        static string ScopedKey(string leaf)
-        {
-            return ScopedKeyPrefix + leaf;
-        }
-
-        static bool GetScopedBool(string leaf, bool defaultValue)
-        {
-            return EditorPrefs.GetBool(ScopedKey(leaf), defaultValue);
-        }
-
-        static void SetScopedBool(string leaf, bool value)
-        {
-            EditorPrefs.SetBool(ScopedKey(leaf), value);
-        }
-
-        static string GetScopedString(string leaf, string defaultValue)
-        {
-            return EditorPrefs.GetString(ScopedKey(leaf), defaultValue);
-        }
-
-        static void SetScopedString(string leaf, string value)
-        {
-            EditorPrefs.SetString(ScopedKey(leaf), value ?? string.Empty);
         }
     }
 
