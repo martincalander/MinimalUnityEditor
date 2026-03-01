@@ -7,6 +7,8 @@ using UnityEngine;
 using UDebug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
+namespace MartinCalander.Essentials.Console
+{
 public static partial class Debug
 {
     private static readonly Dictionary<Type, FieldInfo[]> TypeFieldCache = new();
@@ -147,4 +149,5 @@ public static partial class Debug
 
         return rawName;
     }
+}
 }

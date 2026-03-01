@@ -1,6 +1,6 @@
 {
   "name": "Essentials.Console",
-  "rootNamespace": "",
+  "rootNamespace": "MartinCalander.Essentials.Console",
   "references": [],
   "includePlatforms": [],
   "excludePlatforms": [],

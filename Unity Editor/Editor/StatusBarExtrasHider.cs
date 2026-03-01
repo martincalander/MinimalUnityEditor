@@ -3,7 +3,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Editor
+namespace MartinCalander.Essentials.Editor
 {
     [InitializeOnLoad]
     internal static class StatusBarExtrasHider

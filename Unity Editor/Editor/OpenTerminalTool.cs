@@ -3,7 +3,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Editor
+namespace MartinCalander.Essentials.Editor
 {
     public static class OpenTerminalTool
     {

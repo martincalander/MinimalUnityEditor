@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.MenuItem.Editor
+namespace MartinCalander.Essentials.MenuItem.Editor
 {
     [InitializeOnLoad]
     internal static class MenuItemHider

@@ -5,6 +5,8 @@ using UnityEngine;
 using UDebug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
+namespace MartinCalander.Essentials.Console
+{
 public static partial class Debug
 {
     public static ILogger logger => UDebug.unityLogger;
@@ -166,4 +168,5 @@ public static partial class Debug
 
         return value.ToString() ?? "null";
     }
+}
 }

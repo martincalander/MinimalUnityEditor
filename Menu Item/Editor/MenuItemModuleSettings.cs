@@ -4,7 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.MenuItem.Editor
+namespace MartinCalander.Essentials.MenuItem.Editor
 {
     internal static class MenuItemBundleCatalog
     {
@@ -247,7 +247,7 @@ namespace Essentials.MenuItem.Editor
 
     internal static class MenuItemModuleSettings
     {
-        const string ScopedKeyPrefixRoot = "Essentials.MenuItem.Project.";
+        const string ScopedKeyPrefixRoot = "MartinCalander.Essentials.MenuItem.Project.";
         const string ModuleEnabledLeaf = "ModuleEnabled";
         const string BundleLeafPrefix = "Bundle.";
         const string CustomDefinitionsEnabledLeaf = "CustomDefinitionsEnabled";

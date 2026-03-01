@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.Editor
+namespace MartinCalander.Essentials.Editor
 {
     [InitializeOnLoad]
     internal static class WindowTitleShortener

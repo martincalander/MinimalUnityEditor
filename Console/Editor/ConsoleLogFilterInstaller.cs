@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Essentials.Console.Editor
+namespace MartinCalander.Essentials.Console.Editor
 {
     [InitializeOnLoad]
     internal static partial class ConsoleLogFilterInstaller
@@ -153,7 +153,7 @@ namespace Essentials.Console.Editor
             if (ReferenceEquals(s_activeFilteringLogHandler, selectedHandler))
                 return;
 
-            var currentHandler = Debug.unityLogger.logHandler;
+            var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
             var previousHandler = s_activeFilteringLogHandler;
 
             if (previousHandler != null)
@@ -164,7 +164,7 @@ namespace Essentials.Console.Editor
             }
 
             if (ReferenceEquals(currentHandler, previousHandler))
-                Debug.unityLogger.logHandler = selectedHandler;
+                UnityEngine.Debug.unityLogger.logHandler = selectedHandler;
 
             s_activeFilteringLogHandler = selectedHandler;
         }
@@ -172,7 +172,7 @@ namespace Essentials.Console.Editor
         private static void EnsureLogHandlerState()
         {
             var activeHandler = s_activeFilteringLogHandler ?? s_cleanStackFilteringLogHandler;
-            var currentHandler = Debug.unityLogger.logHandler;
+            var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
 
             // In clean-stack mode we avoid wrapping Unity's logger to prevent handler frames
             // from entering stack traces; filtering/cleanup is done by console-entry rescans.
@@ -185,7 +185,7 @@ namespace Essentials.Console.Editor
                 {
                     var cleanStackFallbackHandler = filteringHandler.Inner;
                     if (cleanStackFallbackHandler != null && !IsManagedFilteringHandler(cleanStackFallbackHandler))
-                        Debug.unityLogger.logHandler = cleanStackFallbackHandler;
+                        UnityEngine.Debug.unityLogger.logHandler = cleanStackFallbackHandler;
                 }
 
                 return;
@@ -209,7 +209,7 @@ namespace Essentials.Console.Editor
                     }
                 }
 
-                Debug.unityLogger.logHandler = activeHandler;
+                UnityEngine.Debug.unityLogger.logHandler = activeHandler;
                 return;
             }
 
@@ -218,7 +218,7 @@ namespace Essentials.Console.Editor
 
             var fallbackHandler = activeHandler.Inner;
             if (fallbackHandler != null && !IsManagedFilteringHandler(fallbackHandler))
-                Debug.unityLogger.logHandler = fallbackHandler;
+                UnityEngine.Debug.unityLogger.logHandler = fallbackHandler;
         }
 
         internal static bool TryUpdateCurrentLogs(out string message)

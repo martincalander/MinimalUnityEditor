@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Console.Editor
+namespace MartinCalander.Essentials.Console.Editor
 {
     internal static class ConsoleLogFilterSettings
     {
-        private const string EditorPrefsKey = "Essentials.Console.HiddenLogFilters";
+        private const string EditorPrefsKey = "MartinCalander.Essentials.Console.HiddenLogFilters";
 
         private static ConsoleLogFilterSettingsData s_data;
 

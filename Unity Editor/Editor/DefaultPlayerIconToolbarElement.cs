@@ -4,6 +4,8 @@ using UnityEditor.Build;
 using UnityEditor.Toolbars;
 using UnityEngine;
 
+namespace MartinCalander.Essentials.Editor
+{
 internal static class DefaultPlayerIconToolbarElement
 {
     const string kElementPath = "Editor/Default Icon";
@@ -171,4 +173,5 @@ internal sealed class DefaultPlayerIconBuildTargetChanged : IActiveBuildTargetCh
     {
         DefaultPlayerIconToolbarElement.NotifyBuildTargetChanged();
     }
+}
 }

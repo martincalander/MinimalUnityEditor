@@ -7,6 +7,8 @@ using UnityEngine;
 using UDebug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
+namespace MartinCalander.Essentials.Console
+{
 public static partial class Debug
 {
     private static readonly Dictionary<string, object> LastObservedValues = new();
@@ -118,4 +120,5 @@ public static partial class Debug
 
         return Equals(previousValue, currentValue);
     }
+}
 }

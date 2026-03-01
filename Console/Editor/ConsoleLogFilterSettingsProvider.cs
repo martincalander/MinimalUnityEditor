@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Console.Editor
+namespace MartinCalander.Essentials.Console.Editor
 {
     internal static class ConsoleLogFilterSettingsProvider
     {
