@@ -1,0 +1,27 @@
+{
+    "name": "Essentials.MenuItem.Editor",
+    "rootNamespace": "Essentials.MenuItem.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "0.0",
+            "define": "HAS_TMP"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "HAS_TMP"
+        }
+    ],
+    "noEngineReferences": false
+}

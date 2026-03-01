@@ -1,0 +1,19 @@
+{
+  "name": "Essentials.Editor",
+  "rootNamespace": "Essentials.Editor",
+  "references": [
+    "Essentials.MenuItem.Editor",
+    "Essentials.Inspector.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
