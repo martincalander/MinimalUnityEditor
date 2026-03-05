@@ -7,12 +7,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 {
     internal static class MenuItemPreferencesProvider
     {
-        const string CustomDefinitionsControlName = "MartinCalander.Essentials.MenuItem.CustomDefinitions";
-
         static GUIStyle s_customDefinitionsTextAreaStyle;
-        static string s_customDefinitionsDraft;
-        static bool s_customDefinitionsDraftDirty;
-        static bool s_wasEditingCustomDefinitions;
 
         [SettingsProvider]
         static SettingsProvider CreateProvider()
@@ -20,8 +15,6 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             return new SettingsProvider("Preferences/Menu Item", SettingsScope.User)
             {
                 label = "Menu Item",
-                activateHandler = (_, _) => ResetCustomDefinitionsDraft(),
-                deactivateHandler = () => CommitPendingCustomDefinitions(),
                 guiHandler = DrawGui,
                 keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -67,7 +60,6 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Apply Now", GUILayout.Width(100f)))
                 {
-                    CommitPendingCustomDefinitions();
                     MenuItemHider.ApplyWithMenuProxy();
                 }
             }
@@ -135,19 +127,16 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     MenuItemModuleSettings.CustomDefinitionsEnabled);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    CommitPendingCustomDefinitions(applyChanges: false);
                     MenuItemModuleSettings.CustomDefinitionsEnabled = customDefinitionsEnabled;
                     MenuItemHider.Apply();
                 }
 
-                EnsureCustomDefinitionsDraft();
                 EditorGUILayout.LabelField(
-                    "Detected entries: " + MenuItemModuleSettings.CustomDefinitionEntryCount(s_customDefinitionsDraft),
+                    "Detected entries: " + MenuItemModuleSettings.CustomDefinitionEntryCount(),
                     EditorStyles.miniLabel);
 
-                var customDefinitionsText = s_customDefinitionsDraft;
+                var customDefinitionsText = MenuItemModuleSettings.CustomDefinitionsText;
                 EditorGUI.BeginChangeCheck();
-                GUI.SetNextControlName(CustomDefinitionsControlName);
                 var textAreaRect = GUILayoutUtility.GetRect(
                     GUIContent.none,
                     GetCustomDefinitionsTextAreaStyle(),
@@ -161,22 +150,14 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     GetCustomDefinitionsTextAreaStyle());
                 if (EditorGUI.EndChangeCheck())
                 {
-                    s_customDefinitionsDraft = customDefinitionsText;
-                    s_customDefinitionsDraftDirty = true;
+                    MenuItemModuleSettings.CustomDefinitionsText = customDefinitionsText;
+                    if (MenuItemModuleSettings.CustomDefinitionsEnabled)
+                    {
+                        MenuItemHider.Apply();
+                    }
                 }
 
-                var isEditingCustomDefinitions = string.Equals(
-                    GUI.GetNameOfFocusedControl(),
-                    CustomDefinitionsControlName,
-                    StringComparison.Ordinal);
-                if (s_wasEditingCustomDefinitions && !isEditingCustomDefinitions)
-                {
-                    CommitPendingCustomDefinitions();
-                }
-
-                s_wasEditingCustomDefinitions = isEditingCustomDefinitions;
-
-                if (MenuItemModuleSettings.CustomDefinitionsContainUnsupportedEntries(s_customDefinitionsDraft))
+                if (MenuItemModuleSettings.CustomDefinitionsContainUnsupportedEntries())
                 {
                     EditorGUILayout.HelpBox(
                         "Services entries are not reliable. Unity regenerates Services menu items internally, so they cannot be hidden consistently.",
@@ -198,41 +179,6 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 clipping = TextClipping.Clip
             };
             return s_customDefinitionsTextAreaStyle;
-        }
-
-        static void EnsureCustomDefinitionsDraft()
-        {
-            if (s_customDefinitionsDraft != null)
-            {
-                return;
-            }
-
-            ResetCustomDefinitionsDraft();
-        }
-
-        static void ResetCustomDefinitionsDraft()
-        {
-            s_customDefinitionsDraft = MenuItemModuleSettings.CustomDefinitionsText;
-            s_customDefinitionsDraftDirty = false;
-            s_wasEditingCustomDefinitions = false;
-        }
-
-        static void CommitPendingCustomDefinitions(bool applyChanges = true)
-        {
-            EnsureCustomDefinitionsDraft();
-            if (!s_customDefinitionsDraftDirty)
-            {
-                return;
-            }
-
-            MenuItemModuleSettings.CustomDefinitionsText = s_customDefinitionsDraft;
-            s_customDefinitionsDraft = MenuItemModuleSettings.CustomDefinitionsText;
-            s_customDefinitionsDraftDirty = false;
-
-            if (applyChanges && MenuItemModuleSettings.CustomDefinitionsEnabled)
-            {
-                MenuItemHider.Apply();
-            }
         }
     }
 }

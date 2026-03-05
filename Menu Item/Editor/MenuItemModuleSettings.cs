@@ -104,12 +104,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static bool CustomDefinitionsContainUnsupportedEntries()
         {
-            return CustomDefinitionsContainUnsupportedEntries(CustomDefinitionsText);
-        }
-
-        internal static bool CustomDefinitionsContainUnsupportedEntries(string text)
-        {
-            var entries = ParseDefinitionEntries(text);
+            var entries = ParseDefinitionEntries(CustomDefinitionsText);
             for (var i = 0; i < entries.Count; i++)
             {
                 if (MenuItemPatternMatcher.IsUnsupportedEntry(entries[i]))
@@ -123,12 +118,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static int CustomDefinitionEntryCount()
         {
-            return CustomDefinitionEntryCount(CustomDefinitionsText);
-        }
-
-        internal static int CustomDefinitionEntryCount(string text)
-        {
-            return ParseDefinitionEntries(text).Count;
+            return ParseDefinitionEntries(CustomDefinitionsText).Count;
         }
 
         static IReadOnlyList<string> ResolveCustomDefinitionPaths()
