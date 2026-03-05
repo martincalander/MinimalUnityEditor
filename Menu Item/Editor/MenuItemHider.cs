@@ -18,11 +18,12 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         static Func<IEnumerable<string>> s_menuItemsInput;
 
         static bool s_isApplying;
+        static bool s_applyQueued;
+        static bool s_forceApplyQueued;
+        static bool s_failSafeMode;
 
         static readonly MethodInfo RemoveMenuItemMethod =
             typeof(Menu).GetMethod("RemoveMenuItem", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-        static readonly MethodInfo RebuildAllMenusMethod =
-            typeof(Menu).GetMethod("RebuildAllMenus", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
         static readonly MethodInfo ExtractSubmenusMethod =
             typeof(Menu).GetMethod(
@@ -58,7 +59,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static MenuItemHider()
         {
-            EditorApplication.delayCall += Apply;
+            QueueApply(force: true);
             EditorApplication.projectChanged += OnProjectChanged;
         }
 
@@ -137,45 +138,65 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static void Apply()
         {
-            ApplyCore(force: true, rebuildMenus: true);
+            QueueApply(force: true);
         }
 
         internal static void ApplyWithMenuProxy()
         {
-            EditorApplication.delayCall += ExecuteApplyProxy;
+            QueueApply(force: true);
         }
 
         [UnityEditor.MenuItem(ApplyProxyMenuPath, false, 30000)]
         static void ApplyFromProxyMenuItem()
         {
-            ApplyCore(force: true, rebuildMenus: true);
+            QueueApply(force: true);
         }
 
         static void OnProjectChanged()
         {
-            ApplyCore(force: false, rebuildMenus: true);
+            QueueApply(force: false);
         }
 
-        static void ExecuteApplyProxy()
+        static void QueueApply(bool force)
         {
-            try
+            if (force)
             {
-                if (EditorApplication.ExecuteMenuItem(ApplyProxyMenuPath))
-                {
-                    return;
-                }
-            }
-            catch
-            {
-                // Fall through to direct apply fallback.
+                s_forceApplyQueued = true;
             }
 
-            Apply();
+            if (s_applyQueued || s_failSafeMode)
+            {
+                return;
+            }
+
+            s_applyQueued = true;
+            EditorApplication.delayCall += FlushQueuedApply;
         }
 
-        static void ApplyCore(bool force, bool rebuildMenus)
+        static void FlushQueuedApply()
         {
-            if (s_isApplying) return;
+            s_applyQueued = false;
+
+            var force = s_forceApplyQueued;
+            s_forceApplyQueued = false;
+
+            if (s_failSafeMode)
+            {
+                return;
+            }
+
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                QueueApply(force);
+                return;
+            }
+
+            ApplyCore(force);
+        }
+
+        static void ApplyCore(bool force)
+        {
+            if (s_isApplying || s_failSafeMode) return;
 
             var isActive = ResolveActiveState();
             if (!isActive && !force) return;
@@ -183,11 +204,6 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             s_isApplying = true;
             try
             {
-                if (rebuildMenus)
-                {
-                    TryRebuildMenus();
-                }
-
                 if (!isActive) return;
                 if (RemoveMenuItemMethod == null) return;
 
@@ -206,7 +222,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     {
                         var wildcardPrefix = path.Substring(0, path.Length - 1).Trim();
                         var wildcardMenuPath = wildcardPrefix.TrimEnd('/');
-                        if (!string.IsNullOrEmpty(wildcardMenuPath))
+                        if (CanRemoveDirectPath(wildcardMenuPath))
                         {
                             TryRemoveMenuItem(wildcardMenuPath);
                             TryRemoveMenuItem(wildcardMenuPath + "/");
@@ -215,14 +231,20 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                         foreach (var candidate in allMenuPaths)
                         {
                             if (!MenuItemPatternMatcher.IsMatch(candidate, path)) continue;
+                            if (!CanRemoveDirectPath(candidate)) continue;
                             TryRemoveMenuItem(candidate);
                         }
 
                         continue;
                     }
 
+                    if (!CanRemoveDirectPath(path)) continue;
                     TryRemoveMenuItem(path);
                 }
+            }
+            catch (Exception exception)
+            {
+                EnterFailSafeMode(exception);
             }
             finally
             {
@@ -230,16 +252,10 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             }
         }
 
-        static void TryRebuildMenus()
+        static bool CanRemoveDirectPath(string path)
         {
-            try
-            {
-                RebuildAllMenusMethod?.Invoke(null, null);
-            }
-            catch
-            {
-                // Fail silently if Unity changes menu internals.
-            }
+            var normalizedPath = NormalizeMenuPath(path);
+            return !string.IsNullOrEmpty(normalizedPath) && normalizedPath.Contains("/");
         }
 
         static HashSet<string> BuildMenuRootSet(IReadOnlyList<string> items)
@@ -381,6 +397,22 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             }
 
             return MenuItemModuleSettings.ResolveBundlePaths();
+        }
+
+        static string NormalizeMenuPath(string path)
+        {
+            return path?.Trim().TrimEnd('/');
+        }
+
+        static void EnterFailSafeMode(Exception exception)
+        {
+            if (s_failSafeMode) return;
+
+            s_failSafeMode = true;
+            UnityEngine.Debug.LogWarning(
+                "[MenuItemHider] Disabled menu item hiding for this editor session after an unexpected failure. " +
+                "Menu changes will be skipped until the next domain reload. " +
+                exception.GetType().Name + ": " + exception.Message);
         }
 
         static void TryRemoveMenuItem(string path)
