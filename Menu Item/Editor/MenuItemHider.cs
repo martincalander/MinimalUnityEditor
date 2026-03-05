@@ -21,6 +21,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         static bool s_applyQueued;
         static bool s_forceApplyQueued;
         static bool s_failSafeMode;
+        static bool s_loggedUnsupportedWarning;
 
         static readonly MethodInfo RemoveMenuItemMethod =
             typeof(Menu).GetMethod("RemoveMenuItem", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
@@ -59,6 +60,12 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static MenuItemHider()
         {
+            if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
+            {
+                LogUnsupportedVersionWarningIfNeeded();
+                return;
+            }
+
             QueueApply(force: true);
             EditorApplication.projectChanged += OnProjectChanged;
         }
@@ -85,6 +92,14 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static void SetActive(bool active)
         {
+            if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
+            {
+                MenuItemModuleSettings.ModuleEnabled = active;
+                s_active = false;
+                LogUnsupportedVersionWarningIfNeeded();
+                return;
+            }
+
             if (s_active == active && MenuItemModuleSettings.ModuleEnabled == active) return;
 
             s_active = active;
@@ -159,6 +174,12 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static void QueueApply(bool force)
         {
+            if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
+            {
+                LogUnsupportedVersionWarningIfNeeded();
+                return;
+            }
+
             if (force)
             {
                 s_forceApplyQueued = true;
@@ -413,6 +434,19 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 "[MenuItemHider] Disabled menu item hiding for this editor session after an unexpected failure. " +
                 "Menu changes will be skipped until the next domain reload. " +
                 exception.GetType().Name + ": " + exception.Message);
+        }
+
+        static void LogUnsupportedVersionWarningIfNeeded()
+        {
+            if (s_loggedUnsupportedWarning || !MenuItemModuleSettings.StoredModuleEnabled)
+            {
+                return;
+            }
+
+            s_loggedUnsupportedWarning = true;
+            UnityEngine.Debug.LogWarning(
+                "[MenuItemHider] Menu item hiding is disabled in Unity 6 and newer because this module relies on internal editor menu APIs that are currently unsafe in that editor line. " +
+                "The saved project setting is ignored until the project is opened in a supported Unity version.");
         }
 
         static void TryRemoveMenuItem(string path)

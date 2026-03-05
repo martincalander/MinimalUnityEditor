@@ -26,9 +26,23 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             }
         }
 
+        internal static bool IsSupportedInCurrentEditor
+        {
+            get
+            {
+#if UNITY_6000_0_OR_NEWER
+                return false;
+#else
+                return true;
+#endif
+            }
+        }
+
+        internal static bool StoredModuleEnabled => Data.moduleEnabled;
+
         internal static bool ModuleEnabled
         {
-            get => Data.moduleEnabled;
+            get => IsSupportedInCurrentEditor && Data.moduleEnabled;
             set { Data.moduleEnabled = value; Save(); }
         }
 

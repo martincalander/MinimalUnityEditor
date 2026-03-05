@@ -42,8 +42,19 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static void DrawGui(string _)
         {
+            var menuItemHidingSupported = MenuItemModuleSettings.IsSupportedInCurrentEditor;
+
+            if (!menuItemHidingSupported)
+            {
+                EditorGUILayout.HelpBox(
+                    "Menu item hiding is disabled in Unity 6 and newer. This module relies on internal editor menu APIs that currently crash the editor in that version line, so the saved settings are ignored while this editor is in use.",
+                    MessageType.Warning);
+                EditorGUILayout.Space(8f);
+            }
+
             EditorGUILayout.LabelField("Module", EditorStyles.boldLabel);
 
+            using (new EditorGUI.DisabledScope(!menuItemHidingSupported))
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUI.BeginChangeCheck();
@@ -67,32 +78,38 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Bundles", EditorStyles.boldLabel);
 
-            for (var i = 0; i < MenuItemBundleCatalog.Bundles.Count; i++)
+            using (new EditorGUI.DisabledScope(!menuItemHidingSupported))
             {
-                var bundle = MenuItemBundleCatalog.Bundles[i];
-                if (bundle == null)
+                for (var i = 0; i < MenuItemBundleCatalog.Bundles.Count; i++)
                 {
-                    continue;
-                }
-
-                using (new EditorGUI.DisabledScope(!bundle.IsAvailable))
-                {
-                    EditorGUI.BeginChangeCheck();
-                    var enabled = MenuItemModuleSettings.GetBundleEnabled(bundle.Id);
-                    var label = bundle.IsAvailable
-                        ? bundle.DisplayName
-                        : bundle.DisplayName + " (not installed)";
-                    var nextEnabled = EditorGUILayout.ToggleLeft(label, enabled);
-                    if (EditorGUI.EndChangeCheck())
+                    var bundle = MenuItemBundleCatalog.Bundles[i];
+                    if (bundle == null)
                     {
-                        MenuItemModuleSettings.SetBundleEnabled(bundle.Id, nextEnabled);
-                        MenuItemHider.Apply();
+                        continue;
+                    }
+
+                    using (new EditorGUI.DisabledScope(!bundle.IsAvailable || !menuItemHidingSupported))
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        var enabled = MenuItemModuleSettings.GetBundleEnabled(bundle.Id);
+                        var label = bundle.IsAvailable
+                            ? bundle.DisplayName
+                            : bundle.DisplayName + " (not installed)";
+                        var nextEnabled = EditorGUILayout.ToggleLeft(label, enabled);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            MenuItemModuleSettings.SetBundleEnabled(bundle.Id, nextEnabled);
+                            MenuItemHider.Apply();
+                        }
                     }
                 }
             }
 
             EditorGUILayout.Space(12f);
-            DrawAdvancedSettings();
+            using (new EditorGUI.DisabledScope(!menuItemHidingSupported))
+            {
+                DrawAdvancedSettings();
+            }
         }
 
         static void DrawAdvancedSettings()
