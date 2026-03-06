@@ -23,6 +23,8 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         static bool s_failSafeMode;
         static bool s_loggedUnsupportedWarning;
 
+        // Do not invoke Unity's internal menu rebuild from this module. Rebuilding menus from the
+        // projectChanged/import path has caused native editor crashes in Unity's RebuildOSMainMenu.
         static readonly MethodInfo RemoveMenuItemMethod =
             typeof(Menu).GetMethod("RemoveMenuItem", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
