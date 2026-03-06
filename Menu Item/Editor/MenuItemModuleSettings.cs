@@ -10,6 +10,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
     {
         const string SettingsPath = "ProjectSettings/MenuItemSettings.json";
         const string AdvancedSettingsExpandedKey = "MartinCalander.Essentials.MenuItem.AdvancedExpanded";
+        const string MinimumSupportedUnity6Version = "6000.0.43f1";
 
         static MenuItemSettingsData s_data;
 
@@ -28,13 +29,22 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static bool IsSupportedInCurrentEditor
         {
+            get => !IsKnownUnsafeEditorVersion(Application.unityVersion);
+        }
+
+        internal static string UnsupportedEditorMessage
+        {
             get
             {
-#if UNITY_6000_0_OR_NEWER
-                return false;
-#else
-                return true;
-#endif
+                if (!IsKnownUnsafeEditorVersion(Application.unityVersion))
+                {
+                    return string.Empty;
+                }
+
+                return
+                    "Menu item hiding is disabled in Unity 6.0 editors before " + MinimumSupportedUnity6Version +
+                    " because this module relies on internal editor menu APIs that were unstable in those builds. " +
+                    "The saved settings are ignored until the project is opened in a newer editor.";
             }
         }
 
@@ -234,6 +244,66 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             {
                 Debug.LogWarning("[MenuItemSettings] Failed to save settings: " + e.Message);
             }
+        }
+
+        static bool IsKnownUnsafeEditorVersion(string unityVersion)
+        {
+            if (!TryParseUnityVersion(unityVersion, out var major, out var minor, out var patch))
+            {
+                return false;
+            }
+
+            if (major != 6000)
+            {
+                return false;
+            }
+
+            if (minor != 0)
+            {
+                return false;
+            }
+
+            return patch < 43;
+        }
+
+        static bool TryParseUnityVersion(string unityVersion, out int major, out int minor, out int patch)
+        {
+            major = 0;
+            minor = 0;
+            patch = 0;
+
+            if (string.IsNullOrWhiteSpace(unityVersion))
+            {
+                return false;
+            }
+
+            var numericLength = 0;
+            while (numericLength < unityVersion.Length)
+            {
+                var character = unityVersion[numericLength];
+                if (!char.IsDigit(character) && character != '.')
+                {
+                    break;
+                }
+
+                numericLength++;
+            }
+
+            if (numericLength == 0)
+            {
+                return false;
+            }
+
+            var numericPart = unityVersion.Substring(0, numericLength);
+            var parts = numericPart.Split('.');
+            if (parts.Length < 3)
+            {
+                return false;
+            }
+
+            return int.TryParse(parts[0], out major) &&
+                   int.TryParse(parts[1], out minor) &&
+                   int.TryParse(parts[2], out patch);
         }
     }
 }

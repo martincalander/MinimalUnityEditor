@@ -444,9 +444,13 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             }
 
             s_loggedUnsupportedWarning = true;
-            UnityEngine.Debug.LogWarning(
-                "[MenuItemHider] Menu item hiding is disabled in Unity 6 and newer because this module relies on internal editor menu APIs that are currently unsafe in that editor line. " +
-                "The saved project setting is ignored until the project is opened in a supported Unity version.");
+            var unsupportedMessage = MenuItemModuleSettings.UnsupportedEditorMessage;
+            if (string.IsNullOrEmpty(unsupportedMessage))
+            {
+                return;
+            }
+
+            UnityEngine.Debug.LogWarning("[MenuItemHider] " + unsupportedMessage);
         }
 
         static void TryRemoveMenuItem(string path)

@@ -47,7 +47,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             if (!menuItemHidingSupported)
             {
                 EditorGUILayout.HelpBox(
-                    "Menu item hiding is disabled in Unity 6 and newer. This module relies on internal editor menu APIs that currently crash the editor in that version line, so the saved settings are ignored while this editor is in use.",
+                    MenuItemModuleSettings.UnsupportedEditorMessage,
                     MessageType.Warning);
                 EditorGUILayout.Space(8f);
             }
