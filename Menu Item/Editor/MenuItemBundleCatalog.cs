@@ -21,8 +21,16 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 {
                     "GameObject/UI/Text - TextMeshPro",
                     "GameObject/3D Object/Text - TextMeshPro",
+                    // Unity 6 with UGUI 2.0 groups the common TMP create items under UI (Canvas).
+                    "GameObject/UI (Canvas)/Button - TextMeshPro",
+                    "GameObject/UI (Canvas)/Dropdown - TextMeshPro",
+                    "GameObject/UI (Canvas)/Input Field - TextMeshPro",
+                    "GameObject/UI (Canvas)/Text - TextMeshPro",
                     "Component/TextMeshPro/*",
                     "Component/Mesh/TextMeshPro - Text",
+                    "Component/UI (Canvas)/Dropdown - TextMeshPro",
+                    "Component/UI (Canvas)/TextMeshPro - Input Field",
+                    "Component/UI (Canvas)/TextMeshPro - Text (UI)",
                     "Window/TextMeshPro/*",
                     "Window/TextMeshPro",
                     "Windows/TextMeshPro",
@@ -116,7 +124,10 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 true,
                 new[]
                 {
-                    "Assets/Create/Terrain"
+                    "Assets/Create/Terrain",
+                    "GameObject/3D Object/Terrain",
+                    "Component/Physics/Terrain Collider",
+                    "Component/Rendering/Terrain"
                 }));
 #else
             bundles.Add(new MenuItemBundleDefinition(
@@ -155,7 +166,9 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 new[]
                 {
                     "GameObject/Export glTF",
-                    "Assets/Export glTF"
+                    "Assets/Export glTF",
+                    "Component/Scripts/GLTFast/*",
+                    "Component/Scripts/GLTFast.Documentation.Examples/*"
                 }));
 #else
             bundles.Add(new MenuItemBundleDefinition(
