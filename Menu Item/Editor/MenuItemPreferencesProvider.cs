@@ -95,7 +95,8 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                         var label = bundle.IsAvailable
                             ? bundle.DisplayName
                             : bundle.DisplayName + " (not installed)";
-                        var nextEnabled = EditorGUILayout.ToggleLeft(label, enabled);
+                        var labelContent = new GUIContent(label, BuildBundleTooltip(bundle));
+                        var nextEnabled = EditorGUILayout.ToggleLeft(labelContent, enabled);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MenuItemModuleSettings.SetBundleEnabled(bundle.Id, nextEnabled);
@@ -110,6 +111,21 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             {
                 DrawAdvancedSettings();
             }
+        }
+
+        static string BuildBundleTooltip(MenuItemBundleDefinition bundle)
+        {
+            if (bundle == null)
+            {
+                return string.Empty;
+            }
+
+            if (bundle.MenuPaths == null || bundle.MenuPaths.Count == 0)
+            {
+                return "No menu item entries in this bundle.";
+            }
+
+            return string.Join("\n", bundle.MenuPaths);
         }
 
         static void DrawAdvancedSettings()
@@ -174,12 +190,18 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     }
                 }
 
-                if (MenuItemModuleSettings.CustomDefinitionsContainUnsupportedEntries())
-                {
-                    EditorGUILayout.HelpBox(
-                        "Services entries are not reliable. Unity regenerates Services menu items internally, so they cannot be hidden consistently.",
-                        MessageType.Warning);
-                }
+                DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.Unsupported);
+                DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.ErrorProne);
+            }
+        }
+
+        static void DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind kind)
+        {
+            var warnings = MenuItemModuleSettings.GetCustomDefinitionWarnings(kind);
+            for (var i = 0; i < warnings.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(warnings[i])) continue;
+                EditorGUILayout.HelpBox(warnings[i], MessageType.Warning);
             }
         }
 

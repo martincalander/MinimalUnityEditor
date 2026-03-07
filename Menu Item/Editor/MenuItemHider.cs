@@ -470,8 +470,39 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         }
     }
 
+    internal enum MenuItemBlockedEntryKind
+    {
+        Unsupported,
+        ErrorProne
+    }
+
+    internal readonly struct MenuItemBlockedEntry
+    {
+        internal MenuItemBlockedEntry(string menuPath, MenuItemBlockedEntryKind kind, string warning)
+        {
+            MenuPath = menuPath;
+            Kind = kind;
+            Warning = warning;
+        }
+
+        internal string MenuPath { get; }
+        internal MenuItemBlockedEntryKind Kind { get; }
+        internal string Warning { get; }
+    }
+
     internal static class MenuItemPatternMatcher
     {
+        internal const string UnsupportedServicesWarning =
+            "Services entries are not reliable. Unity regenerates Services menu items internally, so they cannot be hidden consistently.";
+
+        static readonly MenuItemBlockedEntry[] BlacklistedMenuItems =
+        {
+            new MenuItemBlockedEntry(
+                "GameObject/Center On Children",
+                MenuItemBlockedEntryKind.ErrorProne,
+                "\"GameObject/Center On Children\" is blacklisted. Definitions that hide it are ignored because Unity still queries that menu item internally and will emit \"Could not find ... menu item\" errors.")
+        };
+
         internal static bool IsUnsupportedEntry(string entry)
         {
             var trimmed = entry?.Trim();
@@ -481,6 +512,27 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             if (trimmed.Equals("Services", StringComparison.OrdinalIgnoreCase)) return true;
             if (trimmed.Equals("Services/*", StringComparison.OrdinalIgnoreCase)) return true;
             return trimmed.StartsWith("Services/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static bool IsBlacklistedEntry(string entry)
+        {
+            return TryGetWarningMessage(entry, MenuItemBlockedEntryKind.ErrorProne, out _);
+        }
+
+        internal static IReadOnlyList<string> GetWarningMessages(IEnumerable<string> entries, MenuItemBlockedEntryKind kind)
+        {
+            var warnings = new List<string>();
+            if (entries == null) return warnings;
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in entries)
+            {
+                if (!TryGetWarningMessage(entry, kind, out var warning)) continue;
+                if (!seen.Add(warning)) continue;
+                warnings.Add(warning);
+            }
+
+            return warnings;
         }
 
         internal static bool IsMatch(string input, string pattern)
@@ -498,6 +550,45 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             return string.Equals(input, trimmed, StringComparison.OrdinalIgnoreCase);
         }
 
+        static bool TryGetWarningMessage(string entry, MenuItemBlockedEntryKind kind, out string warning)
+        {
+            var trimmed = entry?.Trim();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                warning = null;
+                return false;
+            }
+
+            if (kind == MenuItemBlockedEntryKind.Unsupported && IsUnsupportedEntry(trimmed))
+            {
+                warning = UnsupportedServicesWarning;
+                return true;
+            }
+
+            for (var i = 0; i < BlacklistedMenuItems.Length; i++)
+            {
+                var blacklistedItem = BlacklistedMenuItems[i];
+                if (blacklistedItem.Kind != kind) continue;
+                if (!TargetsMenuPath(trimmed, blacklistedItem.MenuPath)) continue;
+
+                warning = blacklistedItem.Warning;
+                return true;
+            }
+
+            warning = null;
+            return false;
+        }
+
+        static bool TargetsMenuPath(string entry, string menuPath)
+        {
+            if (string.IsNullOrWhiteSpace(entry) || string.IsNullOrWhiteSpace(menuPath)) return false;
+
+            var trimmedEntry = entry.Trim();
+            var trimmedMenuPath = menuPath.Trim();
+            return string.Equals(trimmedEntry, trimmedMenuPath, StringComparison.OrdinalIgnoreCase) ||
+                   IsMatch(trimmedMenuPath, trimmedEntry);
+        }
+
         internal static List<string> SanitizeEntries(IEnumerable<string> entries)
         {
             var result = new List<string>();
@@ -510,6 +601,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 if (string.IsNullOrEmpty(trimmed)) continue;
 
                 if (IsUnsupportedEntry(trimmed)) continue;
+                if (IsBlacklistedEntry(trimmed)) continue;
 
                 if (!seen.Add(trimmed)) continue;
                 result.Add(trimmed);

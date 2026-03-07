@@ -219,7 +219,6 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     "GameObject/Toggle Active State",
                     "GameObject/Create Empty Child",
                     "GameObject/Create Empty Parent",
-                    "GameObject/Center On Children",
                     "GameObject/Make Parent",
                     "GameObject/Clear Parent"
                 }));

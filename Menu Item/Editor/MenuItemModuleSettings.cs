@@ -128,21 +128,22 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static bool CustomDefinitionsContainUnsupportedEntries()
         {
-            var entries = ParseDefinitionEntries(CustomDefinitionsText);
-            for (var i = 0; i < entries.Count; i++)
-            {
-                if (MenuItemPatternMatcher.IsUnsupportedEntry(entries[i]))
-                {
-                    return true;
-                }
-            }
+            return GetCustomDefinitionWarnings(MenuItemBlockedEntryKind.Unsupported).Count > 0;
+        }
 
-            return false;
+        internal static bool CustomDefinitionsContainBlacklistedEntries()
+        {
+            return GetCustomDefinitionWarnings(MenuItemBlockedEntryKind.ErrorProne).Count > 0;
         }
 
         internal static int CustomDefinitionEntryCount()
         {
             return ParseDefinitionEntries(CustomDefinitionsText).Count;
+        }
+
+        internal static IReadOnlyList<string> GetCustomDefinitionWarnings(MenuItemBlockedEntryKind kind)
+        {
+            return MenuItemPatternMatcher.GetWarningMessages(ParseDefinitionEntries(CustomDefinitionsText), kind);
         }
 
         static IReadOnlyList<string> ResolveCustomDefinitionPaths()
