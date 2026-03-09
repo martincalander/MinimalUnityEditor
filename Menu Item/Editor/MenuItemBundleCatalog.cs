@@ -215,7 +215,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     "Assets/Add to Assistant",
                     "Assets/Generate",
                     "Assets/Search Generated Assets",
-                    "Windows/AI"
+                    "Window/AI"
                 }));
 #else
             bundles.Add(new MenuItemBundleDefinition(
