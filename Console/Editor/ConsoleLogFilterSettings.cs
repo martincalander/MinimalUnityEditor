@@ -53,6 +53,7 @@ namespace MartinCalander.Essentials.Console.Editor
             }
 
             var hasCleanStackTraceSetting = json.IndexOf("\"cleanStackTraces\"", StringComparison.Ordinal) >= 0;
+            var hasHideAssistantToolbarButtonSetting = json.IndexOf("\"hideAssistantToolbarButton\"", StringComparison.Ordinal) >= 0;
 
             try
             {
@@ -66,6 +67,8 @@ namespace MartinCalander.Essentials.Console.Editor
             s_data ??= new ConsoleLogFilterSettingsData();
             if (!hasCleanStackTraceSetting)
                 s_data.cleanStackTraces = true;
+            if (!hasHideAssistantToolbarButtonSetting)
+                s_data.hideAssistantToolbarButton = true;
 
             Sanitize(s_data);
         }

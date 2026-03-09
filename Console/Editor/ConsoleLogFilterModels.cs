@@ -35,6 +35,7 @@ namespace MartinCalander.Essentials.Console.Editor
         public bool enabled = true;
         public bool warningsOnly = true;
         public bool cleanStackTraces = true;
+        public bool hideAssistantToolbarButton = true;
         public List<ConsoleLogFilterRuleData> rules = new();
 
         public ConsoleLogFilterSettingsData Clone()
@@ -44,6 +45,7 @@ namespace MartinCalander.Essentials.Console.Editor
                 enabled = enabled,
                 warningsOnly = warningsOnly,
                 cleanStackTraces = cleanStackTraces,
+                hideAssistantToolbarButton = hideAssistantToolbarButton,
                 rules = new List<ConsoleLogFilterRuleData>(rules.Count)
             };
 

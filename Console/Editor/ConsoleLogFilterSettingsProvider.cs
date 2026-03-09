@@ -20,6 +20,10 @@ namespace MartinCalander.Essentials.Console.Editor
             "Clean Stack Traces",
             "Hides Console filter frames from stack traces so logs focus on your code.");
 
+        private static readonly GUIContent HideAssistantToolbarButtonContent = new(
+            "Hide Assistant Toolbar Button",
+            "When Unity AI Assistant is installed, removes its 'Add to Assistant' button from the Console toolbar.");
+
         private static readonly GUIContent PatternContent = new(
             "Pattern",
             "String or regex pattern to hide.");
@@ -46,7 +50,10 @@ namespace MartinCalander.Essentials.Console.Editor
                     "regex",
                     "filter",
                     "hide",
-                    "stack trace"
+                    "stack trace",
+                    "assistant",
+                    "ai",
+                    "toolbar"
                 }
             };
         }
@@ -78,6 +85,7 @@ namespace MartinCalander.Essentials.Console.Editor
             EditorGUI.BeginChangeCheck();
             settings.enabled = EditorGUILayout.ToggleLeft(EnableFiltersContent, settings.enabled);
             settings.cleanStackTraces = EditorGUILayout.ToggleLeft(CleanStackTracesContent, settings.cleanStackTraces);
+            settings.hideAssistantToolbarButton = EditorGUILayout.ToggleLeft(HideAssistantToolbarButtonContent, settings.hideAssistantToolbarButton);
 
             using (new EditorGUI.DisabledScope(!settings.enabled))
             {
@@ -86,6 +94,13 @@ namespace MartinCalander.Essentials.Console.Editor
 
             if (EditorGUI.EndChangeCheck())
                 changed = true;
+
+            if (!ConsoleAssistantToolbarButtonController.IsAssistantConsoleToolbarAvailable)
+            {
+                EditorGUILayout.HelpBox(
+                    "Unity AI Assistant console toolbar integration was not detected in this project, so the Assistant toolbar toggle has no effect right now.",
+                    MessageType.None);
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Rules", EditorStyles.boldLabel);
