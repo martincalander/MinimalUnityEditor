@@ -77,6 +77,7 @@ namespace MartinCalander.Essentials.Console.Editor
         {
             var settings = ConsoleLogFilterSettings.Data;
             var changed = false;
+            var assistantToolbarAvailable = ConsoleAssistantToolbarButtonController.IsAssistantConsoleToolbarAvailable;
 
             EditorGUILayout.HelpBox(
                 "Matching logs are hidden before they are written to Console. Current rows are also re-filtered while the editor is open.",
@@ -85,7 +86,13 @@ namespace MartinCalander.Essentials.Console.Editor
             EditorGUI.BeginChangeCheck();
             settings.enabled = EditorGUILayout.ToggleLeft(EnableFiltersContent, settings.enabled);
             settings.cleanStackTraces = EditorGUILayout.ToggleLeft(CleanStackTracesContent, settings.cleanStackTraces);
-            settings.hideAssistantToolbarButton = EditorGUILayout.ToggleLeft(HideAssistantToolbarButtonContent, settings.hideAssistantToolbarButton);
+
+            using (new EditorGUI.DisabledScope(!assistantToolbarAvailable))
+            {
+                settings.hideAssistantToolbarButton = EditorGUILayout.ToggleLeft(
+                    HideAssistantToolbarButtonContent,
+                    settings.hideAssistantToolbarButton);
+            }
 
             using (new EditorGUI.DisabledScope(!settings.enabled))
             {
@@ -95,7 +102,7 @@ namespace MartinCalander.Essentials.Console.Editor
             if (EditorGUI.EndChangeCheck())
                 changed = true;
 
-            if (!ConsoleAssistantToolbarButtonController.IsAssistantConsoleToolbarAvailable)
+            if (!assistantToolbarAvailable)
             {
                 EditorGUILayout.HelpBox(
                     "Unity AI Assistant console toolbar integration was not detected in this project, so the Assistant toolbar toggle has no effect right now.",

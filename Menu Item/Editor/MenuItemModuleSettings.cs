@@ -77,7 +77,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         internal static bool GetBundleEnabled(string bundleId)
         {
             var bundle = MenuItemBundleCatalog.Find(bundleId);
-            if (bundle == null)
+            if (bundle == null || !bundle.IsAvailable)
             {
                 return false;
             }

@@ -36,6 +36,11 @@
             "name": "com.unity.cloud.gltfast",
             "expression": "0.0",
             "define": "HAS_GLTFAST"
+        },
+        {
+            "name": "com.unity.ai.assistant",
+            "expression": "0.0",
+            "define": "HAS_UNITY_AI_ASSISTANT"
         }
     ],
     "noEngineReferences": false

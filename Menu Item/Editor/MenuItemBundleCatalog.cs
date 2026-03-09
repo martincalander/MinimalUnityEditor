@@ -204,6 +204,28 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                     "Assets/Select Dependencies"
                 }));
 
+#if HAS_UNITY_AI_ASSISTANT
+            bundles.Add(new MenuItemBundleDefinition(
+                "ai_assistant",
+                "AI Assistant",
+                true,
+                true,
+                new[]
+                {
+                    "Assets/Add to Assistant",
+                    "Assets/Generate",
+                    "Assets/Search Generated Assets",
+                    "Windows/AI"
+                }));
+#else
+            bundles.Add(new MenuItemBundleDefinition(
+                "ai_assistant",
+                "AI Assistant",
+                false,
+                false,
+                Array.Empty<string>()));
+#endif
+
             bundles.Add(new MenuItemBundleDefinition(
                 "gameobject_extra",
                 "GameObject Extra",

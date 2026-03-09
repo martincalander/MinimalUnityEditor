@@ -8,7 +8,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
     [InitializeOnLoad]
     internal static class MenuItemHider
     {
-        const string ApplyProxyMenuPath = "Tools/Essentials/Internal/Apply Menu Item Hider";
+        const string ApplyProxyMenuPath = "Help/Apply Menu Item Hider";
 
         static bool s_active = MenuItemModuleSettings.ModuleEnabled;
         static Func<bool> s_activeInput;
