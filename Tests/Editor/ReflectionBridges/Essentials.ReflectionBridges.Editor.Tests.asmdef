@@ -1,0 +1,19 @@
+{
+    "name": "Essentials.ReflectionBridges.Editor.Tests",
+    "rootNamespace": "MartinCalander.Essentials.Tests.Editor.ReflectionBridges",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}
