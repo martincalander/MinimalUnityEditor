@@ -21,6 +21,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
         static bool s_applyQueued;
         static bool s_forceApplyQueued;
         static bool s_failSafeMode;
+        static bool s_mutationSuppressed;
         static bool s_loggedUnsupportedWarning;
 
         // Do not invoke Unity's internal menu rebuild from this module. Rebuilding menus from the
@@ -68,6 +69,9 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 return;
             }
 
+            EditorApplication.wantsToQuit += OnWantsToQuit;
+            EditorApplication.quitting += SuppressMutationForTeardown;
+            AssemblyReloadEvents.beforeAssemblyReload += SuppressMutationForTeardown;
             QueueApply(force: true);
             EditorApplication.projectChanged += OnProjectChanged;
         }
@@ -174,11 +178,41 @@ namespace MartinCalander.Essentials.MenuItem.Editor
             QueueApply(force: false);
         }
 
+        static bool OnWantsToQuit()
+        {
+            SuppressMutationForTeardown();
+            return true;
+        }
+
+        static void SuppressMutationForTeardown()
+        {
+            if (s_mutationSuppressed)
+            {
+                return;
+            }
+
+            s_mutationSuppressed = true;
+            s_applyQueued = false;
+            s_forceApplyQueued = false;
+            EditorApplication.delayCall -= FlushQueuedApply;
+            EditorApplication.projectChanged -= OnProjectChanged;
+        }
+
+        static bool IsMutationSuppressed()
+        {
+            return s_mutationSuppressed;
+        }
+
         static void QueueApply(bool force)
         {
             if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
             {
                 LogUnsupportedVersionWarningIfNeeded();
+                return;
+            }
+
+            if (IsMutationSuppressed())
+            {
                 return;
             }
 
@@ -208,6 +242,11 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 return;
             }
 
+            if (IsMutationSuppressed())
+            {
+                return;
+            }
+
             if (EditorApplication.isCompiling || EditorApplication.isUpdating)
             {
                 QueueApply(force);
@@ -219,7 +258,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static void ApplyCore(bool force)
         {
-            if (s_isApplying || s_failSafeMode) return;
+            if (s_isApplying || s_failSafeMode || IsMutationSuppressed()) return;
 
             var isActive = ResolveActiveState();
             if (!isActive && !force) return;
@@ -318,7 +357,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static void AddEnumeratedMenuPaths(string menuRoot, HashSet<string> allMenuPaths)
         {
-            if (string.IsNullOrWhiteSpace(menuRoot) || allMenuPaths == null) return;
+            if (IsMutationSuppressed() || string.IsNullOrWhiteSpace(menuRoot) || allMenuPaths == null) return;
 
             try
             {
@@ -457,7 +496,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         static void TryRemoveMenuItem(string path)
         {
-            if (string.IsNullOrWhiteSpace(path)) return;
+            if (IsMutationSuppressed() || string.IsNullOrWhiteSpace(path)) return;
 
             try
             {

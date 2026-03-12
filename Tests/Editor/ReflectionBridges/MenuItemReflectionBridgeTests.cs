@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -12,8 +13,61 @@ namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
     /// </summary>
     public sealed class MenuItemReflectionBridgeTests
     {
+        const string MenuItemHiderTypeName = "MartinCalander.Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor";
         const BindingFlags AnyStatic   = BindingFlags.Static   | BindingFlags.Public | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        [SetUp]
+        public void SetUp()
+        {
+            ResetMenuItemHiderState();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            ResetMenuItemHiderState();
+        }
+
+        [Test]
+        public void MenuItemHider_SuppressMutationForTeardown_SetsSuppressedState_AndClearsQueuedFlags()
+        {
+            SetMenuItemHiderBool("s_applyQueued", true);
+            SetMenuItemHiderBool("s_forceApplyQueued", true);
+
+            InvokeMenuItemHiderParameterlessMethod("SuppressMutationForTeardown");
+
+            Assert.That(GetMenuItemHiderBool("s_mutationSuppressed"), Is.True,
+                "SuppressMutationForTeardown() should mark menu mutation as suppressed.");
+            Assert.That(GetMenuItemHiderBool("s_applyQueued"), Is.False,
+                "SuppressMutationForTeardown() should clear any queued apply state.");
+            Assert.That(GetMenuItemHiderBool("s_forceApplyQueued"), Is.False,
+                "SuppressMutationForTeardown() should clear any queued forced apply state.");
+        }
+
+        [Test]
+        public void MenuItemHider_QueueApply_Force_DoesNothing_WhenMutationIsSuppressed()
+        {
+            SetMenuItemHiderBool("s_mutationSuppressed", true);
+
+            InvokeMenuItemHiderBoolMethod("QueueApply", true);
+
+            Assert.That(GetMenuItemHiderBool("s_applyQueued"), Is.False,
+                "QueueApply(force: true) should not queue work once teardown suppression is active.");
+            Assert.That(GetMenuItemHiderBool("s_forceApplyQueued"), Is.False,
+                "QueueApply(force: true) should not remember a forced apply once teardown suppression is active.");
+        }
+
+        [Test]
+        public void MenuItemHider_QueueApply_Force_Queues_WhenMutationIsNotSuppressed()
+        {
+            InvokeMenuItemHiderBoolMethod("QueueApply", true);
+
+            Assert.That(GetMenuItemHiderBool("s_applyQueued"), Is.True,
+                "QueueApply(force: true) should queue a delayed apply during normal editor operation.");
+            Assert.That(GetMenuItemHiderBool("s_forceApplyQueued"), Is.True,
+                "QueueApply(force: true) should remember that the pending apply is forced during normal editor operation.");
+        }
 
         // ── Menu.RemoveMenuItem ──────────────────────────────────────────────
         // Production code: MenuItemHider.RemoveMenuItemMethod
@@ -122,6 +176,85 @@ namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
             Assert.That(pathProperty.PropertyType, Is.EqualTo(typeof(string)),
                 $"The 'path' property on {elementType.FullName} is no longer a string. " +
                 "Menu path extraction will be broken.");
+        }
+
+        static void ResetMenuItemHiderState()
+        {
+            var flushQueuedApply = CreateDelayCall("FlushQueuedApply");
+            EditorApplication.delayCall -= flushQueuedApply;
+
+            var onProjectChanged = CreateAction("OnProjectChanged");
+            EditorApplication.projectChanged -= onProjectChanged;
+            EditorApplication.projectChanged += onProjectChanged;
+
+            InvokeMenuItemHiderParameterlessMethod("SuppressMutationForTeardown");
+            SetMenuItemHiderBool("s_mutationSuppressed", false);
+            SetMenuItemHiderBool("s_applyQueued", false);
+            SetMenuItemHiderBool("s_forceApplyQueued", false);
+            SetMenuItemHiderBool("s_failSafeMode", false);
+            SetMenuItemHiderBool("s_isApplying", false);
+        }
+
+        static bool GetMenuItemHiderBool(string fieldName)
+        {
+            return (bool)GetRequiredMenuItemHiderField(fieldName).GetValue(null);
+        }
+
+        static void SetMenuItemHiderBool(string fieldName, bool value)
+        {
+            GetRequiredMenuItemHiderField(fieldName).SetValue(null, value);
+        }
+
+        static void InvokeMenuItemHiderParameterlessMethod(string methodName)
+        {
+            GetRequiredMenuItemHiderMethod(methodName).Invoke(null, null);
+        }
+
+        static void InvokeMenuItemHiderBoolMethod(string methodName, bool argument)
+        {
+            GetRequiredMenuItemHiderMethod(methodName, typeof(bool)).Invoke(null, new object[] { argument });
+        }
+
+        static EditorApplication.CallbackFunction CreateDelayCall(string methodName)
+        {
+            return (EditorApplication.CallbackFunction)Delegate.CreateDelegate(
+                typeof(EditorApplication.CallbackFunction),
+                GetRequiredMenuItemHiderMethod(methodName));
+        }
+
+        static Action CreateAction(string methodName)
+        {
+            return (Action)Delegate.CreateDelegate(typeof(Action), GetRequiredMenuItemHiderMethod(methodName));
+        }
+
+        static FieldInfo GetRequiredMenuItemHiderField(string fieldName)
+        {
+            var field = GetRequiredMenuItemHiderType().GetField(fieldName, AnyStatic);
+            Assert.That(field, Is.Not.Null,
+                $"MenuItemHider field '{fieldName}' was not found. The shutdown-suppression tests can no longer inspect production state.");
+            return field;
+        }
+
+        static MethodInfo GetRequiredMenuItemHiderMethod(string methodName, params Type[] parameterTypes)
+        {
+            var method = GetRequiredMenuItemHiderType().GetMethod(
+                methodName,
+                AnyStatic,
+                null,
+                parameterTypes ?? Type.EmptyTypes,
+                null);
+
+            Assert.That(method, Is.Not.Null,
+                $"MenuItemHider method '{methodName}' was not found. The shutdown-suppression tests can no longer invoke production behavior.");
+            return method;
+        }
+
+        static Type GetRequiredMenuItemHiderType()
+        {
+            var type = Type.GetType(MenuItemHiderTypeName);
+            Assert.That(type, Is.Not.Null,
+                "MenuItemHider type could not be resolved from the Essentials.MenuItem.Editor assembly.");
+            return type;
         }
     }
 }
