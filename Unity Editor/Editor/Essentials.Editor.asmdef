@@ -13,7 +13,12 @@
   "overrideReferences": true,
   "precompiledReferences": [],
   "autoReferenced": false,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "!ESSENTIALS_DISABLE_ALL",
+    "!ESSENTIALS_DISABLE_UNITY_EDITOR",
+    "!ESSENTIALS_DISABLE_MENU_ITEM",
+    "!ESSENTIALS_DISABLE_INSPECTOR"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

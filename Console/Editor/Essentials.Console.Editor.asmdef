@@ -10,7 +10,10 @@
   "overrideReferences": true,
   "precompiledReferences": [],
   "autoReferenced": false,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "!ESSENTIALS_DISABLE_ALL",
+    "!ESSENTIALS_DISABLE_CONSOLE"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }
