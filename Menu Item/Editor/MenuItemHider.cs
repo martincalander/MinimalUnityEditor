@@ -164,7 +164,7 @@ namespace MartinCalander.Essentials.MenuItem.Editor
 
         internal static void ApplyWithMenuProxy()
         {
-            QueueApply(force: true);
+            EditorUtility.RequestScriptReload();
         }
 
         [UnityEditor.MenuItem(ApplyProxyMenuPath, false, 30000)]
