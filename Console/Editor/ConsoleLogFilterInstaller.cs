@@ -54,6 +54,9 @@ namespace MartinCalander.Essentials.Console.Editor
         private static bool s_cleanStackTracesEnabled = true;
         private static readonly double s_forceRefilterUntilTime = EditorApplication.timeSinceStartup + StartupForceRefilterSeconds;
 
+        internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
+            s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
+
         static ConsoleLogFilterInstaller()
         {
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
@@ -374,9 +377,8 @@ namespace MartinCalander.Essentials.Console.Editor
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
-            var filteringEnabled = s_activeFilteringLogHandler.FilteringEnabled;
-            var isFeatureActive = filteringEnabled || s_cleanStackTracesEnabled;
-            if (!isFeatureActive)
+            var filteringEnabled = AutomaticConsoleEntryMaintenanceEnabled;
+            if (!filteringEnabled)
             {
                 if (TryGetConsoleFingerprint(out var inactiveFingerprint))
                 {
@@ -387,34 +389,9 @@ namespace MartinCalander.Essentials.Console.Editor
                 return;
             }
 
-            // Always rescan while filtering is enabled so matching rows are removed
-            // even when Unity's visible-count fingerprint does not change.
-            if (filteringEnabled)
-            {
-                TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
-                RefreshConsoleFingerprint();
-                return;
-            }
-
-            var shouldForceRefilter = EditorApplication.isUpdating || EditorApplication.timeSinceStartup <= s_forceRefilterUntilTime;
-            var time = EditorApplication.timeSinceStartup;
-            var shouldRunPeriodicRescan = time >= s_nextPeriodicRescanTime;
-            if (shouldRunPeriodicRescan)
-                s_nextPeriodicRescanTime = time + PeriodicRescanIntervalSeconds;
-
-            if (shouldForceRefilter || shouldRunPeriodicRescan)
-            {
-                TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
-                RefreshConsoleFingerprint();
-                return;
-            }
-
-            if (!TryGetConsoleFingerprint(out var currentFingerprint))
-                return;
-
-            if (s_hasConsoleFingerprint && currentFingerprint == s_consoleFingerprint)
-                return;
-
+            // Automatic maintenance is only needed while rules are actively suppressing
+            // rows. In clean-stack mode without rules the logger is not wrapped, so
+            // polling and cloning the Console every update just burns editor time.
             TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
             RefreshConsoleFingerprint();
         }
