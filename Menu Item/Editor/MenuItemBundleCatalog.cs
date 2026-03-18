@@ -226,6 +226,25 @@ namespace MartinCalander.Essentials.MenuItem.Editor
                 Array.Empty<string>()));
 #endif
 
+#if HAS_PLATFORM_TOOLKIT
+            bundles.Add(new MenuItemBundleDefinition(
+                "platform_toolkit",
+                "Platform Toolkit",
+                true,
+                true,
+                new[]
+                {
+                    "Assets/Create/Platform Toolkit"
+                }));
+#else
+            bundles.Add(new MenuItemBundleDefinition(
+                "platform_toolkit",
+                "Platform Toolkit",
+                false,
+                false,
+                Array.Empty<string>()));
+#endif
+
             bundles.Add(new MenuItemBundleDefinition(
                 "gameobject_extra",
                 "GameObject Extra",

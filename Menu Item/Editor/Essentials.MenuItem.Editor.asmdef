@@ -44,6 +44,11 @@
             "name": "com.unity.ai.assistant",
             "expression": "0.0",
             "define": "HAS_UNITY_AI_ASSISTANT"
+        },
+        {
+            "name": "com.unity.platformtoolkit",
+            "expression": "0.0",
+            "define": "HAS_PLATFORM_TOOLKIT"
         }
     ],
     "noEngineReferences": false
