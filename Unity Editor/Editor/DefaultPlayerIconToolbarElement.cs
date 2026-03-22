@@ -8,6 +8,12 @@ namespace MartinCalander.Essentials.Editor
 {
 internal static class DefaultPlayerIconToolbarElement
 {
+#if UNITY_6000_0_OR_NEWER
+#pragma warning disable CS0618
+    static int GetId(UnityEngine.Object obj) => obj.GetEntityId();
+#pragma warning restore CS0618
+#endif
+
     const string kElementPath = "Editor/Default Icon";
     const double kFallbackPollIntervalSeconds = 15d;
 
@@ -154,7 +160,11 @@ internal static class DefaultPlayerIconToolbarElement
     static int GetCurrentIconInstanceId()
     {
         Texture2D icon = GetCurrentDefaultIconSafe();
+#if UNITY_6000_0_OR_NEWER
+        return icon != null ? GetId(icon) : 0;
+#else
         return icon != null ? icon.GetInstanceID() : 0;
+#endif
     }
 
     static DefaultPlayerIconToolbarElement()

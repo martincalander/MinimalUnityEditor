@@ -219,7 +219,11 @@ namespace MartinCalander.Essentials.Console
 
             if (owner is Object unityObject)
             {
+#if UNITY_6000_0_OR_NEWER
+                ownerId = unityObject == null ? "unity:null" : $"unity:{unityObject.GetEntityId()}";
+#else
                 ownerId = unityObject == null ? "unity:null" : $"unity:{unityObject.GetInstanceID().ToString(CultureInfo.InvariantCulture)}";
+#endif
             }
             else if (owner != null)
             {
