@@ -9,15 +9,16 @@ namespace MartinCalander.Essentials.Editor
 internal static class DefaultPlayerIconToolbarElement
 {
 #if UNITY_6000_0_OR_NEWER
-#pragma warning disable CS0618
-    static int GetId(UnityEngine.Object obj) => obj.GetEntityId();
-#pragma warning restore CS0618
+    static UnityEngine.EntityId GetId(UnityEngine.Object obj) => obj.GetEntityId();
+    static UnityEngine.EntityId s_LastIconId;
+#else
+    static int GetId(UnityEngine.Object obj) => obj.GetInstanceID();
+    static int s_LastIconId;
 #endif
 
     const string kElementPath = "Editor/Default Icon";
     const double kFallbackPollIntervalSeconds = 15d;
 
-    static int s_LastIconInstanceId;
     static double s_LastFallbackPollTime;
 
     [MainToolbarElement(kElementPath, defaultDockPosition = MainToolbarDockPosition.Right)]
@@ -150,28 +151,28 @@ internal static class DefaultPlayerIconToolbarElement
 
     static void RefreshIfIconChanged()
     {
-        int iconInstanceId = GetCurrentIconInstanceId();
-        if (iconInstanceId == s_LastIconInstanceId) return;
+        var iconId = GetCurrentIconId();
+        if (iconId.Equals(s_LastIconId)) return;
 
-        s_LastIconInstanceId = iconInstanceId;
+        s_LastIconId = iconId;
         RequestRefresh();
     }
 
-    static int GetCurrentIconInstanceId()
+#if UNITY_6000_0_OR_NEWER
+    static UnityEngine.EntityId GetCurrentIconId()
+#else
+    static int GetCurrentIconId()
+#endif
     {
         Texture2D icon = GetCurrentDefaultIconSafe();
-#if UNITY_6000_0_OR_NEWER
-        return icon != null ? GetId(icon) : 0;
-#else
-        return icon != null ? icon.GetInstanceID() : 0;
-#endif
+        return icon != null ? GetId(icon) : default;
     }
 
     static DefaultPlayerIconToolbarElement()
     {
         EditorApplication.projectChanged += OnProjectChanged;
         EditorApplication.update += PollFallback;
-        s_LastIconInstanceId = GetCurrentIconInstanceId();
+        s_LastIconId = GetCurrentIconId();
     }
 }
 
