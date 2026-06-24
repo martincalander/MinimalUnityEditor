@@ -7,33 +7,20 @@ namespace MartinCalander.Essentials.Console.Editor
     [InitializeOnLoad]
     internal static class ConsoleAssistantToolbarButtonController
     {
-        private const double PollIntervalSeconds = 1d;
         private const string AssistantBridgeAssemblyName = "Unity.AI.Assistant.Bridge.Editor";
         private const string AssistantBridgeConsoleUtilsTypeName = "Unity.AI.Assistant.Bridge.Editor.ConsoleUtils";
         private const string AssistantUiAssemblyName = "Unity.AI.Assistant.UI.Editor";
         private const string AssistantUiConsoleTypeName = "Unity.AI.Assistant.UI.Editor.Scripts.ConsoleUI";
         private const string ToolbarEventName = "s_DrawCustomToolbarGuiEvent";
         private const string ToolbarHandlerMethodName = "OnDrawCustomGuiEvent";
-        private static double s_nextPollTime;
 
         static ConsoleAssistantToolbarButtonController()
         {
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
-            EditorApplication.update += OnEditorUpdate;
             EditorApplication.delayCall += ApplySettings;
         }
 
         internal static bool IsAssistantConsoleToolbarAvailable => TryGetToolbarHandler(out _, out _);
-
-        private static void OnEditorUpdate()
-        {
-            var time = EditorApplication.timeSinceStartup;
-            if (time < s_nextPollTime)
-                return;
-
-            s_nextPollTime = time + PollIntervalSeconds;
-            ApplySettings();
-        }
 
         private static void ApplySettings()
         {
