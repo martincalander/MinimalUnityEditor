@@ -6,16 +6,16 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MartinCalander.Essentials.Editor
+namespace Essentials.Editor
 {
     [InitializeOnLoad]
     internal static class HierarchySceneAutoSave
     {
-        const string EnabledKey = "MartinCalander.Essentials.Editor.HierarchySceneAutoSave.Enabled";
+        const string EnabledKey = "Essentials.Editor.HierarchySceneAutoSave.Enabled";
 
-        const string EnableActionId = "MartinCalander.Essentials.Editor.HierarchySceneAutoSave.Enable";
-        const string DisableActionId = "MartinCalander.Essentials.Editor.HierarchySceneAutoSave.Disable";
-        const string SaveNowActionId = "MartinCalander.Essentials.Editor.HierarchySceneAutoSave.SaveNow";
+        const string EnableActionId = "Essentials.Editor.HierarchySceneAutoSave.Enable";
+        const string DisableActionId = "Essentials.Editor.HierarchySceneAutoSave.Disable";
+        const string SaveNowActionId = "Essentials.Editor.HierarchySceneAutoSave.SaveNow";
 
         const int EnableActionPriority = 500;
         const int DisableActionPriority = 501;

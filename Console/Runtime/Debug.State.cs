@@ -3,7 +3,7 @@ using System.Diagnostics;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace MartinCalander.Essentials.Console
+namespace Essentials.Console
 {
 public static partial class Debug
 {

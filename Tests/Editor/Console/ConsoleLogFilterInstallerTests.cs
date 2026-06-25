@@ -1,7 +1,7 @@
 using NUnit.Framework;
-using MartinCalander.Essentials.Console.Editor;
+using Essentials.Console.Editor;
 
-namespace MartinCalander.Essentials.Tests.Editor.Console
+namespace Essentials.Tests.Editor.Console
 {
     public sealed class ConsoleLogFilterInstallerTests
     {

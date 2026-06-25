@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     [InitializeOnLoad]
     internal static class ConsoleAssistantToolbarButtonController

@@ -9,7 +9,7 @@ using UnityEngine;
 using UDebug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
-namespace MartinCalander.Essentials.Console
+namespace Essentials.Console
 {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     internal static class DebugRuntimeHelper

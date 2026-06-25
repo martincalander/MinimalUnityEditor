@@ -3,10 +3,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using NUnit.Framework;
-using EssentialsDebug = MartinCalander.Essentials.Console.Debug;
+using EssentialsDebug = Essentials.Console.Debug;
 using Object = UnityEngine.Object;
 
-namespace MartinCalander.Essentials.Tests.Editor
+namespace Essentials.Tests.Editor
 {
     public sealed class DebugConditionalTests
     {

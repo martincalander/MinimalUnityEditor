@@ -3,7 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
+namespace Essentials.Tests.Editor.ReflectionBridges
 {
     /// <summary>
     /// Verifies that Unity's internal Menu API — accessed via reflection in
@@ -13,7 +13,7 @@ namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
     /// </summary>
     public sealed class MenuItemReflectionBridgeTests
     {
-        const string MenuItemHiderTypeName = "MartinCalander.Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor";
+        const string MenuItemHiderTypeName = "Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor";
         const BindingFlags AnyStatic   = BindingFlags.Static   | BindingFlags.Public | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     internal enum ConsoleLogFilterMatchType
     {

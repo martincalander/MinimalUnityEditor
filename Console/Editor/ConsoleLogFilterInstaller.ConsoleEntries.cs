@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     internal static partial class ConsoleLogFilterInstaller
     {
@@ -250,7 +250,7 @@ namespace MartinCalander.Essentials.Console.Editor
             if (string.IsNullOrEmpty(line))
                 return false;
 
-            return line.IndexOf("MartinCalander.Essentials.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
+            return line.IndexOf("Essentials.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
                    line.IndexOf("Packages/com.essentials.extensions/Console/Editor/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    line.IndexOf("UnityEngine.DebugLogHandler:LogFormat", StringComparison.Ordinal) >= 0;
         }

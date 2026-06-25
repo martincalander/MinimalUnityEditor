@@ -1,6 +1,6 @@
 {
   "name": "Essentials.Editor",
-  "rootNamespace": "MartinCalander.Essentials.Editor",
+  "rootNamespace": "Essentials.Editor",
   "references": [
     "Essentials.MenuItem.Editor",
     "Essentials.Inspector.Editor"

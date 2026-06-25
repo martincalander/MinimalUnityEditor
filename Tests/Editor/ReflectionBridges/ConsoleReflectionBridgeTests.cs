@@ -4,7 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
+namespace Essentials.Tests.Editor.ReflectionBridges
 {
     /// <summary>
     /// Verifies that Unity's internal Console API — accessed via reflection in

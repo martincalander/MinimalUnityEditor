@@ -1,6 +1,6 @@
 {
     "name": "Essentials.ReflectionBridges.Editor.Tests",
-    "rootNamespace": "MartinCalander.Essentials.Tests.Editor.ReflectionBridges",
+    "rootNamespace": "Essentials.Tests.Editor.ReflectionBridges",
     "references": [],
     "includePlatforms": [
         "Editor"

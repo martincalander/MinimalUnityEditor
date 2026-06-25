@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     [InitializeOnLoad]
     internal static partial class ConsoleLogFilterInstaller

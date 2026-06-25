@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MartinCalander.Essentials.MenuItem.Editor
+namespace Essentials.MenuItem.Editor
 {
     internal static class MenuItemBundleCatalog
     {

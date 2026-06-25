@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.MenuItem.Editor
+namespace Essentials.MenuItem.Editor
 {
     internal static class MenuItemPreferencesProvider
     {

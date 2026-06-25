@@ -3,7 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace MartinCalander.Essentials.Tests.Editor.ReflectionBridges
+namespace Essentials.Tests.Editor.ReflectionBridges
 {
     /// <summary>
     /// Verifies that Unity's internal editor-wide APIs — accessed via reflection in

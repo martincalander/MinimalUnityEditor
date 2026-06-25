@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.Editor
+namespace Essentials.Editor
 {
     internal static class ResolvePackagesMenuItem
     {

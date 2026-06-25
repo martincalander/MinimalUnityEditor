@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.MenuItem.Editor
+namespace Essentials.MenuItem.Editor
 {
     [Serializable]
     internal sealed class BundleState

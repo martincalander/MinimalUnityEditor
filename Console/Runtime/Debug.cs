@@ -5,7 +5,7 @@ using UnityEngine;
 using UDebug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
-namespace MartinCalander.Essentials.Console
+namespace Essentials.Console
 {
 public static partial class Debug
 {

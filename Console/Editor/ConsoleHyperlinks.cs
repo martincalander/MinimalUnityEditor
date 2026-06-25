@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     [InitializeOnLoad]
     public static class ConsoleHyperlinks

@@ -1,6 +1,6 @@
 using System;
 
-namespace MartinCalander.Essentials.Console.Editor
+namespace Essentials.Console.Editor
 {
     public static class ConsoleLogFilters
     {

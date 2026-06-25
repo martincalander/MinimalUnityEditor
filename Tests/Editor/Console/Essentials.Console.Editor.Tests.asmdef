@@ -1,6 +1,6 @@
 {
     "name": "Essentials.Console.Editor.Tests",
-    "rootNamespace": "MartinCalander.Essentials.Tests.Editor.Console",
+    "rootNamespace": "Essentials.Tests.Editor.Console",
     "references": [
         "Essentials.Console",
         "Essentials.Console.Editor"

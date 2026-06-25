@@ -4,12 +4,12 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.MenuItem.Editor
+namespace Essentials.MenuItem.Editor
 {
     internal static class MenuItemModuleSettings
     {
         const string SettingsPath = "ProjectSettings/MenuItemSettings.json";
-        const string AdvancedSettingsExpandedKey = "MartinCalander.Essentials.MenuItem.AdvancedExpanded";
+        const string AdvancedSettingsExpandedKey = "Essentials.MenuItem.AdvancedExpanded";
         const string MinimumSupportedUnity6Version = "6000.0.43f1";
 
         static MenuItemSettingsData s_data;

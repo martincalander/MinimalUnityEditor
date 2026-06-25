@@ -7,7 +7,7 @@ using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.Editor
+namespace Essentials.Editor
 {
     public static class UpdateAllGitUpmTool
     {

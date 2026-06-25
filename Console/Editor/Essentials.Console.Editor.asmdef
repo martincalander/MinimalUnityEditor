@@ -1,6 +1,6 @@
 {
   "name": "Essentials.Console.Editor",
-  "rootNamespace": "MartinCalander.Essentials.Console.Editor",
+  "rootNamespace": "Essentials.Console.Editor",
   "references": [],
   "includePlatforms": [
     "Editor"

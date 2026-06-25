@@ -4,7 +4,7 @@ using UnityEditor.Build;
 using UnityEditor.Toolbars;
 using UnityEngine;
 
-namespace MartinCalander.Essentials.Editor
+namespace Essentials.Editor
 {
 internal static class DefaultPlayerIconToolbarElement
 {

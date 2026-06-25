@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using MartinCalander.Essentials.Inspector.Editor;
-using MartinCalander.Essentials.MenuItem.Editor;
+using Essentials.Inspector.Editor;
+using Essentials.MenuItem.Editor;
 
-namespace MartinCalander.Essentials.Editor
+namespace Essentials.Editor
 {
     public static class EditorFeatureToggles
     {
