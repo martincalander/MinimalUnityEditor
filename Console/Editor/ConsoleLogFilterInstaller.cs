@@ -14,8 +14,6 @@ namespace Essentials.Console.Editor
     {
         private const double SyncIntervalSeconds = 0.5d;
         private const double ConsoleRescanIntervalSeconds = 0.25d;
-        private const double PeriodicRescanIntervalSeconds = 2d;
-        private const double StartupForceRefilterSeconds = 30d;
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
         private static readonly DeclutteredFilterLogHandler s_cleanStackFilteringLogHandler = new();
@@ -23,8 +21,6 @@ namespace Essentials.Console.Editor
         private static readonly Type s_logEntriesType = typeof(EditorWindow).Assembly.GetType("UnityEditor.LogEntries");
         private static readonly Type s_consoleWindowModeType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ConsoleWindow+Mode");
         private static readonly MethodInfo s_logEntriesClearMethod = GetLogEntriesMethod("Clear");
-        private static readonly MethodInfo s_logEntriesGetCountMethod = GetLogEntriesMethod("GetCount");
-        private static readonly MethodInfo s_logEntriesGetCountsByTypeMethod = GetLogEntriesMethod("GetCountsByType");
         private static readonly MethodInfo s_logEntriesStartGettingEntriesMethod = GetLogEntriesMethod("StartGettingEntries");
         private static readonly MethodInfo s_logEntriesEndGettingEntriesMethod = GetLogEntriesMethod("EndGettingEntries");
         private static readonly MethodInfo s_logEntriesGetEntryInternalMethod = GetLogEntriesMethod("GetEntryInternal");
@@ -46,13 +42,9 @@ namespace Essentials.Console.Editor
 
         private static double s_nextSyncTime;
         private static double s_nextConsoleRescanTime;
-        private static double s_nextPeriodicRescanTime;
         private static bool s_isUpdatingConsoleEntries;
-        private static bool s_hasConsoleFingerprint;
-        private static (int rows, int errors, int warnings, int logs) s_consoleFingerprint;
         private static IFilteringLogHandler s_activeFilteringLogHandler = s_cleanStackFilteringLogHandler;
         private static bool s_cleanStackTracesEnabled = true;
-        private static readonly double s_forceRefilterUntilTime = EditorApplication.timeSinceStartup + StartupForceRefilterSeconds;
 
         internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
             s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
@@ -116,8 +108,6 @@ namespace Essentials.Console.Editor
             SelectActiveLogHandler(snapshot.cleanStackTraces);
             s_activeFilteringLogHandler.Configure(snapshot.enabled, snapshot.warningsOnly, compiledRules);
             EnsureLogHandlerState();
-            s_nextPeriodicRescanTime = 0d;
-            ResetConsoleFingerprint();
             TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out _);
         }
 
@@ -237,7 +227,6 @@ namespace Essentials.Console.Editor
             if (!TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out message))
                 return false;
 
-            RefreshConsoleFingerprint();
             return true;
         }
 
@@ -377,37 +366,13 @@ namespace Essentials.Console.Editor
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {
-            var filteringEnabled = AutomaticConsoleEntryMaintenanceEnabled;
-            if (!filteringEnabled)
-            {
-                if (TryGetConsoleFingerprint(out var inactiveFingerprint))
-                {
-                    s_consoleFingerprint = inactiveFingerprint;
-                    s_hasConsoleFingerprint = true;
-                }
-
+            if (!AutomaticConsoleEntryMaintenanceEnabled)
                 return;
-            }
 
             // Automatic maintenance is only needed while rules are actively suppressing
             // rows. In clean-stack mode without rules the logger is not wrapped, so
             // polling and cloning the Console every update just burns editor time.
             TryApplyFiltersToCurrentConsoleEntries(force: false, out _, out _);
-            RefreshConsoleFingerprint();
-        }
-
-        private static void ResetConsoleFingerprint()
-        {
-            s_hasConsoleFingerprint = false;
-        }
-
-        private static void RefreshConsoleFingerprint()
-        {
-            if (!TryGetConsoleFingerprint(out var fingerprint))
-                return;
-
-            s_consoleFingerprint = fingerprint;
-            s_hasConsoleFingerprint = true;
         }
 
         private static string FormatMessage(string format, object[] args)

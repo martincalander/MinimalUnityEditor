@@ -298,35 +298,5 @@ namespace Essentials.Console.Editor
             }
         }
 
-        private static bool TryGetConsoleFingerprint(out (int rows, int errors, int warnings, int logs) fingerprint)
-        {
-            fingerprint = default;
-            if (s_logEntriesGetCountMethod == null)
-                return false;
-
-            try
-            {
-                var rows = Convert.ToInt32(s_logEntriesGetCountMethod.Invoke(null, null), CultureInfo.InvariantCulture);
-                var errors = 0;
-                var warnings = 0;
-                var logs = 0;
-
-                if (s_logEntriesGetCountsByTypeMethod != null)
-                {
-                    var countArgs = new object[] { 0, 0, 0 };
-                    s_logEntriesGetCountsByTypeMethod.Invoke(null, countArgs);
-                    errors = Convert.ToInt32(countArgs[0], CultureInfo.InvariantCulture);
-                    warnings = Convert.ToInt32(countArgs[1], CultureInfo.InvariantCulture);
-                    logs = Convert.ToInt32(countArgs[2], CultureInfo.InvariantCulture);
-                }
-
-                fingerprint = (rows, errors, warnings, logs);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }
