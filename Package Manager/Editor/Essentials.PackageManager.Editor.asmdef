@@ -1,0 +1,21 @@
+{
+    "name": "Essentials.PackageManager.Editor",
+    "rootNamespace": "Essentials.PackageManager.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Essentials.Harmony.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "!ESSENTIALS_DISABLE_ALL",
+        "!ESSENTIALS_DISABLE_PACKAGE_MANAGER"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
