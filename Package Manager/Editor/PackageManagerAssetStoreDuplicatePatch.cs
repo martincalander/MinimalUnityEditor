@@ -21,6 +21,9 @@ namespace Essentials.PackageManager.Editor
         internal const string ResolveMethodName = "Resolve";
         internal const string InProjectPageId = "InProject";
         internal const string UpdatesPageId = "Updates";
+        internal const string PageActivePagePropertyName = "activePage";
+        internal const string PageLoadMethodName = "Load";
+        internal const string PageSetNewSelectionMethodName = "SetNewSelection";
 
         const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -41,20 +44,24 @@ namespace Essentials.PackageManager.Editor
 
             try
             {
-                var shouldIncludeMethod = GetTargetMethod();
-                var postfixMethod = GetPostfixMethod();
-                if (shouldIncludeMethod == null || postfixMethod == null)
-                    return;
-
                 s_Harmony = new Harmony(HarmonyId);
-                s_Harmony.Patch(shouldIncludeMethod, postfix: new HarmonyMethod(postfixMethod));
+                PatchPostfix(GetTargetMethod(), GetPostfixMethod());
+                PatchPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
                 s_Patched = true;
-                EditorApplication.delayCall += ForceRebuildFilteredPages;
+                EditorApplication.delayCall += RefreshPackageManagerWindow;
             }
             catch
             {
                 s_Patched = false;
             }
+        }
+
+        static void PatchPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
+        {
+            if (targetMethod == null || postfixMethod == null)
+                return;
+
+            s_Harmony.Patch(targetMethod, postfix: new HarmonyMethod(postfixMethod));
         }
 
         internal static MethodInfo GetTargetMethod()
@@ -71,6 +78,27 @@ namespace Essentials.PackageManager.Editor
         internal static MethodInfo GetPostfixMethod()
         {
             return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(ShouldIncludePostfix), AnyStatic);
+        }
+
+        internal static MethodInfo GetPackageDetailsHeaderRefreshMethod()
+        {
+            var editorAssembly = typeof(UnityEditor.Editor).Assembly;
+            var detailHeaderType = editorAssembly.GetType(PackageManagerLocalPackageButton.DetailHeaderTypeName);
+            var packageType = editorAssembly.GetType(PackageInterfaceTypeName);
+            if (detailHeaderType == null || packageType == null)
+                return null;
+
+            return detailHeaderType.GetMethod(
+                PackageManagerLocalPackageButton.DetailHeaderRefreshMethodName,
+                AnyInstance,
+                null,
+                new[] { packageType },
+                null);
+        }
+
+        internal static MethodInfo GetPackageDetailsHeaderRefreshPostfixMethod()
+        {
+            return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(PackageDetailsHeaderRefreshPostfix), AnyStatic);
         }
 
         internal static bool IsPatchApplied()
@@ -100,6 +128,39 @@ namespace Essentials.PackageManager.Editor
             return false;
         }
 
+        internal static bool IsLocalPackageButtonPatchApplied()
+        {
+            try
+            {
+                var targetMethod = GetPackageDetailsHeaderRefreshMethod();
+                var postfixMethod = GetPackageDetailsHeaderRefreshPostfixMethod();
+                if (targetMethod == null || postfixMethod == null)
+                    return false;
+
+                var patchInfo = Harmony.GetPatchInfo(targetMethod);
+                if (patchInfo == null)
+                    return false;
+
+                foreach (var postfix in patchInfo.Postfixes)
+                {
+                    if (postfix.owner == HarmonyId && postfix.PatchMethod == postfixMethod)
+                        return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        static void RefreshPackageManagerWindow()
+        {
+            ForceRebuildFilteredPages();
+            PackageManagerLocalPackageButton.RefreshOpenPackageManagerWindows();
+        }
+
         internal static void ForceRebuildFilteredPages()
         {
             try
@@ -123,7 +184,7 @@ namespace Essentials.PackageManager.Editor
             return simplePageType?.GetMethod(RebuildMethodName, AnyInstance, null, new[] { typeof(bool) }, null);
         }
 
-        static object ResolvePackageManagerService(string serviceInterfaceName)
+        internal static object ResolvePackageManagerService(string serviceInterfaceName)
         {
             var editorAssembly = typeof(UnityEditor.Editor).Assembly;
             var servicesContainerType = editorAssembly.GetType(ServicesContainerTypeName);
@@ -162,7 +223,7 @@ namespace Essentials.PackageManager.Editor
             return null;
         }
 
-        static object GetPage(object pageManager, string pageId)
+        internal static object GetPage(object pageManager, string pageId)
         {
             return pageManager
                 ?.GetType()
@@ -189,6 +250,18 @@ namespace Essentials.PackageManager.Editor
             catch
             {
                 __result = true;
+            }
+        }
+
+        static void PackageDetailsHeaderRefreshPostfix(object __instance, object __0)
+        {
+            try
+            {
+                PackageManagerLocalPackageButton.Refresh(__instance, __0);
+            }
+            catch
+            {
+                // The Package Manager UI should keep working if Unity internals change.
             }
         }
 

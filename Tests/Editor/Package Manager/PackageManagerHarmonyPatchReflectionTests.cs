@@ -71,6 +71,55 @@ namespace Essentials.Tests.Editor.PackageManager
         }
 
         [Test]
+        public void HarmonyPatch_DetailHeaderRefresh_HasExpectedSignature()
+        {
+            var method = PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshMethod();
+
+            Assert.That(method, Is.Not.Null,
+                $"{PackageManagerLocalPackageButton.DetailHeaderTypeName}.{PackageManagerLocalPackageButton.DetailHeaderRefreshMethodName}(IPackage) was not found. " +
+                "The local package button is injected when the Package Manager details header refreshes for the selected package.");
+            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)),
+                "PackageDetailsHeader.Refresh(IPackage) must keep returning void so the postfix can update the toolbar after Unity renders its buttons.");
+
+            var parameters = method.GetParameters();
+            Assert.That(parameters, Has.Length.EqualTo(1));
+            Assert.That(parameters[0].ParameterType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName),
+                "PackageDetailsHeader.Refresh no longer receives IPackage; update the local package button patch.");
+        }
+
+        [Test]
+        public void HarmonyPatch_DetailHeaderRefreshPostfix_UsesHarmonyArgumentNames()
+        {
+            var method = PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshPostfixMethod();
+
+            Assert.That(method, Is.Not.Null,
+                "PackageManagerAssetStoreDuplicatePatch.PackageDetailsHeaderRefreshPostfix was not found. " +
+                "The Harmony patch must bind this method as the PackageDetailsHeader.Refresh postfix.");
+            Assert.That(method.IsStatic, Is.True, "Harmony postfix must remain static.");
+            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
+
+            var parameters = method.GetParameters();
+            Assert.That(parameters, Has.Length.EqualTo(2),
+                "PackageDetailsHeaderRefreshPostfix must keep object __instance and object __0.");
+            Assert.That(parameters[0].Name, Is.EqualTo("__instance"),
+                "Harmony binds the PackageDetailsHeader instance by the special __instance parameter name.");
+            Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(object)));
+            Assert.That(parameters[1].Name, Is.EqualTo("__0"),
+                "Harmony binds the refreshed package argument by the special __0 parameter name.");
+            Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(object)));
+        }
+
+        [Test]
+        public void HarmonyPatch_DetailHeaderRefreshRuntimePatchRegistration_ContainsExpectedOwnerAndPostfix()
+        {
+            PackageManagerAssetStoreDuplicatePatch.TryPatch();
+
+            Assert.That(PackageManagerAssetStoreDuplicatePatch.IsLocalPackageButtonPatchApplied(), Is.True,
+                "Harmony does not report the local package button postfix on PackageDetailsHeader.Refresh. " +
+                "Check the Harmony id, target lookup, postfix lookup, and assembly load order.");
+        }
+
+        [Test]
         public void PageRebuildHook_SimplePage_RebuildBoolMethodExists()
         {
             var method = PackageManagerAssetStoreDuplicatePatch.GetPageRebuildMethod();
@@ -128,6 +177,91 @@ namespace Essentials.Tests.Editor.PackageManager
                 "ServicesContainer.Resolve must remain generic so the filter can resolve IPageManager by reflected type.");
             Assert.That(resolveMethod.GetParameters(), Is.Empty,
                 "ServicesContainer.Resolve<T>() must stay parameterless so the filter can invoke it by reflection.");
+        }
+
+        [Test]
+        public void LocalPackageButtonReflection_DetailHeaderPackageField_Exists()
+        {
+            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.DetailHeaderTypeName);
+            Assert.That(type, Is.Not.Null,
+                $"{PackageManagerLocalPackageButton.DetailHeaderTypeName} was not found. " +
+                "The local package button refreshes already-open Package Manager windows by reading this header.");
+
+            var field = type.GetField(PackageManagerLocalPackageButton.DetailHeaderPackageFieldName, AnyInstance);
+            Assert.That(field, Is.Not.Null,
+                "PackageDetailsHeader.m_Package was not found. " +
+                "The local package button uses it when refreshing an already-open Package Manager window after domain reload.");
+            Assert.That(field.FieldType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName));
+        }
+
+        [Test]
+        public void LocalPackageButtonReflection_PackageToolbarType_Exists()
+        {
+            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.ToolbarTypeName);
+            Assert.That(type, Is.Not.Null,
+                $"{PackageManagerLocalPackageButton.ToolbarTypeName} was not found. " +
+                "The local package button inserts itself into this toolbar next to Unity's In Project button.");
+            Assert.That(typeof(UnityEngine.UIElements.VisualElement).IsAssignableFrom(type), Is.True,
+                "PackageToolbar must remain a VisualElement so the local package button can be inserted into it.");
+        }
+
+        [Test]
+        public void LocalPackageButtonReflection_PackageManagerWindowType_Exists()
+        {
+            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.PackageManagerWindowTypeName);
+            Assert.That(type, Is.Not.Null,
+                $"{PackageManagerLocalPackageButton.PackageManagerWindowTypeName} was not found. " +
+                "The local package button scans open Package Manager windows after assembly reload.");
+            Assert.That(typeof(UnityEditor.EditorWindow).IsAssignableFrom(type), Is.True);
+        }
+
+        [Test]
+        public void LocalPackageButtonReflection_InProjectPageSelectionMethods_Exist()
+        {
+            var pageType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName);
+            Assert.That(pageType, Is.Not.Null,
+                $"{PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName} was not found. " +
+                "The local package button uses page selection APIs to jump from an Asset Store row to the local package row.");
+
+            var loadMethod = pageType.GetMethod(
+                PackageManagerAssetStoreDuplicatePatch.PageLoadMethodName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(string) },
+                null);
+            Assert.That(loadMethod, Is.Not.Null,
+                "IPage.Load(string) was not found. " +
+                "The local package button uses it to ensure the local package item is available before selecting it.");
+
+            var setNewSelectionMethod = pageType.GetMethod(
+                PackageManagerAssetStoreDuplicatePatch.PageSetNewSelectionMethodName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(string), typeof(bool) },
+                null);
+            Assert.That(setNewSelectionMethod, Is.Not.Null,
+                "IPage.SetNewSelection(string, bool) was not found. " +
+                "The local package button uses it to select the local package row.");
+            Assert.That(setNewSelectionMethod.ReturnType, Is.EqualTo(typeof(bool)));
+        }
+
+        [Test]
+        public void LocalPackageButtonReflection_PageManagerActivePage_SetterExists()
+        {
+            var pageManagerType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName);
+            Assert.That(pageManagerType, Is.Not.Null,
+                $"{PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName} was not found. " +
+                "The local package button uses it to switch to All Packages before selecting the local package.");
+
+            var property = pageManagerType.GetProperty(
+                PackageManagerAssetStoreDuplicatePatch.PageActivePagePropertyName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(property, Is.Not.Null,
+                "IPageManager.activePage was not found. " +
+                "The local package button uses it to switch to the InProject page.");
+            Assert.That(property.CanWrite, Is.True,
+                "IPageManager.activePage must remain settable so the local package button can switch pages.");
+            Assert.That(property.PropertyType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PageInterfaceTypeName));
         }
 
         [Test]

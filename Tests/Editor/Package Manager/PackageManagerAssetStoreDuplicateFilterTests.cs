@@ -113,6 +113,44 @@ namespace Essentials.Tests.Editor.PackageManager
         }
 
         [Test]
+        public void TryGetLocalPackageForAssetStorePackage_TechnicalNameInEmbeddedPackage_ReturnsPackage()
+        {
+            string projectRoot = CreateProjectRootPath();
+            string resolvedPath = Path.Combine(projectRoot, "Packages", "com.vendor.tool");
+            var package = new FakePackage("com.vendor.tool", new object(), new FakeVersionList(null));
+
+            Assert.That(
+                PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
+                    package,
+                    name => name == "com.vendor.tool" ? resolvedPath : null,
+                    projectRoot,
+                    out string packageName,
+                    out string localResolvedPath),
+                Is.True);
+            Assert.That(packageName, Is.EqualTo("com.vendor.tool"));
+            Assert.That(localResolvedPath, Is.EqualTo(resolvedPath));
+        }
+
+        [Test]
+        public void TryGetLocalPackageForAssetStorePackage_TechnicalNameInReadOnlyPackage_ReturnsFalse()
+        {
+            string projectRoot = CreateProjectRootPath();
+            string resolvedPath = Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.tool@abc123");
+            var package = new FakePackage("com.vendor.tool", new object(), new FakeVersionList(null));
+
+            Assert.That(
+                PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
+                    package,
+                    name => name == "com.vendor.tool" ? resolvedPath : null,
+                    projectRoot,
+                    out string packageName,
+                    out string localResolvedPath),
+                Is.False);
+            Assert.That(packageName, Is.Empty);
+            Assert.That(localResolvedPath, Is.Empty);
+        }
+
+        [Test]
         public void ShouldHideAssetStoreDuplicate_TechnicalNameAndImportedAssetSamePackage_ResolvesPackageOnce()
         {
             string projectRoot = CreateProjectRootPath();
@@ -199,6 +237,56 @@ namespace Essentials.Tests.Editor.PackageManager
                     _ => Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.bundle@abc123"),
                     projectRoot),
                 Is.False);
+        }
+
+        [Test]
+        public void TryGetLocalPackageForAssetStorePackage_LegacyAssetStoreImportedAssetInEmbeddedPackage_ReturnsPackage()
+        {
+            string projectRoot = CreateProjectRootPath();
+            string resolvedPath = Path.Combine(projectRoot, "Packages", "com.vendor.bundle");
+            var package = new FakePackage(
+                string.Empty,
+                new object(),
+                new FakeVersionList(new FakeVersion(new[]
+                {
+                    new FakeAsset("Packages/com.vendor.bundle/Feature/Tool.cs")
+                })));
+
+            Assert.That(
+                PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
+                    package,
+                    name => name == "com.vendor.bundle" ? resolvedPath : null,
+                    projectRoot,
+                    out string packageName,
+                    out string localResolvedPath),
+                Is.True);
+            Assert.That(packageName, Is.EqualTo("com.vendor.bundle"));
+            Assert.That(localResolvedPath, Is.EqualTo(resolvedPath));
+        }
+
+        [Test]
+        public void TryGetLocalPackageForAssetStorePackage_LegacyAssetStoreImportedAssetInReadOnlyPackage_ReturnsFalse()
+        {
+            string projectRoot = CreateProjectRootPath();
+            string resolvedPath = Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.bundle@abc123");
+            var package = new FakePackage(
+                string.Empty,
+                new object(),
+                new FakeVersionList(new FakeVersion(new[]
+                {
+                    new FakeAsset("Packages/com.vendor.bundle/Feature/Tool.cs")
+                })));
+
+            Assert.That(
+                PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
+                    package,
+                    name => name == "com.vendor.bundle" ? resolvedPath : null,
+                    projectRoot,
+                    out string packageName,
+                    out string localResolvedPath),
+                Is.False);
+            Assert.That(packageName, Is.Empty);
+            Assert.That(localResolvedPath, Is.Empty);
         }
 
         [Test]

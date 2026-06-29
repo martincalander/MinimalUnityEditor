@@ -44,19 +44,19 @@ namespace Essentials.PackageManager.Editor
             if (package == null || !IsAssetStoreBacked(package))
                 return false;
 
-            var visitedPackageNames = new HashSet<string>(StringComparer.Ordinal);
-            string packageName = GetStringProperty(package, PackageNamePropertyName);
-            if (TryShouldHideRegisteredPackage(packageName, visitedPackageNames, registeredPackageResolvedPathResolver, projectRoot))
-                return true;
-
-            foreach (string importedAssetPath in GetImportedAssetPaths(package))
+            bool foundReadOnlyRegisteredPackage = false;
+            foreach (string packageName in GetCandidatePackageNames(package))
             {
-                string importedPackageName = ExtractPackageNameFromImportedAssetPath(importedAssetPath);
-                if (TryShouldHideRegisteredPackage(importedPackageName, visitedPackageNames, registeredPackageResolvedPathResolver, projectRoot))
-                    return true;
+                if (!TryGetRegisteredPackageResolvedPath(packageName, registeredPackageResolvedPathResolver, out string resolvedPath))
+                    continue;
+
+                if (IsPathInsideProjectPackages(resolvedPath, projectRoot))
+                    return false;
+
+                foundReadOnlyRegisteredPackage = true;
             }
 
-            return false;
+            return foundReadOnlyRegisteredPackage;
         }
 
         internal static bool ShouldHideAssetStoreDuplicate(
@@ -108,27 +108,57 @@ namespace Essentials.PackageManager.Editor
                    candidatePath.StartsWith(packagePath + "/", PathComparison);
         }
 
-        static bool TryShouldHideRegisteredPackage(
-            string packageName,
-            HashSet<string> visitedPackageNames,
-            Func<string, string> registeredPackageResolvedPathResolver,
-            string projectRoot)
+        internal static bool TryGetLocalPackageForAssetStorePackage(
+            object package,
+            out string packageName,
+            out string resolvedPath)
         {
-            if (string.IsNullOrEmpty(packageName) || !visitedPackageNames.Add(packageName))
-                return false;
-
-            return ShouldHideRegisteredPackage(packageName, registeredPackageResolvedPathResolver, projectRoot);
+            return TryGetLocalPackageForAssetStorePackage(
+                package,
+                GetRegisteredPackageResolvedPath,
+                GetProjectRoot(),
+                out packageName,
+                out resolvedPath);
         }
 
-        static bool ShouldHideRegisteredPackage(
+        internal static bool TryGetLocalPackageForAssetStorePackage(
+            object package,
+            Func<string, string> registeredPackageResolvedPathResolver,
+            string projectRoot,
+            out string packageName,
+            out string resolvedPath)
+        {
+            packageName = string.Empty;
+            resolvedPath = string.Empty;
+
+            if (package == null || !IsAssetStoreBacked(package))
+                return false;
+
+            foreach (string candidatePackageName in GetCandidatePackageNames(package))
+            {
+                if (!TryGetRegisteredPackageResolvedPath(candidatePackageName, registeredPackageResolvedPathResolver, out string candidateResolvedPath) ||
+                    !IsPathInsideProjectPackages(candidateResolvedPath, projectRoot))
+                {
+                    continue;
+                }
+
+                packageName = candidatePackageName;
+                resolvedPath = candidateResolvedPath;
+                return true;
+            }
+
+            return false;
+        }
+
+        static bool TryGetRegisteredPackageResolvedPath(
             string packageName,
             Func<string, string> registeredPackageResolvedPathResolver,
-            string projectRoot)
+            out string resolvedPath)
         {
+            resolvedPath = string.Empty;
             if (string.IsNullOrEmpty(packageName) || registeredPackageResolvedPathResolver == null)
                 return false;
 
-            string resolvedPath;
             try
             {
                 resolvedPath = registeredPackageResolvedPathResolver(packageName);
@@ -138,7 +168,7 @@ namespace Essentials.PackageManager.Editor
                 return false;
             }
 
-            return ShouldHideAssetStoreDuplicate(true, packageName, resolvedPath, projectRoot);
+            return !string.IsNullOrEmpty(resolvedPath);
         }
 
         static string GetRegisteredPackageResolvedPath(string packageName)
@@ -150,6 +180,21 @@ namespace Essentials.PackageManager.Editor
             catch
             {
                 return string.Empty;
+            }
+        }
+
+        static IEnumerable<string> GetCandidatePackageNames(object package)
+        {
+            var visitedPackageNames = new HashSet<string>(StringComparer.Ordinal);
+            string packageName = GetStringProperty(package, PackageNamePropertyName);
+            if (!string.IsNullOrEmpty(packageName) && visitedPackageNames.Add(packageName))
+                yield return packageName;
+
+            foreach (string importedAssetPath in GetImportedAssetPaths(package))
+            {
+                string importedPackageName = ExtractPackageNameFromImportedAssetPath(importedAssetPath);
+                if (!string.IsNullOrEmpty(importedPackageName) && visitedPackageNames.Add(importedPackageName))
+                    yield return importedPackageName;
             }
         }
 
