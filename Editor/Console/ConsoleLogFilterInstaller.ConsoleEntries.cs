@@ -251,7 +251,7 @@ namespace Essentials.Console.Editor
                 return false;
 
             return line.IndexOf("Essentials.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
-                   line.IndexOf("Packages/com.essentials.extensions/Console/Editor/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   line.IndexOf("Packages/com.essentials.extensions/Editor/Console/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    line.IndexOf("UnityEngine.DebugLogHandler:LogFormat", StringComparison.Ordinal) >= 0;
         }
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Essentials.Inspector.Editor;
 using Essentials.MenuItem.Editor;
 
 namespace Essentials.Editor
@@ -23,18 +22,6 @@ namespace Essentials.Editor
         {
             get => MenuItemFeatureToggles.HideMenuItems;
             set => MenuItemFeatureToggles.HideMenuItems = value;
-        }
-
-        public static bool HideInspectorAssetFooter
-        {
-            get => InspectorFeatureToggles.HideInspectorAssetFooter;
-            set => InspectorFeatureToggles.HideInspectorAssetFooter = value;
-        }
-
-        public static bool HideAssetBundleHud
-        {
-            get => InspectorFeatureToggles.HideAssetBundleHud;
-            set => InspectorFeatureToggles.HideAssetBundleHud = value;
         }
 
         public static void SetMenuItemPaths(IEnumerable<string> paths)
@@ -62,14 +49,5 @@ namespace Essentials.Editor
             MenuItemFeatureToggles.SetHideInput(input);
         }
 
-        public static void SetInspectorAssetFooterInput(Func<bool> input)
-        {
-            InspectorFeatureToggles.SetInspectorAssetFooterInput(input);
-        }
-
-        public static void SetAssetBundleHudInput(Func<bool> input)
-        {
-            InspectorFeatureToggles.SetAssetBundleHudInput(input);
-        }
     }
 }

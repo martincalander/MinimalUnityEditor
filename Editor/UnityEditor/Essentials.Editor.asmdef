@@ -2,8 +2,7 @@
   "name": "Essentials.Editor",
   "rootNamespace": "Essentials.Editor",
   "references": [
-    "Essentials.MenuItem.Editor",
-    "Essentials.Inspector.Editor"
+    "Essentials.MenuItem.Editor"
   ],
   "includePlatforms": [
     "Editor"
@@ -16,8 +15,7 @@
   "defineConstraints": [
     "!ESSENTIALS_DISABLE_ALL",
     "!ESSENTIALS_DISABLE_UNITY_EDITOR",
-    "!ESSENTIALS_DISABLE_MENU_ITEM",
-    "!ESSENTIALS_DISABLE_INSPECTOR"
+    "!ESSENTIALS_DISABLE_MENU_ITEM"
   ],
   "versionDefines": [],
   "noEngineReferences": false

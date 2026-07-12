@@ -2,7 +2,6 @@
     "name": "Essentials.Console.Editor.Tests",
     "rootNamespace": "Essentials.Tests.Editor.Console",
     "references": [
-        "Essentials.Console",
         "Essentials.Console.Editor"
     ],
     "includePlatforms": [
