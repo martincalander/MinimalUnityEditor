@@ -1,14 +1,13 @@
 using System;
 using System.Reflection;
 using NUnit.Framework;
-using UnityEditor;
 
 namespace Essentials.Tests.Editor.ReflectionBridges
 {
     /// <summary>
     /// Verifies that Unity's internal editor-wide APIs — accessed via reflection in
-    /// InspectorPreferencesProvider, StatusBarExtrasHider, OpenTerminalTool, and
-    /// AudioSourceAddonEditor — still match what the production code expects after a Unity update.
+    /// InspectorPreferencesProvider, StatusBarExtrasHider, and AudioSourceAddonEditor
+    /// — still match what the production code expects after a Unity update.
     ///
     /// A failure here means the corresponding feature will silently degrade or stop working.
     /// </summary>
@@ -67,36 +66,6 @@ namespace Essentials.Tests.Editor.ReflectionBridges
             Assert.That(field, Is.Not.Null,
                 "AppStatusBar.m_DrawExtraFeatures (non-public instance) was not found. " +
                 "The status bar extras hider cannot toggle the animation/memory stat display.");
-        }
-
-        // ── OpenTerminalTool ─────────────────────────────────────────────────
-        // Production code: OpenTerminalTool.GetAssetPathFromProjectBrowser()
-        // Lookup: typeof(ProjectWindowUtil).GetMethod("GetActiveFolderPath",
-        //         BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
-
-        [Test]
-        public void ProjectWindowUtil_GetActiveFolderPath_StaticMethodExists()
-        {
-            var method = typeof(ProjectWindowUtil).GetMethod(
-                "GetActiveFolderPath",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-
-            Assert.That(method, Is.Not.Null,
-                "ProjectWindowUtil.GetActiveFolderPath() was not found. " +
-                "\"Assets / Open Terminal Here\" will fall back to the project root instead of the selected folder.");
-        }
-
-        [Test]
-        public void ProjectWindowUtil_GetActiveFolderPath_ReturnsString()
-        {
-            var method = typeof(ProjectWindowUtil).GetMethod(
-                "GetActiveFolderPath",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-
-            Assume.That(method, Is.Not.Null);
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(string)),
-                "ProjectWindowUtil.GetActiveFolderPath() no longer returns a string — " +
-                "the result cast will produce null and the terminal will open at the project root.");
         }
 
         // ── AudioSourceAddonEditor ───────────────────────────────────────────
