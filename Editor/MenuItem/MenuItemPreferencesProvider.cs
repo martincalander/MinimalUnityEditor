@@ -7,12 +7,14 @@ namespace Essentials.MenuItem.Editor
 {
     internal static class MenuItemPreferencesProvider
     {
+        internal const string SettingsPath = "Project/Essentials/Menu Item";
+
         static GUIStyle s_customDefinitionsTextAreaStyle;
 
         [SettingsProvider]
         static SettingsProvider CreateProvider()
         {
-            return new SettingsProvider("Preferences/Menu Item", SettingsScope.User)
+            return new SettingsProvider(SettingsPath, SettingsScope.Project)
             {
                 label = "Menu Item",
                 guiHandler = DrawGui,

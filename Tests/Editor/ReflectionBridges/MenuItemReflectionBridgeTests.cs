@@ -14,8 +14,27 @@ namespace Essentials.Tests.Editor.ReflectionBridges
     public sealed class MenuItemReflectionBridgeTests
     {
         const string MenuItemHiderTypeName = "Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor";
+        const string MenuItemPreferencesProviderTypeName =
+            "Essentials.MenuItem.Editor.MenuItemPreferencesProvider, Essentials.MenuItem.Editor";
         const BindingFlags AnyStatic   = BindingFlags.Static   | BindingFlags.Public | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        [Test]
+        public void MenuItemSettingsProvider_IsProjectScoped()
+        {
+            var providerType = Type.GetType(MenuItemPreferencesProviderTypeName);
+            Assert.That(providerType, Is.Not.Null,
+                "MenuItemPreferencesProvider could not be resolved from the Essentials.MenuItem.Editor assembly.");
+
+            var createProvider = providerType.GetMethod("CreateProvider", AnyStatic);
+            Assert.That(createProvider, Is.Not.Null,
+                "MenuItemPreferencesProvider.CreateProvider() was not found.");
+
+            var provider = createProvider.Invoke(null, null) as SettingsProvider;
+            Assert.That(provider, Is.Not.Null);
+            Assert.That(provider.settingsPath, Is.EqualTo("Project/Essentials/Menu Item"));
+            Assert.That(provider.scope, Is.EqualTo(SettingsScope.Project));
+        }
 
         [SetUp]
         public void SetUp()
