@@ -8,8 +8,6 @@ namespace Essentials.MenuItem.Editor
     [InitializeOnLoad]
     internal static class MenuItemHider
     {
-        const string ApplyProxyMenuPath = "Help/Apply Menu Item Hider";
-
         static bool s_active = MenuItemModuleSettings.ModuleEnabled;
         static Func<bool> s_activeInput;
 
@@ -158,17 +156,6 @@ namespace Essentials.MenuItem.Editor
         }
 
         internal static void Apply()
-        {
-            QueueApply(force: true);
-        }
-
-        internal static void ApplyWithMenuProxy()
-        {
-            EditorUtility.RequestScriptReload();
-        }
-
-        [UnityEditor.MenuItem(ApplyProxyMenuPath, false, 30000)]
-        static void ApplyFromProxyMenuItem()
         {
             QueueApply(force: true);
         }

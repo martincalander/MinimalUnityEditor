@@ -29,12 +29,6 @@ namespace Essentials.Console.Editor
             "String or regex pattern to hide.");
         private static readonly GUIContent RemoveRuleContent = BuildRemoveRuleContent();
 
-        [MenuItem("Window/Analysis/Console Preferences", false, 3200)]
-        private static void OpenSettings()
-        {
-            SettingsService.OpenUserPreferences(SettingsPath);
-        }
-
         [SettingsProvider]
         private static SettingsProvider CreateSettingsProvider()
         {

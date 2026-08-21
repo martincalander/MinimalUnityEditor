@@ -7,7 +7,6 @@ namespace Essentials.Editor
     [InitializeOnLoad]
     internal static class WindowTitleShortener
     {
-        static bool s_active = true;
         static Func<bool> s_activeInput;
 
         static readonly MethodInfo UpdateTitleMethod =
@@ -22,7 +21,7 @@ namespace Essentials.Editor
 
         internal static bool Active
         {
-            get => s_active;
+            get => UnityEditorPreferences.ShortWindowTitle;
             set => SetActive(value);
         }
 
@@ -34,8 +33,8 @@ namespace Essentials.Editor
 
         internal static void SetActive(bool active)
         {
-            if (s_active == active) return;
-            s_active = active;
+            if (Active == active) return;
+            UnityEditorPreferences.ShortWindowTitle = active;
             TryRefreshTitle();
         }
 
@@ -85,7 +84,7 @@ namespace Essentials.Editor
         static bool IsActive()
         {
             var input = s_activeInput;
-            if (input == null) return s_active;
+            if (input == null) return Active;
 
             try
             {
@@ -93,7 +92,7 @@ namespace Essentials.Editor
             }
             catch
             {
-                return s_active;
+                return Active;
             }
         }
     }

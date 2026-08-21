@@ -1,0 +1,25 @@
+{
+  "name": "Essentials.Editor.Tests",
+  "rootNamespace": "Essentials.Tests.Editor.UnityEditor",
+  "references": [
+    "Essentials.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "!ESSENTIALS_DISABLE_ALL",
+    "!ESSENTIALS_DISABLE_UNITY_EDITOR",
+    "!ESSENTIALS_DISABLE_MENU_ITEM"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

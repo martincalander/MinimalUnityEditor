@@ -73,7 +73,7 @@ namespace Essentials.MenuItem.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Apply Now", GUILayout.Width(100f)))
                 {
-                    MenuItemHider.ApplyWithMenuProxy();
+                    MenuItemHider.Apply();
                 }
             }
 

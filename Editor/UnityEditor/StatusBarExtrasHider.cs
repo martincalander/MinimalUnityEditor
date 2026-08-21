@@ -10,7 +10,6 @@ namespace Essentials.Editor
     {
         const double FallbackPollIntervalSeconds = 15d;
 
-        static bool s_active = true;
         static Func<bool> s_activeInput;
         static bool s_lastHideState;
         static int s_lastStatusBarCount = -1;
@@ -29,7 +28,7 @@ namespace Essentials.Editor
 
         internal static bool Active
         {
-            get => s_active;
+            get => UnityEditorPreferences.HideStatusBarExtras;
             set => SetActive(value);
         }
 
@@ -41,8 +40,8 @@ namespace Essentials.Editor
 
         internal static void SetActive(bool active)
         {
-            if (s_active == active) return;
-            s_active = active;
+            if (Active == active) return;
+            UnityEditorPreferences.HideStatusBarExtras = active;
             Apply();
         }
 
@@ -115,7 +114,7 @@ namespace Essentials.Editor
         static bool IsActive()
         {
             var input = s_activeInput;
-            if (input == null) return s_active;
+            if (input == null) return Active;
 
             try
             {
@@ -123,7 +122,7 @@ namespace Essentials.Editor
             }
             catch
             {
-                return s_active;
+                return Active;
             }
         }
     }
