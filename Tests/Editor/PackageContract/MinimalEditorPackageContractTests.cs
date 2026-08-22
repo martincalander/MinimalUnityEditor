@@ -50,6 +50,23 @@ namespace Essentials.Tests.Editor.MinimalEditor
             StringAssert.Contains($"\"{legacyDisableSymbol}\"", json);
         }
 
+        [Test]
+        public void PackageManagerAssemblies_AreLimitedToUnity6InternalApis()
+        {
+            string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
+            string[] relativePaths =
+            {
+                "Editor/PackageManager/Essentials.PackageManager.Editor.asmdef",
+                "Tests/Editor/PackageManager/Essentials.PackageManager.Editor.Tests.asmdef"
+            };
+
+            foreach (string relativePath in relativePaths)
+            {
+                string json = File.ReadAllText(Path.Combine(packageRoot, relativePath));
+                StringAssert.Contains("\"UNITY_6000_0_OR_NEWER\"", json);
+            }
+        }
+
         [TestCase("Editor/Console/ConsoleLogFilterInstaller.cs")]
         [TestCase("Editor/MenuItem/MenuItemHider.cs")]
         [TestCase("Editor/PackageManager/PackageManagerAssetStoreDuplicatePatch.cs")]

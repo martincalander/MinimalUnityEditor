@@ -45,23 +45,41 @@ namespace Essentials.PackageManager.Editor
             try
             {
                 s_Harmony = new Harmony(HarmonyId);
-                PatchPostfix(GetTargetMethod(), GetPostfixMethod());
-                PatchPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
+                bool patchedAnyTarget =
+                    PatchPostfix(GetTargetMethod(), GetPostfixMethod()) |
+                    PatchPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
+                if (!patchedAnyTarget)
+                {
+                    s_Harmony = null;
+                    return;
+                }
+
                 s_Patched = true;
                 EditorApplication.delayCall += RefreshPackageManagerWindow;
             }
             catch
             {
+                try
+                {
+                    s_Harmony?.UnpatchAll(HarmonyId);
+                }
+                catch
+                {
+                    // Preserve the original Package Manager failure while cleaning up best-effort.
+                }
+
+                s_Harmony = null;
                 s_Patched = false;
             }
         }
 
-        static void PatchPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
+        internal static bool PatchPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
         {
             if (targetMethod == null || postfixMethod == null)
-                return;
+                return false;
 
             s_Harmony.Patch(targetMethod, postfix: new HarmonyMethod(postfixMethod));
+            return true;
         }
 
         internal static MethodInfo GetTargetMethod()

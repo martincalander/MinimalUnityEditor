@@ -6,7 +6,7 @@
 
 - **Console** — filters unwanted log entries, cleans extension-owned stack frames, and can hide the Unity AI Assistant Console button when that optional integration is installed. Configure it under **Preferences > Console**.
 - **Menu Item** — hides project-selected menu items and optional menu bundles. Configure it under **Project Settings > Essentials > Menu Item**; settings are stored in `ProjectSettings/MenuItemSettings.json`.
-- **Package Manager** — hides duplicate Asset Store rows when a project-local package is already installed, adds **Go To Local Package**, and provides **Window > Package Management > Re-resolve All Packages**.
+- **Package Manager (Unity 6+)** — hides duplicate Asset Store rows when a project-local package is already installed, adds **Go To Local Package**, and provides **Window > Package Management > Re-resolve All Packages**.
 - **Editor chrome** — uses short project window titles and hides status-bar animation and memory statistics. Configure both under **Preferences > Essentials > Unity Editor**.
 - **FMOD menu** — when `com.fmod.fmod-for-unity-2-03` is installed, moves FMOD's root menu entries below **Tools > FMOD**.
 
@@ -45,6 +45,8 @@ The extracted modules retain their existing assembly identities:
 - `Essentials.Editor`
 
 The public `EditorFeatureToggles`, `ConsoleHyperlinks`, `ConsoleLogFilters`, and `MenuItemFeatureToggles` APIs keep their existing namespaces and assembly-qualified names. Existing Editor preferences and project settings also keep their original keys and paths.
+
+The package baseline is Unity 2021.3. Package Manager cleanup is enabled only on Unity 6 or newer because it integrates with Unity 6 Package Manager internals; the other modules remain available on the declared baseline when their own optional integrations are satisfied.
 
 Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all Minimal Editor feature and test asmdefs while leaving the package installed. The Harmony binary remains importable so `com.essentials.extensions` can keep its retained Preset Manager integration active. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
 

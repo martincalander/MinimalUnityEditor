@@ -13,6 +13,7 @@
     "precompiledReferences": [],
     "autoReferenced": false,
     "defineConstraints": [
+        "UNITY_6000_0_OR_NEWER",
         "!ESSENTIALS_DISABLE_ALL",
         "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
         "!ESSENTIALS_DISABLE_PACKAGE_MANAGER"

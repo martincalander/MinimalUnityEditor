@@ -71,6 +71,17 @@ namespace Essentials.Tests.Editor.PackageManager
         }
 
         [Test]
+        public void HarmonyPatch_MissingTargetOrPostfix_IsNotReportedAsPatched()
+        {
+            Assert.That(
+                PackageManagerAssetStoreDuplicatePatch.PatchPostfix(null, PackageManagerAssetStoreDuplicatePatch.GetPostfixMethod()),
+                Is.False);
+            Assert.That(
+                PackageManagerAssetStoreDuplicatePatch.PatchPostfix(PackageManagerAssetStoreDuplicatePatch.GetTargetMethod(), null),
+                Is.False);
+        }
+
+        [Test]
         public void HarmonyPatch_DetailHeaderRefresh_HasExpectedSignature()
         {
             var method = PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshMethod();
