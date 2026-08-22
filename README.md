@@ -46,7 +46,7 @@ The extracted modules retain their existing assembly identities:
 
 The public `EditorFeatureToggles`, `ConsoleHyperlinks`, `ConsoleLogFilters`, and `MenuItemFeatureToggles` APIs keep their existing namespaces and assembly-qualified names. Existing Editor preferences and project settings also keep their original keys and paths.
 
-Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all package-owned assemblies while leaving the package installed. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
+Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all Minimal Editor feature and test asmdefs while leaving the package installed. The Harmony binary remains importable so `com.essentials.extensions` can keep its retained Preset Manager integration active. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
 
 ## Optional integrations
 
