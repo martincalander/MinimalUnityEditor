@@ -14,6 +14,7 @@
     "autoReferenced": false,
     "defineConstraints": [
         "!ESSENTIALS_DISABLE_ALL",
+        "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
         "!ESSENTIALS_DISABLE_CONSOLE"
     ],
     "versionDefines": [],

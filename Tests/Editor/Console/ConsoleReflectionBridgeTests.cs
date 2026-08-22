@@ -4,7 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Essentials.Tests.Editor.ReflectionBridges
+namespace Essentials.Tests.Editor.Console
 {
     /// <summary>
     /// Verifies that Unity's internal Console API — accessed via reflection in
@@ -23,6 +23,27 @@ namespace Essentials.Tests.Editor.ReflectionBridges
 
         const BindingFlags AnyStatic   = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         const BindingFlags AnyInstance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        [Test]
+        public void RedundantConsolePreferencesMenuItemPath_IsNotRegistered()
+        {
+            Type providerType = Type.GetType(
+                "Essentials.Console.Editor.ConsoleLogFilterSettingsProvider, Essentials.Console.Editor");
+            Assert.That(providerType, Is.Not.Null);
+
+            foreach (MethodInfo method in providerType.GetMethods(AnyStatic))
+            {
+                foreach (CustomAttributeData attribute in method.GetCustomAttributesData())
+                {
+                    if (attribute.AttributeType != typeof(MenuItem) || attribute.ConstructorArguments.Count == 0)
+                        continue;
+
+                    Assert.That(
+                        attribute.ConstructorArguments[0].Value,
+                        Is.Not.EqualTo("Window/Analysis/Console Preferences"));
+                }
+            }
+        }
 
         // ── Types ────────────────────────────────────────────────────────────
 

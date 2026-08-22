@@ -17,10 +17,6 @@ namespace Essentials.Editor
             "Hide Status Bar Extras",
             "Hides Unity's animation and memory statistics from the Editor status bar.");
 
-        static readonly GUIContent HierarchySceneAutoSaveContent = new GUIContent(
-            "Hierarchy Scene Auto Save",
-            "Automatically saves dirty, previously saved scenes after they are edited and the Editor is in a safe state.");
-
         [SettingsProvider]
         internal static SettingsProvider CreateProvider()
         {
@@ -35,10 +31,7 @@ namespace Essentials.Editor
                     "editor",
                     "window",
                     "title",
-                    "status bar",
-                    "hierarchy",
-                    "scene",
-                    "auto save"
+                    "status bar"
                 }
             };
         }
@@ -61,19 +54,6 @@ namespace Essentials.Editor
             if (EditorGUI.EndChangeCheck())
                 EditorFeatureToggles.HideStatusBarExtras = hideStatusBarExtras;
 
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Scene Editing", EditorStyles.boldLabel);
-
-            EditorGUI.BeginChangeCheck();
-            bool hierarchySceneAutoSave = EditorGUILayout.ToggleLeft(
-                HierarchySceneAutoSaveContent,
-                HierarchySceneAutoSave.Enabled);
-            if (EditorGUI.EndChangeCheck())
-                HierarchySceneAutoSave.Enabled = hierarchySceneAutoSave;
-
-            EditorGUILayout.HelpBox(
-                "Auto Save ignores unsaved and preview scenes, and waits while Unity is compiling, importing, entering Play Mode, or building a Player.",
-                MessageType.Info);
         }
     }
 }

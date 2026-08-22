@@ -1,0 +1,22 @@
+{
+  "name": "Essentials.MinimalEditor.Editor.Tests",
+  "rootNamespace": "Essentials.Tests.Editor.MinimalEditor",
+  "references": [],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "!ESSENTIALS_DISABLE_ALL",
+    "!ESSENTIALS_DISABLE_MINIMAL_EDITOR"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

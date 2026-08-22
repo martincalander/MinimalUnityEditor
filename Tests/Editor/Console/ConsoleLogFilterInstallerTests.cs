@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Essentials.Console.Editor;
+using System.Reflection;
 
 namespace Essentials.Tests.Editor.Console
 {
@@ -42,6 +43,24 @@ namespace Essentials.Tests.Editor.Console
                 });
 
             Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.True);
+        }
+
+        [Test]
+        public void CleanStackTrace_StripsFramesFromMinimalEditorPackagePath()
+        {
+            MethodInfo method = typeof(ConsoleLogFilterInstaller).GetMethod(
+                "ShouldStripStackTraceLine",
+                BindingFlags.Static | BindingFlags.NonPublic);
+
+            Assert.That(method, Is.Not.Null);
+            Assert.That(
+                method.Invoke(
+                    null,
+                    new object[]
+                    {
+                        "at Filter (Packages/com.essentials.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)"
+                    }),
+                Is.True);
         }
 
         private static void Apply(bool enabled, bool cleanStackTraces, params ConsoleLogFilterRuleData[] rules)

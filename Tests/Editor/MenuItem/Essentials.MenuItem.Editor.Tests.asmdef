@@ -1,0 +1,25 @@
+{
+  "name": "Essentials.MenuItem.Editor.Tests",
+  "rootNamespace": "Essentials.Tests.Editor.MenuItem",
+  "references": [
+    "Essentials.MenuItem.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "!ESSENTIALS_DISABLE_ALL",
+    "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
+    "!ESSENTIALS_DISABLE_MENU_ITEM"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

@@ -3,7 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Essentials.Tests.Editor.ReflectionBridges
+namespace Essentials.Tests.Editor.MenuItem
 {
     /// <summary>
     /// Verifies that Unity's internal Menu API — accessed via reflection in
@@ -19,46 +19,23 @@ namespace Essentials.Tests.Editor.ReflectionBridges
         const BindingFlags AnyStatic   = BindingFlags.Static   | BindingFlags.Public | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        [TestCase(
-            "Essentials.Console.Editor.ConsoleLogFilterSettingsProvider, Essentials.Console.Editor",
-            "Window/Analysis/Console Preferences")]
-        [TestCase(
-            "Essentials.EditorIcon.Editor.EditorIconApplier, Essentials.EditorIcon.Editor",
-            "Tools/Essentials/Editor Icon/Apply Player Icon")]
-        [TestCase(
-            "Essentials.EditorIcon.Editor.EditorIconApplier, Essentials.EditorIcon.Editor",
-            "Tools/Essentials/Editor Icon/Reset")]
-        [TestCase(
-            "Essentials.BuildProfile.Editor.QuickBuild, Essentials.BuildProfile.Editor",
-            "File/Open Build Folder")]
-        [TestCase(
-            "Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor",
-            "Help/Apply Menu Item Hider")]
-        public void RedundantMenuItemPath_IsNotRegistered(string typeName, string removedPath)
+        [Test]
+        public void RedundantApplyMenuItemPath_IsNotRegistered()
         {
-            Type type = Type.GetType(typeName);
-            Assume.That(type, Is.Not.Null, $"Optional editor type '{typeName}' is not active in this test configuration.");
+            Type type = Type.GetType(MenuItemHiderTypeName);
+            Assert.That(type, Is.Not.Null);
 
             foreach (MethodInfo method in type.GetMethods(AnyStatic))
             {
                 foreach (CustomAttributeData attribute in method.GetCustomAttributesData())
                 {
-                    if (attribute.AttributeType != typeof(MenuItem) || attribute.ConstructorArguments.Count == 0)
+                    if (attribute.AttributeType != typeof(global::UnityEditor.MenuItem) || attribute.ConstructorArguments.Count == 0)
                         continue;
 
-                    Assert.That(attribute.ConstructorArguments[0].Value, Is.Not.EqualTo(removedPath),
-                        $"{type.FullName}.{method.Name} should not register the redundant menu path '{removedPath}'.");
+                    Assert.That(attribute.ConstructorArguments[0].Value, Is.Not.EqualTo("Help/Apply Menu Item Hider"),
+                        $"{type.FullName}.{method.Name} should not register the redundant apply command.");
                 }
             }
-        }
-
-        [Test]
-        public void UpdateAllGitUpmTool_IsFullyRemoved()
-        {
-            Assert.That(
-                Type.GetType("Essentials.Editor.UpdateAllGitUpmTool, Essentials.Editor"),
-                Is.Null,
-                "The removed Git UPM updater implementation must not remain in the editor assembly.");
         }
 
         [Test]

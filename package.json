@@ -1,0 +1,28 @@
+{
+  "name": "com.essentials.minimaleditor",
+  "version": "0.1.0",
+  "displayName": "Minimal Editor",
+  "description": "Makes the Unity Editor quieter, cleaner, and less distracting.",
+  "unity": "2021.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/README.md",
+  "changelogUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/LICENSE.md",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "keywords": [
+    "unity",
+    "editor",
+    "console",
+    "menu",
+    "package-manager",
+    "minimal"
+  ],
+  "author": {
+    "name": "Essentials",
+    "url": "https://github.com/EssentialsForUnity",
+    "email": "martin.calander@gmail.com"
+  },
+  "publishConfig": {
+    "registry": "https://upm.essentialsforunity.com"
+  }
+}

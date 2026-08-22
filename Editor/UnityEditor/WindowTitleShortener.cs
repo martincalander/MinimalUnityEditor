@@ -10,7 +10,9 @@ namespace Essentials.Editor
         static Func<bool> s_activeInput;
 
         static readonly MethodInfo UpdateTitleMethod =
-            typeof(EditorApplication).GetMethod("UpdateMainWindowTitle", BindingFlags.Static | BindingFlags.NonPublic);
+            typeof(EditorApplication).GetMethod(
+                "UpdateMainWindowTitle",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
         static WindowTitleShortener()
         {

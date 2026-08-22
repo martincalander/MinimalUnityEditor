@@ -8,14 +8,12 @@ namespace Essentials.Tests.Editor.UnityEditor
     {
         PreferenceSnapshot shortWindowTitleSnapshot;
         PreferenceSnapshot hideStatusBarExtrasSnapshot;
-        PreferenceSnapshot hierarchySceneAutoSaveSnapshot;
 
         [SetUp]
         public void SetUp()
         {
             shortWindowTitleSnapshot = Capture(UnityEditorPreferences.ShortWindowTitleKey);
             hideStatusBarExtrasSnapshot = Capture(UnityEditorPreferences.HideStatusBarExtrasKey);
-            hierarchySceneAutoSaveSnapshot = Capture(UnityEditorPreferences.HierarchySceneAutoSaveKey);
         }
 
         [TearDown]
@@ -31,11 +29,6 @@ namespace Essentials.Tests.Editor.UnityEditor
                 UnityEditorPreferences.HideStatusBarExtrasDefaultValue,
                 hideStatusBarExtrasSnapshot,
                 value => EditorFeatureToggles.HideStatusBarExtras = value);
-            Restore(
-                UnityEditorPreferences.HierarchySceneAutoSaveKey,
-                UnityEditorPreferences.HierarchySceneAutoSaveDefaultValue,
-                hierarchySceneAutoSaveSnapshot,
-                value => HierarchySceneAutoSave.Enabled = value);
         }
 
         [Test]
@@ -53,11 +46,9 @@ namespace Essentials.Tests.Editor.UnityEditor
         {
             EditorPrefs.DeleteKey(UnityEditorPreferences.ShortWindowTitleKey);
             EditorPrefs.DeleteKey(UnityEditorPreferences.HideStatusBarExtrasKey);
-            EditorPrefs.DeleteKey(UnityEditorPreferences.HierarchySceneAutoSaveKey);
 
             Assert.That(EditorFeatureToggles.ShortWindowTitle, Is.True);
             Assert.That(EditorFeatureToggles.HideStatusBarExtras, Is.True);
-            Assert.That(HierarchySceneAutoSave.Enabled, Is.False);
         }
 
         [Test]
@@ -78,16 +69,6 @@ namespace Essentials.Tests.Editor.UnityEditor
 
             EditorFeatureToggles.HideStatusBarExtras = true;
             Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideStatusBarExtrasKey, false), Is.True);
-        }
-
-        [Test]
-        public void HierarchyAutoSaveToggle_PersistsInEditorPrefs()
-        {
-            HierarchySceneAutoSave.Enabled = true;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HierarchySceneAutoSaveKey, false), Is.True);
-
-            HierarchySceneAutoSave.Enabled = false;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HierarchySceneAutoSaveKey, true), Is.False);
         }
 
         static PreferenceSnapshot Capture(string key)
