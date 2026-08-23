@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
@@ -10,8 +9,10 @@ namespace Essentials.Tests.Editor.MinimalEditor
     {
         const string PackageName = "com.essentials.minimaleditor";
         const string PackageJsonPath = "Packages/com.essentials.minimaleditor/package.json";
+        const string HarmonyDirectoryPath =
+            "Packages/com.essentials.minimaleditor/ThirdParty";
         const string HarmonyPath =
-            "Packages/com.essentials.minimaleditor/ThirdParty/Essentials.Harmony.dll";
+            "Packages/com.essentials.minimaleditor/ThirdParty/Essentials.MinimalEditor.Harmony.dll";
 
         [Test]
         public void Package_HasExactIdentityAndEditorOnlyLayout()
@@ -79,16 +80,14 @@ namespace Essentials.Tests.Editor.MinimalEditor
         }
 
         [Test]
-        public void Harmony_HasOneStableEditorOnlyOwner()
+        public void Harmony_HasStablePackageOwnedEditorOnlyImporter()
         {
-            string[] harmonyAssets = AssetDatabase.GetAllAssetPaths()
-                .Where(path => Path.GetFileName(path) == "Essentials.Harmony.dll")
-                .ToArray();
-
-            Assert.That(harmonyAssets, Is.EqualTo(new[] { HarmonyPath }));
+            Assert.That(
+                AssetDatabase.AssetPathToGUID(HarmonyDirectoryPath),
+                Is.EqualTo("c23ac49376204a03ad8d23c2b24682da"));
             Assert.That(
                 AssetDatabase.AssetPathToGUID(HarmonyPath),
-                Is.EqualTo("5b81de61450c43b0bc0b8b08c3e3764a"));
+                Is.EqualTo("e6ff89daf671406bb11379a34e86086c"));
 
             var importer = AssetImporter.GetAtPath(HarmonyPath) as PluginImporter;
             Assert.That(importer, Is.Not.Null);
@@ -98,6 +97,16 @@ namespace Essentials.Tests.Editor.MinimalEditor
             PackageInfo package = PackageInfo.FindForAssetPath(HarmonyPath);
             Assert.That(package, Is.Not.Null);
             Assert.That(package.name, Is.EqualTo(PackageName));
+
+            string importerMeta = File.ReadAllText(Path.Combine(
+                package.resolvedPath,
+                "ThirdParty/Essentials.MinimalEditor.Harmony.dll.meta"));
+            StringAssert.Contains("isExplicitlyReferenced: 1", importerMeta);
+
+            string asmdef = File.ReadAllText(Path.Combine(
+                package.resolvedPath,
+                "Editor/PackageManager/Essentials.PackageManager.Editor.asmdef"));
+            StringAssert.Contains("\"Essentials.MinimalEditor.Harmony.dll\"", asmdef);
         }
     }
 }

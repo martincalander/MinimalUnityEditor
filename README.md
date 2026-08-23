@@ -48,7 +48,7 @@ The public `EditorFeatureToggles`, `ConsoleHyperlinks`, `ConsoleLogFilters`, and
 
 The package baseline is Unity 2021.3. Package Manager cleanup is enabled only on Unity 6 or newer because it integrates with Unity 6 Package Manager internals; the other modules remain available on the declared baseline when their own optional integrations are satisfied.
 
-Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all Minimal Editor feature and test asmdefs while leaving the package installed. The Harmony binary remains importable so `com.essentials.extensions` can keep its retained Preset Manager integration active. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
+Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all Minimal Editor feature and test asmdefs while leaving the package installed. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
 
 ## Optional integrations
 
@@ -56,7 +56,7 @@ FMOD support is enabled only when `com.fmod.fmod-for-unity-2-03` is installed. O
 
 ## Third-party software
 
-The package contains Harmony for its Package Manager patches. `com.essentials.extensions` also consumes that single binary from this package for its retained Preset Manager integration. See [Third Party Notices.md](Third%20Party%20Notices.md).
+The Package Manager patches use the package-owned, Editor-only `ThirdParty/Essentials.MinimalEditor.Harmony.dll` binary. It is explicitly referenced by the Package Manager assembly and does not require a shared Harmony package. See [Third Party Notices.md](Third%20Party%20Notices.md).
 
 ## License
 

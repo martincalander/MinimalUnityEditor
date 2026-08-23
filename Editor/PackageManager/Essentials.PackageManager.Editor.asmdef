@@ -9,7 +9,7 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Essentials.Harmony.dll"
+        "Essentials.MinimalEditor.Harmony.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [
