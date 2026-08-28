@@ -1,6 +1,6 @@
 # Minimal Editor
 
-`com.essentials.minimaleditor` makes the Unity Editor quieter, cleaner, and less distracting. It groups small, opinionated editor-surface refinements without taking ownership of project content, import workflows, runtime systems, or IDE tooling.
+`com.martincalander.minimaleditor` makes the Unity Editor quieter, cleaner, and less distracting. It groups small, opinionated editor-surface refinements without taking ownership of project content, import workflows, runtime systems, or IDE tooling.
 
 ## Features
 
@@ -18,8 +18,8 @@ Install the private repository as an embedded package:
 
 ```bash
 git submodule add -b main \
-  https://github.com/EssentialsForUnity/com.essentials.minimaleditor.git \
-  Packages/com.essentials.minimaleditor
+  https://github.com/martincalander/com.martincalander.minimaleditor.git \
+  Packages/com.martincalander.minimaleditor
 ```
 
 Or add the authenticated Git dependency to `Packages/manifest.json`:
@@ -27,12 +27,10 @@ Or add the authenticated Git dependency to `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.essentials.minimaleditor": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor.git"
+    "com.martincalander.minimaleditor": "https://github.com/martincalander/com.martincalander.minimaleditor.git"
   }
 }
 ```
-
-Installing `com.essentials.extensions` also installs the exact compatible Minimal Editor version.
 
 ## Compatibility
 

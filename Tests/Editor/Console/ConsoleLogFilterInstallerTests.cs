@@ -58,7 +58,7 @@ namespace Essentials.Tests.Editor.Console
                     null,
                     new object[]
                     {
-                        "at Filter (Packages/com.essentials.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)"
+                        "at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)"
                     }),
                 Is.True);
         }

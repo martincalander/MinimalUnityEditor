@@ -7,12 +7,12 @@ namespace Essentials.Tests.Editor.MinimalEditor
 {
     public sealed class MinimalEditorPackageContractTests
     {
-        const string PackageName = "com.essentials.minimaleditor";
-        const string PackageJsonPath = "Packages/com.essentials.minimaleditor/package.json";
+        const string PackageName = "com.martincalander.minimaleditor";
+        const string PackageJsonPath = "Packages/com.martincalander.minimaleditor/package.json";
         const string HarmonyDirectoryPath =
-            "Packages/com.essentials.minimaleditor/ThirdParty";
+            "Packages/com.martincalander.minimaleditor/ThirdParty";
         const string HarmonyPath =
-            "Packages/com.essentials.minimaleditor/ThirdParty/Essentials.MinimalEditor.Harmony.dll";
+            "Packages/com.martincalander.minimaleditor/ThirdParty/Essentials.MinimalEditor.Harmony.dll";
 
         [Test]
         public void Package_HasExactIdentityAndEditorOnlyLayout()

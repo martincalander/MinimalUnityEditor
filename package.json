@@ -1,13 +1,13 @@
 {
-  "name": "com.essentials.minimaleditor",
+  "name": "com.martincalander.minimaleditor",
   "version": "0.1.0",
   "displayName": "Minimal Editor",
   "description": "Makes the Unity Editor quieter, cleaner, and less distracting.",
   "unity": "2021.3",
   "unityRelease": "0f1",
-  "documentationUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/README.md",
-  "changelogUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/EssentialsForUnity/com.essentials.minimaleditor/blob/main/LICENSE.md",
+  "documentationUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/README.md",
+  "changelogUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/LICENSE.md",
   "license": "Proprietary License",
   "keywords": [
     "unity",
@@ -18,11 +18,12 @@
     "minimal"
   ],
   "author": {
-    "name": "Essentials",
-    "url": "https://github.com/EssentialsForUnity",
+    "name": "Martin Calander",
+    "url": "https://martincalander.com",
     "email": "martin.calander@gmail.com"
   },
-  "publishConfig": {
-    "registry": "https://upm.essentialsforunity.com"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martincalander/com.martincalander.minimaleditor.git"
   }
 }

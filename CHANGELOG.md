@@ -6,6 +6,7 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Moved the repository to Martin Calander's personal GitHub account and renamed the package from `com.essentials.minimaleditor` to `com.martincalander.minimaleditor`, while preserving its assembly, namespace, settings, and Unity asset compatibility identities.
 - Vendored a uniquely named, package-owned Harmony binary for the Package Manager patches with Editor-only, explicit-reference importer settings.
 - Updated the Package Manager assembly to reference `Essentials.MinimalEditor.Harmony.dll` and removed the shared `com.essentials.harmony` dependency.
 
