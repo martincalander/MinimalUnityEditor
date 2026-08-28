@@ -1,20 +1,50 @@
 # Minimal Editor
 
-`com.martincalander.minimaleditor` makes the Unity Editor quieter, cleaner, and less distracting. It groups small, opinionated editor-surface refinements without taking ownership of project content, import workflows, runtime systems, or IDE tooling.
+A quieter Unity Editor without a new workflow to learn.
 
-## Features
+<p align="center">
+  <img alt="UPM minimum 2021.3.0f1" src="https://img.shields.io/badge/UPM%20minimum-2021.3.0f1-222C37?logo=unity&logoColor=white">
+  <img alt="Editor-only package" src="https://img.shields.io/badge/scope-Editor%20only-555">
+</p>
 
-- **Console** — filters unwanted log entries, cleans extension-owned stack frames, and can hide the Unity AI Assistant Console button when that optional integration is installed. Configure it under **Preferences > Console**.
-- **Menu Item** — hides project-selected menu items and optional menu bundles. Configure it under **Project Settings > Essentials > Menu Item**; settings are stored in `ProjectSettings/MenuItemSettings.json`.
-- **Package Manager (Unity 6+)** — hides duplicate Asset Store rows when a project-local package is already installed, adds **Go To Local Package**, and provides **Window > Package Management > Re-resolve All Packages**.
-- **Editor chrome** — uses short project window titles and hides status-bar animation and memory statistics. Configure both under **Preferences > Essentials > Unity Editor**.
-- **FMOD menu** — when `com.fmod.fmod-for-unity-2-03` is installed, moves FMOD's root menu entries below **Tools > FMOD**.
+Minimal Editor collects the small editor adjustments that tend to be copied
+from project to project: a calmer Console, shorter window titles, less crowded
+menus, and a few Package Manager conveniences. It stays out of scenes, assets,
+builds, and runtime code.
 
-The package intentionally does not own HID scaffolding, Preset Manager workflows, Rider integration, Animator tooling, Aseprite or Pixel Perfect processing, Hierarchy scene auto-save, or the default Player-icon toolbar element. Those remain with their domain package or `com.essentials.extensions`.
+## What It Changes
+
+| Area | What it controls | Location |
+| --- | --- | --- |
+| Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
+| Menu Item | Built-in bundles and custom menu paths | **Project Settings > Essentials > Menu Item** |
+| Unity Editor | Short title and status-bar extras | **Preferences > Essentials > Unity Editor** |
+| Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
+| FMOD | Automatic menu relocation when FMOD is installed | No settings page |
+
+Console and Unity Editor choices use user-global `EditorPrefs` and carry across
+Unity projects opened by the same operating-system user. Menu Item settings are
+shared with the project in `ProjectSettings/MenuItemSettings.json`.
+
+## Requirements
+
+| Component | Requirement |
+| --- | --- |
+| Unity | Package manifest minimum: `2021.3.0f1` |
+| Package Manager refinements | Unity 6 or newer |
+| Menu hiding on Unity 6.0 | `6000.0.43f1` or newer |
+| Runtime footprint | None; every assembly is Editor-only |
+
+The manifest minimum is an eligibility floor, not a claim that every intervening
+Unity release has been validated. Reflection-backed features stop applying when
+their required Editor internals are unavailable.
 
 ## Installation
 
-Install the private repository as an embedded package:
+Both installation methods require Git and credentials that can read this
+private repository.
+
+Add it as an editable submodule:
 
 ```bash
 git submodule add -b main \
@@ -22,7 +52,7 @@ git submodule add -b main \
   Packages/com.martincalander.minimaleditor
 ```
 
-Or add the authenticated Git dependency to `Packages/manifest.json`:
+Or add it as a read-only Git dependency in `Packages/manifest.json`:
 
 ```json
 {
@@ -32,30 +62,54 @@ Or add the authenticated Git dependency to `Packages/manifest.json`:
 }
 ```
 
-## Compatibility
+The Git dependency follows the mutable `main` branch. A committed submodule
+gitlink already pins the exact package commit checked out in the parent project.
 
-The extracted modules retain their existing assembly identities:
+## Quick Start
 
-- `Essentials.Console.Editor`
-- `Essentials.MenuItem.Editor`
-- `Essentials.PackageManager.Editor`
-- `Essentials.FMOD.Editor`
-- `Essentials.Editor`
+1. Install the package and let Unity finish its domain reload.
+2. Open **Project Settings > Essentials > Menu Item**. Most available menu
+   bundles are enabled by default, so keep the ones that suit the project and
+   turn off the rest. A removed menu entry returns after the next domain reload
+   or Editor reopen.
+3. Open **Preferences > Console** and add a rule. Filtering defaults to enabled
+   when no earlier preference exists, but the default rule list is empty.
+4. Open **Preferences > Essentials > Unity Editor** to adjust the title and
+   status-bar options. Both default to enabled when no earlier preference
+   exists.
 
-The public `EditorFeatureToggles`, `ConsoleHyperlinks`, `ConsoleLogFilters`, and `MenuItemFeatureToggles` APIs keep their existing namespaces and assembly-qualified names. Existing Editor preferences and project settings also keep their original keys and paths.
+The Package Manager and FMOD refinements activate automatically when their
+version and package requirements are met.
 
-The package baseline is Unity 2021.3. Package Manager cleanup is enabled only on Unity 6 or newer because it integrates with Unity 6 Package Manager internals; the other modules remain available on the declared baseline when their own optional integrations are satisfied.
+## Compatibility and Opt-Outs
 
-Define `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable all Minimal Editor feature and test asmdefs while leaving the package installed. The compatibility symbols `ESSENTIALS_DISABLE_ALL`, `ESSENTIALS_DISABLE_CONSOLE`, `ESSENTIALS_DISABLE_MENU_ITEM`, `ESSENTIALS_DISABLE_PACKAGE_MANAGER`, `ESSENTIALS_DISABLE_FMOD`, and `ESSENTIALS_DISABLE_UNITY_EDITOR` remain supported for granular control.
+Use `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable every feature and test
+asmdef without removing the package files. Existing module symbols remain
+available for narrower control, with one important dependency:
+`ESSENTIALS_DISABLE_MENU_ITEM` also disables the Editor chrome assembly because
+that assembly references the Menu Item module.
 
-## Optional integrations
+Assembly names, namespaces, and public editor APIs keep their established
+`Essentials.*` identities. Settings keys and Unity asset GUIDs retain their
+existing values. See
+[Compatibility](Documentation~/compatibility.md) for the assembly, symbol, and
+API overview.
 
-FMOD support is enabled only when `com.fmod.fmod-for-unity-2-03` is installed. Other optional menu bundles keep their existing package and module version gates; they are not hard dependencies.
+## Documentation
 
-## Third-party software
+- [Start here](Documentation~/index.md)
+- [User guide](Documentation~/user-guide.md)
+- [Compatibility and scripting](Documentation~/compatibility.md)
+- [Troubleshooting](Documentation~/troubleshooting.md)
+- [Changelog](CHANGELOG.md)
 
-The Package Manager patches use the package-owned, Editor-only `ThirdParty/Essentials.MinimalEditor.Harmony.dll` binary. It is explicitly referenced by the Package Manager assembly and does not require a shared Harmony package. See [Third Party Notices.md](Third%20Party%20Notices.md).
+## Third-Party Software
+
+The Unity 6 Package Manager refinements use the package-owned, Editor-only
+`ThirdParty/Essentials.MinimalEditor.Harmony.dll`. See
+[Third Party Notices](Third%20Party%20Notices.md).
 
 ## License
 
-This package is proprietary. See [LICENSE.md](LICENSE.md) for the applicable terms.
+This package is proprietary. See [LICENSE.md](LICENSE.md) for the applicable
+terms.

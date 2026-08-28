@@ -1,14 +1,17 @@
 # Third Party Notices
 
-This package includes a package-owned copy of third-party software that remains licensed under its own terms.
+This package includes a package-owned copy of third-party software. That
+component remains licensed under its own terms.
 
 ## Harmony
 
-- Component: Harmony
-- Binary: `ThirdParty/Essentials.MinimalEditor.Harmony.dll`
-- Project: https://github.com/pardeike/Harmony
-- License: MIT License
-- Copyright: Copyright (c) Andreas Pardeike
+| Field | Value |
+| --- | --- |
+| Component | Harmony 2.4.1 |
+| Binary | `ThirdParty/Essentials.MinimalEditor.Harmony.dll` |
+| Project | [pardeike/Harmony](https://github.com/pardeike/Harmony) |
+| License | MIT License |
+| Copyright | Copyright (c) Andreas Pardeike |
 
 ### MIT License
 
