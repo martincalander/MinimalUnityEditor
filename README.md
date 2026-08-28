@@ -18,7 +18,7 @@ Install the private repository as an embedded package:
 
 ```bash
 git submodule add -b main \
-  https://github.com/martincalander/com.martincalander.minimaleditor.git \
+  https://github.com/martincalander/MinimalUnityEditor.git \
   Packages/com.martincalander.minimaleditor
 ```
 
@@ -27,7 +27,7 @@ Or add the authenticated Git dependency to `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.martincalander.minimaleditor": "https://github.com/martincalander/com.martincalander.minimaleditor.git"
+    "com.martincalander.minimaleditor": "https://github.com/martincalander/MinimalUnityEditor.git"
   }
 }
 ```

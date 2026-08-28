@@ -5,9 +5,9 @@
   "description": "Makes the Unity Editor quieter, cleaner, and less distracting.",
   "unity": "2021.3",
   "unityRelease": "0f1",
-  "documentationUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/README.md",
-  "changelogUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/martincalander/com.martincalander.minimaleditor/blob/main/LICENSE.md",
+  "documentationUrl": "https://github.com/martincalander/MinimalUnityEditor/blob/main/README.md",
+  "changelogUrl": "https://github.com/martincalander/MinimalUnityEditor/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/martincalander/MinimalUnityEditor/blob/main/LICENSE.md",
   "license": "Proprietary License",
   "keywords": [
     "unity",
@@ -24,6 +24,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/martincalander/com.martincalander.minimaleditor.git"
+    "url": "https://github.com/martincalander/MinimalUnityEditor.git"
   }
 }
