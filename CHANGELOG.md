@@ -6,9 +6,17 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
-- Moved the repository to Martin Calander's personal GitHub account and renamed the package from `com.essentials.minimaleditor` to `com.martincalander.minimaleditor`, while preserving its assembly, namespace, settings, and Unity asset compatibility identities.
+- Moved the repository to Martin Calander's personal GitHub account and renamed
+  the package from `com.essentials.minimaleditor` to
+  `com.martincalander.minimaleditor`, while preserving its assembly, namespace,
+  settings, and Unity asset compatibility identities.
+- Renamed the GitHub repository from `com.martincalander.minimaleditor` to
+  `MinimalUnityEditor` without changing the package ID or installation path.
 - Vendored a uniquely named, package-owned Harmony binary for the Package Manager patches with Editor-only, explicit-reference importer settings.
 - Updated the Package Manager assembly to reference `Essentials.MinimalEditor.Harmony.dll` and removed the shared `com.essentials.harmony` dependency.
+- Added focused user, compatibility, and troubleshooting guides, including the
+  default menu behavior, menu-restoration caveat, and exact Unity 6 Package
+  Manager duplicate rules.
 
 ## [0.1.0] - 2026-08-22
 
