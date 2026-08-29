@@ -7,6 +7,10 @@ A quieter Unity Editor without a new workflow to learn.
   <img alt="Editor-only package" src="https://img.shields.io/badge/scope-Editor%20only-555">
 </p>
 
+> [!WARNING]
+> **Under development.** This package has not been publicly released yet and
+> may change without notice.
+
 Minimal Editor collects the small editor adjustments that tend to be copied
 from project to project: a calmer Console, shorter window titles, less crowded
 menus, and a few Package Manager conveniences. It stays out of scenes, assets,
