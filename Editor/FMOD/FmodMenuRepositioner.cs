@@ -6,6 +6,10 @@ using UnityEngine;
 
 namespace Essentials.FMOD.Editor
 {
+    // Menu commands and reflection metadata belong to the Editor session.
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     [InitializeOnLoad]
     internal static class FmodMenuRepositioner
     {

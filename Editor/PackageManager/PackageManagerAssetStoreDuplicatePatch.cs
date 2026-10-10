@@ -1,12 +1,15 @@
 using System;
+using System.Collections;
 using System.Reflection;
-using HarmonyLib;
 using UnityEditor;
 
 namespace Essentials.PackageManager.Editor
 {
-    [InitializeOnLoad]
-    internal static class PackageManagerAssetStoreDuplicatePatch
+#if UNITY_6000_5_OR_NEWER
+    // Editor patches stay active in Play Mode and are explicitly removed before code reload.
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
+    internal static partial class PackageManagerAssetStoreDuplicatePatch
     {
         internal const string HarmonyId = "com.essentials.extensions.package-manager.editor";
         internal const string TargetTypeName = "UnityEditor.PackageManager.UI.Internal.InProjectPage";
@@ -17,6 +20,7 @@ namespace Essentials.PackageManager.Editor
         internal const string ServicesContainerTypeName = "UnityEditor.PackageManager.UI.Internal.ServicesContainer";
         internal const string SimplePageTypeName = "UnityEditor.PackageManager.UI.Internal.SimplePage";
         internal const string RebuildMethodName = "Rebuild";
+        internal const string LegacyRebuildMethodName = "RebuildVisualStatesAndUpdateVisibilityWithSearchText";
         internal const string GetPageMethodName = "GetPage";
         internal const string ResolveMethodName = "Resolve";
         internal const string InProjectPageId = "InProject";
@@ -28,13 +32,22 @@ namespace Essentials.PackageManager.Editor
         const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        static Harmony s_Harmony;
+        static object s_Harmony;
         static bool s_Patched;
+        internal static string LastPatchError { get; private set; }
 
-        static PackageManagerAssetStoreDuplicatePatch()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        static void Initialize()
         {
             TryPatch();
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+#endif
         }
 
         internal static void TryPatch()
@@ -44,7 +57,8 @@ namespace Essentials.PackageManager.Editor
 
             try
             {
-                s_Harmony = new Harmony(HarmonyId);
+                LastPatchError = null;
+                s_Harmony = Activator.CreateInstance(GetHarmonyType(), new object[] { HarmonyId });
                 bool patchedAnyTarget =
                     PatchPostfix(GetTargetMethod(), GetPostfixMethod()) |
                     PatchPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
@@ -57,11 +71,12 @@ namespace Essentials.PackageManager.Editor
                 s_Patched = true;
                 EditorApplication.delayCall += RefreshPackageManagerWindow;
             }
-            catch
+            catch (Exception exception)
             {
+                LastPatchError = exception.ToString();
                 try
                 {
-                    s_Harmony?.UnpatchAll(HarmonyId);
+                    RemovePatches();
                 }
                 catch
                 {
@@ -78,8 +93,35 @@ namespace Essentials.PackageManager.Editor
             if (targetMethod == null || postfixMethod == null)
                 return false;
 
-            s_Harmony.Patch(targetMethod, postfix: new HarmonyMethod(postfixMethod));
+            var harmonyType = s_Harmony.GetType();
+            var harmonyMethodType = harmonyType.Assembly.GetType("HarmonyLib.HarmonyMethod", throwOnError: true);
+            var constructor = harmonyMethodType.GetConstructor(new[] { typeof(MethodInfo) })
+                ?? throw new MissingMethodException(harmonyMethodType.FullName, ".ctor(MethodInfo)");
+            var postfix = constructor.Invoke(new object[] { postfixMethod });
+            var patchMethod = harmonyType.GetMethod("Patch", new[]
+            {
+                typeof(MethodBase), harmonyMethodType, harmonyMethodType, harmonyMethodType, harmonyMethodType
+            }) ?? throw new MissingMethodException(harmonyType.FullName, "Patch");
+            patchMethod.Invoke(s_Harmony, new[] { (object)targetMethod, null, postfix, null, null });
             return true;
+        }
+
+        static Type GetHarmonyType()
+        {
+            // Unity 7 runs .NET 10 but compiles Editor scripts against .NET Standard.
+            // Reflection keeps the selected Harmony runtime build out of the script API surface.
+            return Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
+        }
+
+        static void RemovePatches()
+        {
+            if (s_Harmony == null)
+                return;
+
+            var harmonyType = s_Harmony.GetType();
+            var method = harmonyType.GetMethod("UnpatchAll", new[] { typeof(string) })
+                ?? throw new MissingMethodException(harmonyType.FullName, "UnpatchAll");
+            method.Invoke(s_Harmony, new object[] { HarmonyId });
         }
 
         internal static MethodInfo GetTargetMethod()
@@ -121,47 +163,38 @@ namespace Essentials.PackageManager.Editor
 
         internal static bool IsPatchApplied()
         {
-            try
-            {
-                var targetMethod = GetTargetMethod();
-                var postfixMethod = GetPostfixMethod();
-                if (targetMethod == null || postfixMethod == null)
-                    return false;
-
-                var patchInfo = Harmony.GetPatchInfo(targetMethod);
-                if (patchInfo == null)
-                    return false;
-
-                foreach (var postfix in patchInfo.Postfixes)
-                {
-                    if (postfix.owner == HarmonyId && postfix.PatchMethod == postfixMethod)
-                        return true;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-
-            return false;
+            return HasPostfix(GetTargetMethod(), GetPostfixMethod());
         }
 
         internal static bool IsLocalPackageButtonPatchApplied()
         {
+            return HasPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
+        }
+
+        static bool HasPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
+        {
             try
             {
-                var targetMethod = GetPackageDetailsHeaderRefreshMethod();
-                var postfixMethod = GetPackageDetailsHeaderRefreshPostfixMethod();
                 if (targetMethod == null || postfixMethod == null)
                     return false;
 
-                var patchInfo = Harmony.GetPatchInfo(targetMethod);
+                var harmonyType = GetHarmonyType();
+                var getPatchInfo = harmonyType.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
+                    ?? throw new MissingMethodException(harmonyType.FullName, "GetPatchInfo");
+                var patchInfo = getPatchInfo.Invoke(null, new object[] { targetMethod });
                 if (patchInfo == null)
                     return false;
 
-                foreach (var postfix in patchInfo.Postfixes)
+                var postfixes = patchInfo.GetType().GetField("Postfixes")?.GetValue(patchInfo) as IEnumerable;
+                if (postfixes == null)
+                    return false;
+
+                foreach (var postfix in postfixes)
                 {
-                    if (postfix.owner == HarmonyId && postfix.PatchMethod == postfixMethod)
+                    var patchType = postfix.GetType();
+                    var owner = patchType.GetField("owner")?.GetValue(postfix) as string;
+                    var method = patchType.GetProperty("PatchMethod")?.GetValue(postfix) as MethodInfo;
+                    if (owner == HarmonyId && method == postfixMethod)
                         return true;
                 }
             }
@@ -199,7 +232,8 @@ namespace Essentials.PackageManager.Editor
         internal static MethodInfo GetPageRebuildMethod()
         {
             var simplePageType = typeof(UnityEditor.Editor).Assembly.GetType(SimplePageTypeName);
-            return simplePageType?.GetMethod(RebuildMethodName, AnyInstance, null, new[] { typeof(bool) }, null);
+            return simplePageType?.GetMethod(RebuildMethodName, AnyInstance, null, new[] { typeof(bool) }, null)
+                ?? simplePageType?.GetMethod(LegacyRebuildMethodName, AnyInstance, null, Type.EmptyTypes, null);
         }
 
         internal static object ResolvePackageManagerService(string serviceInterfaceName)
@@ -251,8 +285,16 @@ namespace Essentials.PackageManager.Editor
 
         static void RebuildPage(object page)
         {
+            if (page == null)
+                return;
+
             var rebuildMethod = GetPageRebuildMethod();
-            rebuildMethod?.Invoke(page, new object[] { true });
+            if (rebuildMethod == null)
+                return;
+
+            // The older entry point always rebuilds the list and reapplies its search filter.
+            var arguments = rebuildMethod.GetParameters().Length == 0 ? null : new object[] { true };
+            rebuildMethod.Invoke(page, arguments);
         }
 
         static void ShouldIncludePostfix(object __0, ref bool __result)
@@ -283,15 +325,28 @@ namespace Essentials.PackageManager.Editor
             }
         }
 
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
         static void OnBeforeAssemblyReload()
         {
+            EditorApplication.delayCall -= RefreshPackageManagerWindow;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+#endif
             try
             {
-                s_Harmony?.UnpatchAll(HarmonyId);
+                RemovePatches();
             }
             catch
             {
-                // Unity is tearing down the domain; fail open.
+                // Leave the Package Manager usable if patch cleanup fails during code reload.
+            }
+            finally
+            {
+                s_Harmony = null;
+                s_Patched = false;
+                LastPatchError = null;
             }
         }
     }

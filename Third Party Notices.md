@@ -1,17 +1,33 @@
 # Third Party Notices
 
-This package includes a package-owned copy of third-party software. That
-component remains licensed under its own terms.
+This package includes package-owned builds of third-party software. Those
+components remain licensed under their own terms.
 
 ## Harmony
 
 | Field | Value |
 | --- | --- |
-| Component | Harmony 2.4.1 |
-| Binary | `ThirdParty/Essentials.MinimalEditor.Harmony.dll` |
+| Component | Harmony 2.4.1 for Mono; Harmony 2.4.2 for CoreCLR |
+| Mono binary | `ThirdParty/Essentials.MinimalEditor.Harmony.dll` (.NET Framework 4.7.2) |
+| CoreCLR binary | `ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll` (.NET 10) |
 | Project | [pardeike/Harmony](https://github.com/pardeike/Harmony) |
 | License | MIT License |
 | Copyright | Copyright (c) Andreas Pardeike |
+
+Unity 7 and newer select the CoreCLR build. Earlier Editors retain the Mono
+build. Both importers are Editor-only and use complementary version constraints,
+so only one build is loaded.
+
+The CoreCLR binary is the unmodified `net10.0/0Harmony.dll` from the official
+[Harmony 2.4.2 release](https://github.com/pardeike/Harmony/releases/tag/v2.4.2.0),
+renamed to retain this package's explicit assembly reference. The release archive
+is `Harmony-Fat.2.4.2.0.zip`; its SHA-256 matches the digest published with the
+GitHub release asset.
+
+| File | SHA-256 |
+| --- | --- |
+| `Harmony-Fat.2.4.2.0.zip` | `a5fc5f9d9640b927d786a0527faa18bf7aa776788235140c59e9b73de87a7774` |
+| CoreCLR binary | `fd77b88724f4104440df0cf979a851d35eec75ea3a7e86297d04abe47c71aff6` |
 
 ### MIT License
 

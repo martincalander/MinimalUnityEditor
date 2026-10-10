@@ -14,6 +14,58 @@ The manifest minimum is not a record of validation against every Unity release.
 Several refinements use guarded reflection against Editor internals. When a
 required member is absent, the individual refinement remains inactive.
 
+The short window title uses the public callback on Unity 2023.2 and newer.
+Earlier supported Editors use the equivalent internal callback through
+reflection.
+
+Console stack-trace cleanup is available at the declared baseline. Unity's
+additional `HideInCallstack` attribute is used only on Unity 2022.2 and newer.
+
+### Play Mode lifecycle
+
+Domain reload can be disabled, with scene reload either on or off. Editor
+preferences, reflection caches, hyperlink registrations, and installed patches
+persist across Play sessions. They are Editor-session resources, so the package
+does not clear them on each Play entry.
+
+On Unity 6.5 and newer, `OnCodeInitializing` and `OnCodeUnloading` pair service
+registration with cleanup. The Console also uses `OnEnteringPlayMode` and
+`OnEnteringEditMode` to restore its logger wrapper immediately when needed.
+Older Editors use the corresponding initialization and reload events.
+Registration is idempotent, and cleanup removes owned callbacks and Harmony
+patches before code unloads.
+
+See Unity's [code lifecycle guidance](https://docs.unity.com/en-us/engine/7000.0/manual/programming-environment/code-reload-serialization/code-reload/code-lifecycle).
+
+On 2026-10-10, all 111 package tests passed in Unity `7000.0.0a8` on macOS,
+with no failures or skips. This includes three Play sessions with scene reload
+on and three with it off, checking that code does not reload, callbacks and
+Harmony postfixes remain registered once, and Editor settings stay intact.
+FMOD was not installed, so its optional assembly was not compiled. The older
+Editor results below predate these lifecycle changes.
+
+### Verified Editors
+
+EditMode tests passed on macOS Apple silicon on 2026-10-08:
+
+| Editor | Passed | Failed / skipped |
+| --- | --- | --- |
+| `2021.3.10f1` | 53 | 0 / 0 |
+| `2022.3.62f3` | 53 | 0 / 0 |
+| `6000.0.68f1` | 101 | 0 / 0 |
+| `6000.5.10f1` | 101 | 0 / 0 |
+| `6000.7.0b2` | 101 | 0 / 0 |
+| `7000.0.0a8` | 101 | 0 / 0 |
+
+The Unity 6+ runs include real Harmony patch registration and the selected
+Mono/CoreCLR assembly. Earlier Editors exclude the Package Manager module.
+Tests also exercise the actual window-title callback and package asset imports.
+These results do not establish coverage for every patch release or host OS.
+
+Both Harmony importers retain serialization version 2 so older Editors can
+read their platform settings. Preserve that format and their GUIDs when
+changing plugin settings, then validate in both an older Editor and Unity 7.
+
 ## Assembly Identities
 
 The package retains these Editor assembly names:
@@ -84,7 +136,15 @@ or existing Unity asset GUIDs.
 
 ## Third-Party Binary
 
-The Package Manager assembly explicitly references Harmony `2.4.1` from
-`ThirdParty/Essentials.MinimalEditor.Harmony.dll`. It is package-owned and
-Editor-only; no shared Harmony UPM dependency is required. See
+The Package Manager assembly uses package-owned, Editor-only Harmony builds:
+
+- Unity 6 uses the existing Harmony `2.4.1` Mono build in
+  `ThirdParty/Essentials.MinimalEditor.Harmony.dll`.
+- Unity 7 and newer use Harmony `2.4.2` for CoreCLR in
+  `ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll`.
+
+Complementary importer constraints select one build. The Package Manager module
+and its tests remain disabled before Unity 6. The Package Manager list refresh
+supports both the legacy parameterless rebuild and the newer `Rebuild(bool)`
+entry point. No shared Harmony UPM dependency is required. See
 [Third Party Notices](../Third%20Party%20Notices.md).

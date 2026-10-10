@@ -6,6 +6,9 @@ using UnityEngine;
 
 namespace Essentials.MenuItem.Editor
 {
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static class MenuItemModuleSettings
     {
         const string SettingsPath = "ProjectSettings/MenuItemSettings.json";

@@ -5,8 +5,11 @@ using UnityEditor;
 
 namespace Essentials.MenuItem.Editor
 {
-    [InitializeOnLoad]
-    internal static class MenuItemHider
+    // Menu configuration and queued Editor work must survive Play Mode transitions.
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
+    internal static partial class MenuItemHider
     {
         static bool s_active = MenuItemModuleSettings.ModuleEnabled;
         static Func<bool> s_activeInput;
@@ -59,7 +62,12 @@ namespace Essentials.MenuItem.Editor
             "Help"
         };
 
-        static MenuItemHider()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        static void Initialize()
         {
             if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
             {
@@ -67,10 +75,17 @@ namespace Essentials.MenuItem.Editor
                 return;
             }
 
+            s_mutationSuppressed = false;
+            EditorApplication.wantsToQuit -= OnWantsToQuit;
             EditorApplication.wantsToQuit += OnWantsToQuit;
+            EditorApplication.quitting -= SuppressMutationForTeardown;
             EditorApplication.quitting += SuppressMutationForTeardown;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= SuppressMutationForTeardown;
             AssemblyReloadEvents.beforeAssemblyReload += SuppressMutationForTeardown;
+#endif
             QueueApply(force: true);
+            EditorApplication.projectChanged -= OnProjectChanged;
             EditorApplication.projectChanged += OnProjectChanged;
         }
 
@@ -171,18 +186,21 @@ namespace Essentials.MenuItem.Editor
             return true;
         }
 
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
         static void SuppressMutationForTeardown()
         {
-            if (s_mutationSuppressed)
-            {
-                return;
-            }
-
             s_mutationSuppressed = true;
             s_applyQueued = false;
             s_forceApplyQueued = false;
             EditorApplication.delayCall -= FlushQueuedApply;
             EditorApplication.projectChanged -= OnProjectChanged;
+            EditorApplication.wantsToQuit -= OnWantsToQuit;
+            EditorApplication.quitting -= SuppressMutationForTeardown;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= SuppressMutationForTeardown;
+#endif
         }
 
         static bool IsMutationSuppressed()
@@ -516,6 +534,9 @@ namespace Essentials.MenuItem.Editor
         internal string Warning { get; }
     }
 
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static class MenuItemPatternMatcher
     {
         internal const string UnsupportedServicesWarning =

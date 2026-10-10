@@ -8,7 +8,11 @@ using UnityEngine;
 
 namespace Essentials.PackageManager.Editor
 {
-    internal static class PackageManagerAssetStoreDuplicateFilter
+#if UNITY_6000_5_OR_NEWER
+    // Reflection data survives Play Mode; code unloading releases cached assembly references.
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
+    internal static partial class PackageManagerAssetStoreDuplicateFilter
     {
         internal const string PackageNamePropertyName = "name";
         internal const string PackageProductPropertyName = "product";
@@ -30,6 +34,29 @@ namespace Essentials.PackageManager.Editor
 
         static readonly object s_MemberCacheLock = new object();
         static readonly Dictionary<Type, Dictionary<string, MemberInfo>> s_MemberCache = new Dictionary<Type, Dictionary<string, MemberInfo>>();
+
+#if !UNITY_6000_5_OR_NEWER
+        [UnityEditor.InitializeOnLoadMethod]
+        static void RegisterCacheCleanup()
+        {
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= ClearMemberCache;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += ClearMemberCache;
+        }
+#endif
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
+        static void ClearMemberCache()
+        {
+#if !UNITY_6000_5_OR_NEWER
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= ClearMemberCache;
+#endif
+            lock (s_MemberCacheLock)
+            {
+                s_MemberCache.Clear();
+            }
+        }
 
         internal static bool ShouldHideAssetStoreDuplicate(object package)
         {

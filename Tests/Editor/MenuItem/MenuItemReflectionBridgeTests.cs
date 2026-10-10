@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
@@ -105,6 +106,21 @@ namespace Essentials.Tests.Editor.MenuItem
                 "QueueApply(force: true) should queue a delayed apply during normal editor operation.");
             Assert.That(GetMenuItemHiderBool("s_forceApplyQueued"), Is.True,
                 "QueueApply(force: true) should remember that the pending apply is forced during normal editor operation.");
+        }
+
+        [Test]
+        public void MenuItemHider_RepeatedInitialization_QueuesOnce_AndTeardownCancelsWork()
+        {
+            var callback = CreateDelayCall("FlushQueuedApply");
+
+            InvokeMenuItemHiderParameterlessMethod("Initialize");
+            InvokeMenuItemHiderParameterlessMethod("Initialize");
+
+            Assert.That(EditorApplication.delayCall.GetInvocationList().Count(item => item.Equals(callback)), Is.EqualTo(1));
+            InvokeMenuItemHiderParameterlessMethod("SuppressMutationForTeardown");
+            InvokeMenuItemHiderParameterlessMethod("SuppressMutationForTeardown");
+            Assert.That(EditorApplication.delayCall?.GetInvocationList().Count(item => item.Equals(callback)) ?? 0, Is.Zero);
+            Assert.That(GetMenuItemHiderBool("s_applyQueued"), Is.False);
         }
 
         // ── Menu.RemoveMenuItem ──────────────────────────────────────────────
@@ -218,19 +234,13 @@ namespace Essentials.Tests.Editor.MenuItem
 
         static void ResetMenuItemHiderState()
         {
-            var flushQueuedApply = CreateDelayCall("FlushQueuedApply");
-            EditorApplication.delayCall -= flushQueuedApply;
-
-            var onProjectChanged = CreateAction("OnProjectChanged");
-            EditorApplication.projectChanged -= onProjectChanged;
-            EditorApplication.projectChanged += onProjectChanged;
-
             InvokeMenuItemHiderParameterlessMethod("SuppressMutationForTeardown");
-            SetMenuItemHiderBool("s_mutationSuppressed", false);
-            SetMenuItemHiderBool("s_applyQueued", false);
-            SetMenuItemHiderBool("s_forceApplyQueued", false);
             SetMenuItemHiderBool("s_failSafeMode", false);
             SetMenuItemHiderBool("s_isApplying", false);
+            InvokeMenuItemHiderParameterlessMethod("Initialize");
+            EditorApplication.delayCall -= CreateDelayCall("FlushQueuedApply");
+            SetMenuItemHiderBool("s_applyQueued", false);
+            SetMenuItemHiderBool("s_forceApplyQueued", false);
         }
 
         static bool GetMenuItemHiderBool(string fieldName)
@@ -258,11 +268,6 @@ namespace Essentials.Tests.Editor.MenuItem
             return (EditorApplication.CallbackFunction)Delegate.CreateDelegate(
                 typeof(EditorApplication.CallbackFunction),
                 GetRequiredMenuItemHiderMethod(methodName));
-        }
-
-        static Action CreateAction(string methodName)
-        {
-            return (Action)Delegate.CreateDelegate(typeof(Action), GetRequiredMenuItemHiderMethod(methodName));
         }
 
         static FieldInfo GetRequiredMenuItemHiderField(string fieldName)

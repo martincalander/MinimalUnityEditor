@@ -5,8 +5,11 @@ using UnityEngine;
 
 namespace Essentials.Editor
 {
-    [InitializeOnLoad]
-    internal static class StatusBarExtrasHider
+    // Editor configuration persists across Play Mode sessions.
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
+    internal static partial class StatusBarExtrasHider
     {
         const double FallbackPollIntervalSeconds = 15d;
 
@@ -19,11 +22,38 @@ namespace Essentials.Editor
         static readonly FieldInfo DrawExtraFeaturesField =
             AppStatusBarType?.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        static StatusBarExtrasHider()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        static void Initialize()
         {
-            EditorApplication.delayCall += Apply;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.update -= PollFallback;
             EditorApplication.update += PollFallback;
+#if !UNITY_6000_5_OR_NEWER
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+            AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+#endif
+            QueueApply();
+        }
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
+        static void Shutdown()
+        {
+            EditorApplication.delayCall -= Apply;
+            EditorApplication.update -= PollFallback;
+#if !UNITY_6000_5_OR_NEWER
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+#endif
+            s_activeInput = null;
+            s_lastStatusBarCount = -1;
+            s_lastPollTimestamp = 0d;
         }
 
         internal static bool Active
@@ -63,10 +93,22 @@ namespace Essentials.Editor
             ApplyCore(force: true);
         }
 
+#if UNITY_6000_5_OR_NEWER
+        [UnityEngine.OnEnteringPlayMode]
+        [UnityEditor.Scripting.LifecycleManagement.OnEnteringEditMode]
+#endif
+        static void QueueApply()
+        {
+            EditorApplication.delayCall -= Apply;
+            EditorApplication.delayCall += Apply;
+        }
+
+#if !UNITY_6000_5_OR_NEWER
         static void OnPlayModeStateChanged(PlayModeStateChange _)
         {
-            Apply();
+            QueueApply();
         }
+#endif
 
         static void PollFallback()
         {

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 using Essentials.PackageManager.Editor;
 using NUnit.Framework;
@@ -67,7 +68,65 @@ namespace Essentials.Tests.Editor.PackageManager
 
             Assert.That(PackageManagerAssetStoreDuplicatePatch.IsPatchApplied(), Is.True,
                 "Harmony does not report the Package Manager duplicate filter postfix on InProjectPage.ShouldInclude. " +
-                "Check the Harmony id, target lookup, postfix lookup, and assembly load order.");
+                "Check the Harmony id, target lookup, postfix lookup, and assembly load order. " +
+                PackageManagerAssetStoreDuplicatePatch.LastPatchError);
+        }
+
+        [Test]
+        public void HarmonyPatch_RepeatedInitializationAndCleanup_PreserveSingleOwnedPostfixes()
+        {
+            var patchType = typeof(PackageManagerAssetStoreDuplicatePatch);
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+            var initialize = patchType.GetMethod("Initialize", flags);
+            var cleanup = patchType.GetMethod("OnBeforeAssemblyReload", flags);
+            Assert.That(initialize, Is.Not.Null);
+            Assert.That(cleanup, Is.Not.Null);
+
+            var targets = new[]
+            {
+                PackageManagerAssetStoreDuplicatePatch.GetTargetMethod(),
+                PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshMethod()
+            };
+            try
+            {
+                initialize.Invoke(null, null);
+                initialize.Invoke(null, null);
+                foreach (var target in targets)
+                    Assert.That(CountOwnedPostfixes(target), Is.EqualTo(1));
+
+                cleanup.Invoke(null, null);
+                cleanup.Invoke(null, null);
+                foreach (var target in targets)
+                    Assert.That(CountOwnedPostfixes(target), Is.Zero);
+
+                initialize.Invoke(null, null);
+                foreach (var target in targets)
+                    Assert.That(CountOwnedPostfixes(target), Is.EqualTo(1));
+            }
+            finally
+            {
+                initialize.Invoke(null, null);
+            }
+        }
+
+        static int CountOwnedPostfixes(MethodInfo target)
+        {
+            Assert.That(target, Is.Not.Null);
+            var harmony = System.Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
+            var patchInfo = harmony.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
+                .Invoke(null, new object[] { target });
+            if (patchInfo == null)
+                return 0;
+
+            var count = 0;
+            var postfixes = (IEnumerable)patchInfo.GetType().GetField("Postfixes").GetValue(patchInfo);
+            foreach (var postfix in postfixes)
+            {
+                var owner = postfix.GetType().GetField("owner").GetValue(postfix) as string;
+                if (owner == PackageManagerAssetStoreDuplicatePatch.HarmonyId)
+                    count++;
+            }
+            return count;
         }
 
         [Test]
@@ -127,23 +186,33 @@ namespace Essentials.Tests.Editor.PackageManager
 
             Assert.That(PackageManagerAssetStoreDuplicatePatch.IsLocalPackageButtonPatchApplied(), Is.True,
                 "Harmony does not report the local package button postfix on PackageDetailsHeader.Refresh. " +
-                "Check the Harmony id, target lookup, postfix lookup, and assembly load order.");
+                "Check the Harmony id, target lookup, postfix lookup, and assembly load order. " +
+                PackageManagerAssetStoreDuplicatePatch.LastPatchError);
         }
 
         [Test]
-        public void PageRebuildHook_SimplePage_RebuildBoolMethodExists()
+        public void PageRebuildHook_SimplePage_SupportedRebuildMethodExists()
         {
             var method = PackageManagerAssetStoreDuplicatePatch.GetPageRebuildMethod();
 
             Assert.That(method, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName}.{PackageManagerAssetStoreDuplicatePatch.RebuildMethodName}(bool) was not found. " +
+                $"{PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName} has neither Rebuild(bool) nor its legacy parameterless rebuild method. " +
                 "The duplicate filter uses this after patching so already-open All Packages and Updates pages rebuild immediately.");
             Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
 
             var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(1));
-            Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(bool)),
-                "SimplePage.Rebuild must keep its triggerEvent bool parameter.");
+            if (method.Name == PackageManagerAssetStoreDuplicatePatch.RebuildMethodName)
+            {
+                Assert.That(parameters, Has.Length.EqualTo(1));
+                Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(bool)),
+                    "SimplePage.Rebuild must keep its triggerEvent bool parameter.");
+            }
+            else
+            {
+                Assert.That(method.Name, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.LegacyRebuildMethodName));
+                Assert.That(parameters, Is.Empty,
+                    "The legacy list rebuild entry point must remain parameterless.");
+            }
         }
 
         [Test]
@@ -355,8 +424,8 @@ namespace Essentials.Tests.Editor.PackageManager
             Assert.That(property, Is.Not.Null,
                 "IPackageVersion.importedAssets was not found. " +
                 "Without it, the filter cannot map legacy Asset Store rows back to package asset paths.");
-            Assert.That(property.PropertyType.FullName, Does.Contain("IReadOnlyCollection"),
-                "IPackageVersion.importedAssets should remain a collection of imported Asset Store assets.");
+            Assert.That(typeof(IEnumerable).IsAssignableFrom(property.PropertyType), Is.True,
+                "IPackageVersion.importedAssets must remain enumerable so the duplicate filter can inspect its assets.");
         }
 
         [Test]

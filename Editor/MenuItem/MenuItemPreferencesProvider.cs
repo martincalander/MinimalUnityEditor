@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace Essentials.MenuItem.Editor
 {
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static class MenuItemPreferencesProvider
     {
         internal const string SettingsPath = "Project/Essentials/Menu Item";

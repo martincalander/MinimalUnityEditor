@@ -9,7 +9,10 @@ using Object = UnityEngine.Object;
 
 namespace Essentials.Console.Editor
 {
-    [InitializeOnLoad]
+    // Keep the configured Editor log handlers across Play Mode transitions.
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static partial class ConsoleLogFilterInstaller
     {
         private const double SyncIntervalSeconds = 0.5d;
@@ -49,12 +52,63 @@ namespace Essentials.Console.Editor
         internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
             s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
 
-        static ConsoleLogFilterInstaller()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        internal static void Initialize()
         {
+            ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
+            EditorApplication.update -= OnEditorUpdate;
             EditorApplication.update += OnEditorUpdate;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+            AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+#endif
             ApplySettings();
         }
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
+        internal static void Shutdown()
+        {
+            ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
+            EditorApplication.update -= OnEditorUpdate;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#endif
+
+            var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
+            if (IsManagedFilteringHandler(currentHandler) &&
+                currentHandler is IFilteringLogHandler filteringHandler &&
+                filteringHandler.Inner != null && !IsManagedFilteringHandler(filteringHandler.Inner))
+            {
+                UnityEngine.Debug.unityLogger.logHandler = filteringHandler.Inner;
+            }
+        }
+
+#if UNITY_6000_5_OR_NEWER
+        [UnityEngine.OnEnteringPlayMode]
+        [UnityEditor.Scripting.LifecycleManagement.OnEnteringEditMode]
+#endif
+        internal static void OnEnteringMode()
+        {
+            EnsureLogHandlerState();
+        }
+
+#if !UNITY_6000_5_OR_NEWER
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.EnteredEditMode)
+                OnEnteringMode();
+        }
+#endif
 
         internal static bool TryCreateRegex(string pattern, bool caseSensitive, out Regex regex, out string error)
         {

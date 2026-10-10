@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Essentials.MenuItem.Editor
 {
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static class MenuItemBundleCatalog
     {
         internal static readonly IReadOnlyList<MenuItemBundleDefinition> Bundles = CreateBundles();

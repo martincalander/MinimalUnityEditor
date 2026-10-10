@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace Essentials.Editor
 {
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static class UnityEditorPreferencesProvider
     {
         internal const string SettingsPath = "Preferences/Essentials/Unity Editor";

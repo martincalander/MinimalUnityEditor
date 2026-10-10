@@ -4,8 +4,7 @@ using UnityEditor;
 
 namespace Essentials.Console.Editor
 {
-    [InitializeOnLoad]
-    internal static class ConsoleAssistantToolbarButtonController
+    internal static partial class ConsoleAssistantToolbarButtonController
     {
         private const string AssistantBridgeAssemblyName = "Unity.AI.Assistant.Bridge.Editor";
         private const string AssistantBridgeConsoleUtilsTypeName = "Unity.AI.Assistant.Bridge.Editor.ConsoleUtils";
@@ -14,10 +13,33 @@ namespace Essentials.Console.Editor
         private const string ToolbarEventName = "s_DrawCustomToolbarGuiEvent";
         private const string ToolbarHandlerMethodName = "OnDrawCustomGuiEvent";
 
-        static ConsoleAssistantToolbarButtonController()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        internal static void Initialize()
         {
+            ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
+            EditorApplication.delayCall -= ApplySettings;
             EditorApplication.delayCall += ApplySettings;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+            AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+#endif
+        }
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
+        internal static void Shutdown()
+        {
+            ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
+            EditorApplication.delayCall -= ApplySettings;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+#endif
         }
 
         internal static bool IsAssistantConsoleToolbarAvailable => TryGetToolbarHandler(out _, out _);
@@ -72,10 +94,13 @@ namespace Essentials.Console.Editor
 
         private static Type FindLoadedType(string assemblyName, string typeName)
         {
+#if UNITY_6000_5_OR_NEWER
+            var assemblies = UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies();
+#else
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for (var i = 0; i < assemblies.Length; i++)
+#endif
+            foreach (var assembly in assemblies)
             {
-                var assembly = assemblies[i];
                 if (assembly == null)
                     continue;
 

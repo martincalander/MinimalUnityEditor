@@ -13,6 +13,9 @@ namespace Essentials.Tests.Editor.Console
     /// A failure here means a Unity update has renamed or removed an internal type,
     /// method, or field that the log-filter or clean-stack-trace feature depends on.
     /// </summary>
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     public sealed class ConsoleReflectionBridgeTests
     {
         static readonly Assembly UnityEditorAssembly = typeof(EditorWindow).Assembly;

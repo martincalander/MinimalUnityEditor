@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
@@ -13,6 +15,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
             "Packages/com.martincalander.minimaleditor/ThirdParty";
         const string HarmonyPath =
             "Packages/com.martincalander.minimaleditor/ThirdParty/Essentials.MinimalEditor.Harmony.dll";
+        const string CoreClrHarmonyPath =
+            "Packages/com.martincalander.minimaleditor/ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll";
 
         [Test]
         public void Package_HasExactIdentityAndEditorOnlyLayout()
@@ -24,6 +28,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
             Assert.That(package.version, Is.EqualTo("0.1.0"));
             Assert.That(package.dependencies, Is.Empty);
             Assert.That(Directory.Exists(Path.Combine(package.resolvedPath, "Runtime")), Is.False);
+            Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Texture2D>(
+                $"Packages/{PackageName}/EssentialsIcon.png"), Is.Not.Null);
         }
 
         [TestCase("Editor/Console/Essentials.Console.Editor.asmdef", "14cbb37563b2149acb4ac3e45bcbcd36", "Essentials.Console.Editor", "!ESSENTIALS_DISABLE_CONSOLE")]
@@ -108,5 +114,39 @@ namespace Essentials.Tests.Editor.MinimalEditor
                 "Editor/PackageManager/Essentials.PackageManager.Editor.asmdef"));
             StringAssert.Contains("\"Essentials.MinimalEditor.Harmony.dll\"", asmdef);
         }
+
+        [Test]
+        public void Harmony_RuntimeVariantsAreMutuallyExclusiveAndEditorOnly()
+        {
+            var mono = AssetImporter.GetAtPath(HarmonyPath) as PluginImporter;
+            var coreClr = AssetImporter.GetAtPath(CoreClrHarmonyPath) as PluginImporter;
+            Assert.That(mono, Is.Not.Null);
+            Assert.That(coreClr, Is.Not.Null);
+            Assert.That(mono.DefineConstraints, Is.EqualTo(new[] { "!UNITY_7000_0_OR_NEWER" }));
+            Assert.That(coreClr.DefineConstraints, Is.EqualTo(new[] { "UNITY_7000_0_OR_NEWER" }));
+            Assert.That(coreClr.GetCompatibleWithAnyPlatform(), Is.False);
+            Assert.That(coreClr.GetCompatibleWithEditor(), Is.True);
+            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneOSX), Is.False);
+            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneWindows64), Is.False);
+            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneLinux64), Is.False);
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        [Test]
+        public void Harmony_LoadsTheAssemblyForTheCurrentEditorRuntime()
+        {
+            Type harmony = Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
+            var assembly = harmony.Assembly;
+#if UNITY_7000_0_OR_NEWER
+            Assert.That(assembly.GetName().Version, Is.EqualTo(new Version(2, 4, 2, 0)));
+            Assert.That(assembly.GetReferencedAssemblies().Any(
+                reference => reference.Name == "System.Runtime" && reference.Version.Major == 10), Is.True);
+#else
+            Assert.That(assembly.GetName().Version, Is.EqualTo(new Version(2, 4, 1, 0)));
+            Assert.That(assembly.GetReferencedAssemblies().Any(
+                reference => reference.Name == "mscorlib"), Is.True);
+#endif
+        }
+#endif
     }
 }

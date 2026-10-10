@@ -173,7 +173,9 @@ namespace Essentials.Console.Editor
 
         private sealed class DeclutteredFilterLogHandler : FilterLogHandlerBase
         {
+#if UNITY_2022_2_OR_NEWER
             [HideInCallstack]
+#endif
             public override void LogException(Exception exception, Object context)
             {
                 var inner = Inner;
@@ -186,7 +188,9 @@ namespace Essentials.Console.Editor
                 inner.LogException(exception, context);
             }
 
+#if UNITY_2022_2_OR_NEWER
             [HideInCallstack]
+#endif
             public override void LogFormat(LogType logType, Object context, string format, params object[] args)
             {
                 var inner = Inner;
