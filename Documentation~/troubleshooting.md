@@ -53,6 +53,22 @@ registered package is read-only and resolves outside the project `Packages/`
 folder. Local packages remain visible and should receive **Go To Local
 Package**.
 
+## A Project Folder Is Still Visible
+
+Open **Preferences > Minimal Editor > Project Folders** and check both
+**Hide selected folders** and the folder's own checkbox. `Assets/Plugins`,
+`Assets/Gizmos`, `Assets/Settings`, and `Assets/StreamingAssets` start visible.
+Use **Add folder** for other folders inside Assets.
+
+The module requires Unity 7 with the CoreCLR Editor runtime and patches private
+Project Browser methods. If a required method changes, it leaves folders visible
+and reports the failure in the Console and the Preferences page. Check for
+`ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` if the controls are missing.
+
+If upgrading from the separate package, remove
+`com.essentials.projectfoldervisibility` so only Minimal Editor provides the
+module. Its saved local folder preferences carry over automatically.
+
 ## Re-resolve All Packages Did Not Run
 
 The command acts only when `Packages/packages-lock.json` exists. It removes that
@@ -81,4 +97,6 @@ chrome assembly.
 Console filters, the short title, and status-bar choices use user-global
 `EditorPrefs`. They carry across Unity projects opened by the same
 operating-system user. Menu Item choices are different: they live in the
-project-owned `ProjectSettings/MenuItemSettings.json` file.
+project-owned `ProjectSettings/MenuItemSettings.json` file. Project Folders uses
+`EditorPrefs` keyed by the project path, so its choices stay local to this user
+and project.

@@ -8,6 +8,7 @@
 | Menu Item | Declared baseline; disabled on Unity 6.0 before `6000.0.43f1` |
 | Unity Editor chrome | Declared package baseline |
 | Package Manager | Unity 6 or newer |
+| Project Folders | Unity 7 with the CoreCLR Editor runtime |
 | FMOD | Only when `com.fmod.fmod-for-unity-2-03` is installed |
 
 The manifest minimum is not a record of validation against every Unity release.
@@ -61,6 +62,7 @@ The Unity 6+ runs include real Harmony patch registration and the selected
 Mono/CoreCLR assembly. Earlier Editors exclude the Package Manager module.
 Tests also exercise the actual window-title callback and package asset imports.
 These results do not establish coverage for every patch release or host OS.
+The recorded runs predate the Project Folders integration.
 
 Both Harmony importers retain serialization version 2 so older Editors can
 read their platform settings. Preserve that format and their GUIDs when
@@ -73,6 +75,7 @@ The package retains these Editor assembly names:
 - `Essentials.Console.Editor`
 - `Essentials.MenuItem.Editor`
 - `Essentials.PackageManager.Editor`
+- `Essentials.ProjectFolderVisibility.Editor`
 - `Essentials.FMOD.Editor`
 - `Essentials.Editor`
 
@@ -115,6 +118,7 @@ assembly-qualified names.
 | `ESSENTIALS_DISABLE_CONSOLE` | Disables Console features |
 | `ESSENTIALS_DISABLE_MENU_ITEM` | Disables Menu Item and the dependent Editor chrome assembly |
 | `ESSENTIALS_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
+| `ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
 | `ESSENTIALS_DISABLE_FMOD` | Disables FMOD menu relocation |
 | `ESSENTIALS_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
 
@@ -130,13 +134,26 @@ references `Essentials.MenuItem.Editor`.
 | Menu Item | `ProjectSettings/MenuItemSettings.json` |
 | Short title | EditorPrefs key `Essentials.Editor.WindowTitleShortener.Enabled` |
 | Status-bar extras | EditorPrefs key `Essentials.Editor.StatusBarExtrasHider.Enabled` |
+| Project Folders | EditorPrefs key `com.essentials.projectfoldervisibility.settings.` plus the hash of `Application.dataPath` |
 
 The package rename did not change these keys, public namespaces, assembly names,
-or existing Unity asset GUIDs.
+or existing Unity asset GUIDs. The Project Folders integration also retains its
+previous assembly names, source GUIDs, and project-specific preference key.
+Earlier Addressables visibility stored under
+`com.essentials.projectfoldervisibility.show.` plus the same project hash is
+still read when no newer folder rule overrides it.
+
+Remove `com.essentials.projectfoldervisibility` when upgrading a project to the
+integrated module. Keeping both packages would duplicate assembly identities,
+source GUIDs, and Project window hooks. The test assembly retains the name
+`Essentials.ProjectFolderVisibility.Editor.Tests` and now belongs to Minimal
+Editor. Projects that explicitly list the old package in `testables` should
+replace that entry with `com.martincalander.minimaleditor`.
 
 ## Third-Party Binary
 
-The Package Manager assembly uses package-owned, Editor-only Harmony builds:
+The Package Manager and Project Folders assemblies share package-owned,
+Editor-only Harmony builds:
 
 - Unity 6 uses the existing Harmony `2.4.1` Mono build in
   `ThirdParty/Essentials.MinimalEditor.Harmony.dll`.
@@ -144,7 +161,9 @@ The Package Manager assembly uses package-owned, Editor-only Harmony builds:
   `ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll`.
 
 Complementary importer constraints select one build. The Package Manager module
-and its tests remain disabled before Unity 6. The Package Manager list refresh
+and its tests remain disabled before Unity 6. Project Folders and its tests
+require both Unity 7 or newer and `ENABLE_CORECLR`. No additional Harmony binary
+is included for Project Folders. The Package Manager list refresh
 supports both the legacy parameterless rebuild and the newer `Rebuild(bool)`
 entry point. No shared Harmony UPM dependency is required. See
 [Third Party Notices](../Third%20Party%20Notices.md).

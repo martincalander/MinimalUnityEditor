@@ -16,7 +16,8 @@ components remain licensed under their own terms.
 
 Unity 7 and newer select the CoreCLR build. Earlier Editors retain the Mono
 build. Both importers are Editor-only and use complementary version constraints,
-so only one build is loaded.
+so only one build is loaded. The Package Manager and Project Folders modules
+share these binaries.
 
 The CoreCLR binary is the unmodified `net10.0/0Harmony.dll` from the official
 [Harmony 2.4.2 release](https://github.com/pardeike/Harmony/releases/tag/v2.4.2.0),

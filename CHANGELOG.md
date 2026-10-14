@@ -4,7 +4,21 @@ All notable changes to this package are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Integrated Project Folder Visibility into Minimal Editor on Unity 7 CoreCLR,
+  preserving its assembly identities, asset GUIDs, and local project preferences.
+- Added built-in visibility toggles for `Assets/Plugins`, `Assets/Gizmos`, and
+  `Assets/Settings`, alongside Addressables data, StreamingAssets, and custom
+  folders. The three new built-ins start visible.
+- Added **Preferences > Minimal Editor > Project Folders** and moved the menu
+  toggle under **Tools > Minimal Editor > Project Folders**.
+
 ### Changed
+
+- Project Folders uses the existing Minimal Editor Harmony binary and follows
+  the package-wide disable symbols, with its own
+  `ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` opt-out.
 
 - Adopted guarded code lifecycle callbacks with explicit event and Harmony
   cleanup, idempotent initialization, and immediate logger rebinding when

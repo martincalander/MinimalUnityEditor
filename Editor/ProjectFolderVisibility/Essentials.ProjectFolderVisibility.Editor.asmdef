@@ -1,0 +1,20 @@
+{
+    "name": "Essentials.ProjectFolderVisibility.Editor",
+    "rootNamespace": "Essentials.ProjectFolderVisibility.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Essentials.MinimalEditor.Harmony.dll"
+    ],
+    "defineConstraints": [
+        "UNITY_7000_0_OR_NEWER",
+        "ENABLE_CORECLR",
+        "!ESSENTIALS_DISABLE_ALL",
+        "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
+        "!ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY"
+    ],
+    "autoReferenced": false
+}

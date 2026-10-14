@@ -13,8 +13,8 @@ A quieter Unity Editor without a new workflow to learn.
 
 Minimal Editor collects the small editor adjustments that tend to be copied
 from project to project: a calmer Console, shorter window titles, less crowded
-menus, and a few Package Manager conveniences. It stays out of scenes, assets,
-builds, and runtime code.
+menus, folder visibility controls, and a few Package Manager conveniences. It
+stays out of scenes, assets, builds, and runtime code.
 
 ## What It Changes
 
@@ -23,12 +23,14 @@ builds, and runtime code.
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
 | Menu Item | Built-in bundles and custom menu paths | **Project Settings > Essentials > Menu Item** |
 | Unity Editor | Short title and status-bar extras | **Preferences > Essentials > Unity Editor** |
+| Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
 | FMOD | Automatic menu relocation when FMOD is installed | No settings page |
 
 Console and Unity Editor choices use user-global `EditorPrefs` and carry across
 Unity projects opened by the same operating-system user. Menu Item settings are
-shared with the project in `ProjectSettings/MenuItemSettings.json`.
+shared with the project in `ProjectSettings/MenuItemSettings.json`. Project
+Folders choices are local to the current user and project.
 
 ## Requirements
 
@@ -36,6 +38,7 @@ shared with the project in `ProjectSettings/MenuItemSettings.json`.
 | --- | --- |
 | Unity | Package manifest minimum: `2021.3.0f1` |
 | Package Manager refinements | Unity 6 or newer |
+| Project Folders | Unity 7 with the CoreCLR Editor runtime |
 | Menu hiding on Unity 6.0 | `6000.0.43f1` or newer |
 | Runtime footprint | None; every assembly is Editor-only |
 
@@ -81,6 +84,10 @@ gitlink already pins the exact package commit checked out in the parent project.
 4. Open **Preferences > Essentials > Unity Editor** to adjust the title and
    status-bar options. Both default to enabled when no earlier preference
    exists.
+5. On Unity 7, open **Preferences > Minimal Editor > Project Folders** to hide
+   `Assets/AddressableAssetsData`, `Assets/StreamingAssets`, `Assets/Plugins`,
+   `Assets/Gizmos`, `Assets/Settings`, or custom folders. Addressables data starts
+   hidden; the other built-in folders start visible.
 
 The Package Manager and FMOD refinements activate automatically when their
 version and package requirements are met.
@@ -109,8 +116,8 @@ API overview.
 
 ## Third-Party Software
 
-The Unity 6 Package Manager refinements use the package-owned, Editor-only
-`ThirdParty/Essentials.MinimalEditor.Harmony.dll`. See
+The Package Manager and Project Folders modules share the package-owned,
+Editor-only Harmony builds selected for the current Editor runtime. See
 [Third Party Notices](Third%20Party%20Notices.md).
 
 ## License

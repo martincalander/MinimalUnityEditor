@@ -15,7 +15,8 @@ dashboard or any runtime code.
 After installation, review **Project Settings > Essentials > Menu Item** before
 sharing its default bundles with the team. Console rules live under
 **Preferences > Console**, and the title and status-bar choices live under
-**Preferences > Essentials > Unity Editor**.
+**Preferences > Essentials > Unity Editor**. On Unity 7 CoreCLR, folder
+visibility choices live under **Preferences > Minimal Editor > Project Folders**.
 
 The package changes Editor presentation and a few Editor workflows. It does not
 add runtime components, modify scenes or imported assets, configure Player

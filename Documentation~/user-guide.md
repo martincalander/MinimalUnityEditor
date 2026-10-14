@@ -88,6 +88,42 @@ Both options start enabled when no earlier preference exists. Their user-global
 `EditorPrefs` values carry across Unity projects. If a Unity release changes
 the internal status-bar contract, that refinement does not apply.
 
+## Project Folders
+
+This module requires Unity 7 with the CoreCLR Editor runtime. Open
+**Preferences > Minimal Editor > Project Folders**.
+
+A checked folder is hidden while **Hide selected folders** is enabled. The
+built-in choices are:
+
+| Folder | Initial visibility |
+| --- | --- |
+| `Assets/AddressableAssetsData` | Hidden |
+| `Assets/StreamingAssets` | Visible |
+| `Assets/Plugins` | Visible |
+| `Assets/Gizmos` | Visible |
+| `Assets/Settings` | Visible |
+
+Use **Add folder** to include another folder inside Assets. Custom folders can
+be removed from the list; built-in entries stay available for toggling. Existing
+choices from Project Folder Visibility are preserved, including any custom
+rules for the new built-in folders.
+
+The Project window toolbar has a folder visibility toggle and a dropdown for
+individual folders and Preferences. Turn the toggle off to reveal every folder
+without losing your choices. The same toggle is available under
+**Tools > Minimal Editor > Project Folders > Hide Selected Folders**.
+
+Filtering covers the folder tree, single-column layout, list/grid view, and
+Project-window search results. Changes refresh every open Project window. If a
+newly hidden folder is open, that browser returns to Assets.
+
+Files remain in place and stay available to imports, builds, AssetDatabase
+queries, and object pickers. Addressables does not need to be installed.
+Preferences are saved locally for this user and project and survive Editor
+restarts. The module retains the previous Project Folder Visibility preference
+keys, so moving to Minimal Editor keeps earlier choices.
+
 ## Package Manager
 
 This module compiles only on Unity 6 or newer.

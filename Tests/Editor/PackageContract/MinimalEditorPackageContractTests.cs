@@ -35,6 +35,7 @@ namespace Essentials.Tests.Editor.MinimalEditor
         [TestCase("Editor/Console/Essentials.Console.Editor.asmdef", "14cbb37563b2149acb4ac3e45bcbcd36", "Essentials.Console.Editor", "!ESSENTIALS_DISABLE_CONSOLE")]
         [TestCase("Editor/MenuItem/Essentials.MenuItem.Editor.asmdef", "6dc2dc88be2f04b369efaca8770557e3", "Essentials.MenuItem.Editor", "!ESSENTIALS_DISABLE_MENU_ITEM")]
         [TestCase("Editor/PackageManager/Essentials.PackageManager.Editor.asmdef", "3b105bd3244e641d2abbc87499797d3c", "Essentials.PackageManager.Editor", "!ESSENTIALS_DISABLE_PACKAGE_MANAGER")]
+        [TestCase("Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b", "Essentials.ProjectFolderVisibility.Editor", "!ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY")]
         [TestCase("Editor/FMOD/Essentials.FMOD.Editor.asmdef", "229b6ab1758ff4b53b82e8bfb590fa30", "Essentials.FMOD.Editor", "!ESSENTIALS_DISABLE_FMOD")]
         [TestCase("Editor/UnityEditor/Essentials.Editor.asmdef", "16e29f94ad0e4961a9e2f4cf4567b684", "Essentials.Editor", "!ESSENTIALS_DISABLE_UNITY_EDITOR")]
         public void ProductionAssembly_PreservesIdentityAndDisableContracts(
@@ -78,11 +79,57 @@ namespace Essentials.Tests.Editor.MinimalEditor
         [TestCase("Editor/MenuItem/MenuItemHider.cs")]
         [TestCase("Editor/PackageManager/PackageManagerAssetStoreDuplicatePatch.cs")]
         [TestCase("Editor/UnityEditor/WindowTitleShortener.cs")]
+        [TestCase("Editor/ProjectFolderVisibility/AddressablesFolderVisibility.cs")]
+        [TestCase("Editor/ProjectFolderVisibility/FolderVisibilitySettings.cs")]
+        [TestCase("Editor/ProjectFolderVisibility/FolderVisibilityControls.cs")]
+        [TestCase("Tests/Editor/ProjectFolderVisibility/AddressablesFolderVisibilityTests.cs")]
         public void ExtractedAssets_AreOwnedByMinimalEditor(string relativePath)
         {
             PackageInfo package = PackageInfo.FindForAssetPath($"Packages/{PackageName}/{relativePath}");
             Assert.That(package, Is.Not.Null);
             Assert.That(package.name, Is.EqualTo(PackageName));
+        }
+
+        [TestCase("Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b")]
+        [TestCase("Tests/Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.Tests.asmdef", "8f18d14c84426447782690950e452507")]
+        public void ProjectFolderVisibilityAssemblies_PreserveGuidsAndRequireUnity7CoreClr(
+            string relativePath,
+            string expectedGuid)
+        {
+            string assetPath = $"Packages/{PackageName}/{relativePath}";
+            Assert.That(AssetDatabase.AssetPathToGUID(assetPath), Is.EqualTo(expectedGuid));
+
+            PackageInfo package = PackageInfo.FindForAssetPath(assetPath);
+            Assert.That(package, Is.Not.Null);
+            Assert.That(package.name, Is.EqualTo(PackageName));
+
+            string json = File.ReadAllText(Path.Combine(package.resolvedPath, relativePath));
+            StringAssert.Contains("\"UNITY_7000_0_OR_NEWER\"", json);
+            StringAssert.Contains("\"ENABLE_CORECLR\"", json);
+            StringAssert.Contains("\"!ESSENTIALS_DISABLE_ALL\"", json);
+            StringAssert.Contains("\"!ESSENTIALS_DISABLE_MINIMAL_EDITOR\"", json);
+            StringAssert.Contains("\"!ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY\"", json);
+            StringAssert.Contains("\"Editor\"", json);
+            StringAssert.Contains("\"autoReferenced\": false", json);
+        }
+
+        [Test]
+        public void ProjectFolderVisibility_SharesMinimalEditorHarmonyWithoutAnotherBinary()
+        {
+            string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
+            string json = File.ReadAllText(Path.Combine(packageRoot,
+                "Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef"));
+            StringAssert.Contains("\"Essentials.MinimalEditor.Harmony.dll\"", json);
+            StringAssert.DoesNotContain("Essentials.ProjectFolderVisibility.Harmony.dll", json);
+
+            string[] harmonyBinaries = Directory.GetFiles(packageRoot, "*.dll", SearchOption.AllDirectories)
+                .Where(path => Path.GetFileName(path).IndexOf("Harmony", StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToArray();
+            Assert.That(harmonyBinaries, Is.EquivalentTo(new[]
+            {
+                Path.Combine(packageRoot, "ThirdParty", "Essentials.MinimalEditor.Harmony.dll"),
+                Path.Combine(packageRoot, "ThirdParty", "CoreCLR", "Essentials.MinimalEditor.Harmony.dll")
+            }));
         }
 
         [Test]
