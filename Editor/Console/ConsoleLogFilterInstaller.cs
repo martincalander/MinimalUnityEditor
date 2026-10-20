@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     // Keep the configured Editor log handlers across Play Mode transitions.
 #if UNITY_6000_5_OR_NEWER

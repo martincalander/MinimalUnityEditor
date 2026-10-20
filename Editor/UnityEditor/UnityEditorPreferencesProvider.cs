@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
 #endif
     internal static class UnityEditorPreferencesProvider
     {
-        internal const string SettingsPath = "Preferences/Essentials/Unity Editor";
+        internal const string SettingsPath = "Preferences/Minimal Editor/Unity Editor";
 
         static readonly GUIContent ShortWindowTitleContent = new GUIContent(
             "Short Window Title",
@@ -29,7 +29,7 @@ namespace Essentials.Editor
                 guiHandler = DrawGui,
                 keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    "essentials",
+                    "minimal editor",
                     "unity",
                     "editor",
                     "window",

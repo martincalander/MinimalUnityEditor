@@ -21,8 +21,8 @@ stays out of scenes, assets, builds, and runtime code.
 | Area | What it controls | Location |
 | --- | --- | --- |
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
-| Menu Item | Built-in bundles and custom menu paths | **Project Settings > Essentials > Menu Item** |
-| Unity Editor | Short title and status-bar extras | **Preferences > Essentials > Unity Editor** |
+| Menu Item | Built-in bundles and custom menu paths | **Project Settings > Minimal Editor > Menu Item** |
+| Unity Editor | Short title and status-bar extras | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
 | FMOD | Automatic menu relocation when FMOD is installed | No settings page |
@@ -75,13 +75,13 @@ gitlink already pins the exact package commit checked out in the parent project.
 ## Quick Start
 
 1. Install the package and let Unity finish its domain reload.
-2. Open **Project Settings > Essentials > Menu Item**. Most available menu
+2. Open **Project Settings > Minimal Editor > Menu Item**. Most available menu
    bundles are enabled by default, so keep the ones that suit the project and
    turn off the rest. A removed menu entry returns after the next domain reload
    or Editor reopen.
 3. Open **Preferences > Console** and add a rule. Filtering defaults to enabled
    when no earlier preference exists, but the default rule list is empty.
-4. Open **Preferences > Essentials > Unity Editor** to adjust the title and
+4. Open **Preferences > Minimal Editor > Unity Editor** to adjust the title and
    status-bar options. Both default to enabled when no earlier preference
    exists.
 5. On Unity 7, open **Preferences > Minimal Editor > Project Folders** to hide
@@ -94,15 +94,17 @@ version and package requirements are met.
 
 ## Compatibility and Opt-Outs
 
-Use `ESSENTIALS_DISABLE_MINIMAL_EDITOR` to disable every feature and test
-asmdef without removing the package files. Existing module symbols remain
-available for narrower control, with one important dependency:
-`ESSENTIALS_DISABLE_MENU_ITEM` also disables the Editor chrome assembly because
+Use `MINIMAL_EDITOR_DISABLE_ALL` to disable every feature and test
+asmdef without removing the package files. Module symbols provide
+narrower control, with one important dependency:
+`MINIMAL_EDITOR_DISABLE_MENU_ITEM` also disables the Editor chrome assembly because
 that assembly references the Menu Item module.
 
-Assembly names, namespaces, and public editor APIs keep their established
-`Essentials.*` identities. Settings keys and Unity asset GUIDs retain their
-existing values. See
+Assembly names, namespaces, and public editor APIs use `MinimalEditor.*`.
+Update consuming code, assembly references, and scripting symbols when upgrading
+from an earlier package identity. Preferences use the package's current keys,
+so earlier local preferences need to be configured again. Unity asset GUIDs
+are preserved. See
 [Compatibility](Documentation~/compatibility.md) for the assembly, symbol, and
 API overview.
 

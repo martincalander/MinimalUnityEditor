@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Essentials.PackageManager.Editor
+namespace MinimalEditor.PackageManager.Editor
 {
     internal static class PackageManagerLocalPackageButton
     {
@@ -16,7 +16,7 @@ namespace Essentials.PackageManager.Editor
         internal const string ToolbarTypeName = "UnityEditor.PackageManager.UI.Internal.PackageToolbar";
         internal const string ToolbarName = "packageToolbar";
         internal const string InProjectActionText = "In Project";
-        internal const string ButtonName = "essentials-go-to-local-package-button";
+        internal const string ButtonName = "minimal-editor-go-to-local-package-button";
         internal const string ButtonText = "Go To Local Package";
         internal const string ButtonTooltip = "Select the matching local package installed under this project's Packages folder.";
 

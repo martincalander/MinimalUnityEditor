@@ -8,7 +8,7 @@ using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Essentials.ProjectFolderVisibility.Editor.Tests
+namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
 {
     public sealed class AddressablesFolderPathTests
     {
@@ -169,36 +169,22 @@ namespace Essentials.ProjectFolderVisibility.Editor.Tests
             Assert.That(FolderVisibilitySettings.Enabled, Is.False);
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void LegacyPreferenceMigratesUntilExplicitFolderChoicesAreSaved(bool showFolder)
+        [Test]
+        public void MissingPreferenceUsesDefaultsUntilExplicitFolderChoicesAreSaved()
         {
-            string legacyKey = "com.essentials.projectfoldervisibility.show." + Hash128.Compute(Application.dataPath);
-            bool hadLegacyPreference = EditorPrefs.HasKey(legacyKey);
-            bool previousLegacyPreference = EditorPrefs.GetBool(legacyKey);
-            try
-            {
-                EditorPrefs.DeleteKey(FolderVisibilitySettings.PreferenceKey);
-                EditorPrefs.SetBool(legacyKey, showFolder);
+            EditorPrefs.DeleteKey(FolderVisibilitySettings.PreferenceKey);
 
-                FolderVisibilitySettings.Reload();
+            FolderVisibilitySettings.Reload();
 
-                Assert.That(FolderVisibilitySettings.Enabled, Is.True);
-                Assert.That(FolderVisibilitySettings.IsFolderHidden(AddressablesFolderVisibility.FolderPath), Is.EqualTo(!showFolder));
-                Assert.That(FolderVisibilitySettings.IsFolderHidden(StreamingAssetsPath), Is.False);
+            Assert.That(FolderVisibilitySettings.Enabled, Is.True);
+            foreach (var rule in FolderVisibilitySettings.Folders)
+                Assert.That(rule.Hidden, Is.EqualTo(rule.Path == AddressablesFolderVisibility.FolderPath), rule.Path);
 
-                FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, showFolder);
-                FolderVisibilitySettings.Reload();
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, false);
+            FolderVisibilitySettings.Reload();
 
-                Assert.That(FolderVisibilitySettings.IsFolderHidden(AddressablesFolderVisibility.FolderPath), Is.EqualTo(showFolder));
-            }
-            finally
-            {
-                if (hadLegacyPreference)
-                    EditorPrefs.SetBool(legacyKey, previousLegacyPreference);
-                else
-                    EditorPrefs.DeleteKey(legacyKey);
-            }
+            Assert.That(FolderVisibilitySettings.IsFolderHidden(AddressablesFolderVisibility.FolderPath), Is.False);
+            Assert.That(FolderVisibilitySettings.IsFolderHidden(StreamingAssetsPath), Is.False);
         }
 
         [TestCase("Assets/Plugins")]

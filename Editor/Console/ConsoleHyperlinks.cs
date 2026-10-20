@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     // Editor clients keep their registrations until they explicitly unregister.
 #if UNITY_6000_5_OR_NEWER

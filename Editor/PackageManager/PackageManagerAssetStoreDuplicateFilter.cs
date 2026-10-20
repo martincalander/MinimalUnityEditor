@@ -6,7 +6,7 @@ using System.Reflection;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
-namespace Essentials.PackageManager.Editor
+namespace MinimalEditor.PackageManager.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     // Reflection data survives Play Mode; code unloading releases cached assembly references.

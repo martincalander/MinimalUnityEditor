@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.ProjectFolderVisibility.Editor
+namespace MinimalEditor.ProjectFolderVisibility.Editor
 {
     [Serializable]
     internal sealed class FolderVisibilityRule
@@ -32,7 +32,7 @@ namespace Essentials.ProjectFolderVisibility.Editor
         internal const string GizmosPath = "Assets/Gizmos";
         internal const string SettingsPath = "Assets/Settings";
         internal static readonly string PreferenceKey =
-            "com.essentials.projectfoldervisibility.settings." + Hash128.Compute(Application.dataPath);
+            "com.martincalander.minimaleditor.projectfoldervisibility.settings." + Hash128.Compute(Application.dataPath);
 
         [Serializable]
         sealed class Settings
@@ -126,8 +126,7 @@ namespace Essentials.ProjectFolderVisibility.Editor
             }
 
             s_Settings = new Settings { enabled = saved?.enabled ?? true };
-            var previousShowKey = "com.essentials.projectfoldervisibility.show." + Hash128.Compute(Application.dataPath);
-            s_Settings.folders.Add(new FolderVisibilityRule(AddressablesPath, !EditorPrefs.GetBool(previousShowKey, false)));
+            s_Settings.folders.Add(new FolderVisibilityRule(AddressablesPath, true));
             s_Settings.folders.Add(new FolderVisibilityRule(StreamingAssetsPath, false));
             s_Settings.folders.Add(new FolderVisibilityRule(PluginsPath, false));
             s_Settings.folders.Add(new FolderVisibilityRule(GizmosPath, false));

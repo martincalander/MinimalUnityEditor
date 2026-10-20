@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
     // AppKit owns the visible root items separately from Unity's command registry.
     internal sealed class MacOSMenuVisibility : IDisposable

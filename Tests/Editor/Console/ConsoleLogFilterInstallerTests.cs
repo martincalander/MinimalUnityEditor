@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Essentials.Console.Editor;
+using MinimalEditor.Console.Editor;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using UnityEditor;
 using System.Reflection;
 using UnityEngine;
 
-namespace Essentials.Tests.Editor.Console
+namespace MinimalEditor.Tests.Editor.Console
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
@@ -55,17 +55,18 @@ namespace Essentials.Tests.Editor.Console
             Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.EqualTo(hasActiveRule));
         }
 
-        [Test]
-        public void CleanStackTrace_StripsFramesFromMinimalEditorPackagePath()
+        [TestCase("at MinimalEditor.Console.Editor.ConsoleLogFilterInstaller.FilterLog()", true)]
+        [TestCase("at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)", true)]
+        [TestCase("at Game.Player.Update (Assets/Player.cs:1)", false)]
+        public void CleanStackTrace_RecognizesOwnedFrames(string frame, bool expected)
         {
             MethodInfo method = typeof(ConsoleLogFilterInstaller).GetMethod(
                 "ShouldStripStackTraceLine",
                 BindingFlags.Static | BindingFlags.NonPublic);
 
             Assert.That(method, Is.Not.Null);
-            const string frame = "at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)";
             Assert.That(method.Invoke(null, new object[] { frame }),
-                Is.True);
+                Is.EqualTo(expected));
         }
 
         [Test]

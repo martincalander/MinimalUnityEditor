@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
 #endif
     internal static class MenuItemPreferencesProvider
     {
-        internal const string SettingsPath = "Project/Essentials/Menu Item";
+        internal const string SettingsPath = "Project/Minimal Editor/Menu Item";
 
         static GUIStyle s_customDefinitionsTextAreaStyle;
 

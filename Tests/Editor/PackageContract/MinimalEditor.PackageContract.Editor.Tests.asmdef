@@ -1,9 +1,7 @@
 {
-  "name": "Essentials.MenuItem.Editor.Tests",
-  "rootNamespace": "Essentials.Tests.Editor.MenuItem",
-  "references": [
-    "Essentials.MenuItem.Editor"
-  ],
+  "name": "MinimalEditor.PackageContract.Editor.Tests",
+  "rootNamespace": "MinimalEditor.Tests.Editor.PackageContract",
+  "references": [],
   "includePlatforms": [
     "Editor"
   ],
@@ -13,9 +11,7 @@
   "precompiledReferences": [],
   "autoReferenced": false,
   "defineConstraints": [
-    "!ESSENTIALS_DISABLE_ALL",
-    "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
-    "!ESSENTIALS_DISABLE_MENU_ITEM"
+    "!MINIMAL_EDITOR_DISABLE_ALL"
   ],
   "versionDefines": [],
   "noEngineReferences": false,

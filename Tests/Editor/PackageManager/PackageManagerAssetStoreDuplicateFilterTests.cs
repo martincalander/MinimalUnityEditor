@@ -1,13 +1,13 @@
 using System.IO;
 using System.Linq;
-using Essentials.PackageManager.Editor;
+using MinimalEditor.PackageManager.Editor;
 using NUnit.Framework;
 
-namespace Essentials.Tests.Editor.PackageManager
+namespace MinimalEditor.Tests.Editor.PackageManager
 {
     public sealed class PackageManagerAssetStoreDuplicateFilterTests
     {
-        static string ProjectRoot => Path.Combine(Path.GetTempPath(), "EssentialsPackageManagerTests", "Project");
+        static string ProjectRoot => Path.Combine(Path.GetTempPath(), "MinimalEditorPackageManagerTests", "Project");
 
         [TestCase(true, "Library/PackageCache/com.vendor.tool@abc123", true)]
         [TestCase(true, "Packages/com.vendor.tool", false)]

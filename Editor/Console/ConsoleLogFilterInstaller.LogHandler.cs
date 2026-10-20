@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     internal static partial class ConsoleLogFilterInstaller
     {

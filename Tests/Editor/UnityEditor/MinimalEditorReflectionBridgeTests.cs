@@ -1,10 +1,10 @@
 using System;
 using System.Reflection;
-using Essentials.Editor;
+using MinimalEditor.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Essentials.Tests.Editor.UnityEditor
+namespace MinimalEditor.Tests.Editor.UnityEditor
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
@@ -107,9 +107,9 @@ namespace Essentials.Tests.Editor.UnityEditor
         public void RemovedGitPackageUpdater_DoesNotReturn()
         {
             Assert.That(
-                Type.GetType("Essentials.Editor.UpdateAllGitUpmTool, Essentials.Editor"),
+                Type.GetType("MinimalEditor.Editor.UpdateAllGitUpmTool, MinimalEditor.Editor"),
                 Is.Null,
-                "The removed Git UPM updater implementation must not remain in Essentials.Editor.");
+                "The removed Git UPM updater implementation must not remain in MinimalEditor.Editor.");
         }
 
         static object BuildMainWindowTitle()

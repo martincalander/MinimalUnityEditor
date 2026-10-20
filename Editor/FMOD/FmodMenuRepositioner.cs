@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.FMOD.Editor
+namespace MinimalEditor.FMOD.Editor
 {
     // Menu commands and reflection metadata belong to the Editor session.
 #if UNITY_6000_5_OR_NEWER
@@ -309,7 +309,7 @@ namespace Essentials.FMOD.Editor
             {
                 if (!s_loggedMissingRemoveMenuItemMethod)
                 {
-                    Debug.LogWarning("[Essentials FMOD] UnityEditor.Menu.RemoveMenuItem was not found. The root FMOD menu could not be removed.");
+                    Debug.LogWarning("[Minimal Editor FMOD] UnityEditor.Menu.RemoveMenuItem was not found. The root FMOD menu could not be removed.");
                     s_loggedMissingRemoveMenuItemMethod = true;
                 }
 
@@ -361,7 +361,7 @@ namespace Essentials.FMOD.Editor
             {
                 if (MissingCommandWarnings.Add(command.RootPath))
                 {
-                    Debug.LogWarning("[Essentials FMOD] Could not find original FMOD menu command: " + command.RootPath);
+                    Debug.LogWarning("[Minimal Editor FMOD] Could not find original FMOD menu command: " + command.RootPath);
                 }
 
                 return;

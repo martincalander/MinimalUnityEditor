@@ -1,8 +1,8 @@
-using Essentials.PackageManager.Editor;
+using MinimalEditor.PackageManager.Editor;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 
-namespace Essentials.Tests.Editor.PackageManager
+namespace MinimalEditor.Tests.Editor.PackageManager
 {
     public sealed class PackageManagerLocalPackageButtonTests
     {

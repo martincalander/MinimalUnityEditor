@@ -1,8 +1,8 @@
 using NUnit.Framework;
 using UnityEditor;
-using Essentials.Editor;
+using MinimalEditor.Editor;
 
-namespace Essentials.Tests.Editor.UnityEditor
+namespace MinimalEditor.Tests.Editor.UnityEditor
 {
     public sealed class UnityEditorPreferencesTests
     {
@@ -32,12 +32,12 @@ namespace Essentials.Tests.Editor.UnityEditor
         }
 
         [Test]
-        public void SettingsProvider_IsUserScopedAtEssentialsUnityEditorPath()
+        public void SettingsProvider_IsUserScopedAtMinimalEditorUnityEditorPath()
         {
             SettingsProvider provider = UnityEditorPreferencesProvider.CreateProvider();
 
             Assert.That(provider, Is.Not.Null);
-            Assert.That(provider.settingsPath, Is.EqualTo("Preferences/Essentials/Unity Editor"));
+            Assert.That(provider.settingsPath, Is.EqualTo("Preferences/Minimal Editor/Unity Editor"));
             Assert.That(provider.scope, Is.EqualTo(SettingsScope.User));
         }
 

@@ -9,7 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Essentials.Tests.Editor.MinimalEditor
+namespace MinimalEditor.Tests.Editor.PackageContract
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
@@ -103,15 +103,15 @@ namespace Essentials.Tests.Editor.MinimalEditor
         List<Action> CaptureServiceAssertions()
         {
             var assertions = new List<Action>();
-#if !ESSENTIALS_DISABLE_CONSOLE
-            Type consoleSettings = RequireType("Essentials.Console.Editor.ConsoleLogFilterSettings, Essentials.Console.Editor");
+#if !MINIMAL_EDITOR_DISABLE_CONSOLE
+            Type consoleSettings = RequireType("MinimalEditor.Console.Editor.ConsoleLogFilterSettings, MinimalEditor.Console.Editor");
             object consoleData = Property(consoleSettings, "Data").GetValue(null);
             string consoleSnapshot = JsonUtility.ToJson(Property(consoleSettings, "Snapshot").GetValue(null));
-            Type installer = RequireType("Essentials.Console.Editor.ConsoleLogFilterInstaller, Essentials.Console.Editor");
+            Type installer = RequireType("MinimalEditor.Console.Editor.ConsoleLogFilterInstaller, MinimalEditor.Console.Editor");
             object logHandler = Field(installer, "s_activeFilteringLogHandler").GetValue(null);
             Assert.That(logHandler, Is.Not.Null);
-            Type toolbar = RequireType("Essentials.Console.Editor.ConsoleAssistantToolbarButtonController, Essentials.Console.Editor");
-            Type hyperlinks = RequireType("Essentials.Console.Editor.ConsoleHyperlinks, Essentials.Console.Editor");
+            Type toolbar = RequireType("MinimalEditor.Console.Editor.ConsoleAssistantToolbarButtonController, MinimalEditor.Console.Editor");
+            Type hyperlinks = RequireType("MinimalEditor.Console.Editor.ConsoleHyperlinks, MinimalEditor.Console.Editor");
             assertions.Add(() =>
             {
                 Assert.That(Property(consoleSettings, "Data").GetValue(null), Is.SameAs(consoleData));
@@ -123,11 +123,11 @@ namespace Essentials.Tests.Editor.MinimalEditor
                 AssertCallbackCount(typeof(EditorGUI), "hyperLinkClicked", hyperlinks, "OnHyperlinkClicked", 1);
             });
 #endif
-#if !ESSENTIALS_DISABLE_MENU_ITEM
-            Type menuSettings = RequireType("Essentials.MenuItem.Editor.MenuItemModuleSettings, Essentials.MenuItem.Editor");
+#if !MINIMAL_EDITOR_DISABLE_MENU_ITEM
+            Type menuSettings = RequireType("MinimalEditor.MenuItem.Editor.MenuItemModuleSettings, MinimalEditor.MenuItem.Editor");
             object menuData = Property(menuSettings, "Data").GetValue(null);
             string menuSnapshot = JsonUtility.ToJson(menuData);
-            Type menuHider = RequireType("Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor");
+            Type menuHider = RequireType("MinimalEditor.MenuItem.Editor.MenuItemHider, MinimalEditor.MenuItem.Editor");
             int menuCallbackCount = (bool)Property(menuSettings, "IsSupportedInCurrentEditor").GetValue(null) ? 1 : 0;
             assertions.Add(() =>
             {
@@ -138,9 +138,9 @@ namespace Essentials.Tests.Editor.MinimalEditor
                 AssertCallbackCount(typeof(EditorApplication), "quitting", menuHider, "SuppressMutationForTeardown", menuCallbackCount);
             });
 #endif
-#if !ESSENTIALS_DISABLE_UNITY_EDITOR
-            Type title = RequireType("Essentials.Editor.WindowTitleShortener, Essentials.Editor");
-            Type statusBar = RequireType("Essentials.Editor.StatusBarExtrasHider, Essentials.Editor");
+#if !MINIMAL_EDITOR_DISABLE_UNITY_EDITOR
+            Type title = RequireType("MinimalEditor.Editor.WindowTitleShortener, MinimalEditor.Editor");
+            Type statusBar = RequireType("MinimalEditor.Editor.StatusBarExtrasHider, MinimalEditor.Editor");
             m_titleInput = Property(title, "ActiveInput");
             m_previousTitleInput = m_titleInput.GetValue(null);
             m_titleInput.SetValue(null, new Func<bool>(() =>
@@ -160,8 +160,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
                     Assert.That(result, Is.EqualTo(PlayerSettings.productName));
             });
 #endif
-#if UNITY_6000_0_OR_NEWER && !ESSENTIALS_DISABLE_PACKAGE_MANAGER
-            Type patch = RequireType("Essentials.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch, Essentials.PackageManager.Editor");
+#if UNITY_6000_0_OR_NEWER && !MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER
+            Type patch = RequireType("MinimalEditor.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch, MinimalEditor.PackageManager.Editor");
             assertions.Add(() =>
             {
                 AssertSinglePostfix(patch, "GetTargetMethod", "GetPostfixMethod");

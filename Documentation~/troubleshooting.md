@@ -72,11 +72,11 @@ Use **Add folder** for other folders inside Assets.
 The module requires Unity 7 with the CoreCLR Editor runtime and patches private
 Project Browser methods. If a required method changes, it leaves folders visible
 and reports the failure in the Console and the Preferences page. Check for
-`ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` if the controls are missing.
+`MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` if the controls are missing.
 
-If upgrading from the separate package, remove
-`com.essentials.projectfoldervisibility` so only Minimal Editor provides the
-module. Its saved local folder preferences carry over automatically.
+If upgrading from the standalone Project Folder Visibility package, remove it
+so only Minimal Editor provides the module. Configure local folder preferences
+again under **Preferences > Minimal Editor > Project Folders**.
 
 ## Re-resolve All Packages Did Not Run
 
@@ -95,11 +95,11 @@ Minimal Editor cannot call its replacement.
 ## A Whole Module Is Missing
 
 Check the project's scripting define symbols. The package-wide
-`ESSENTIALS_DISABLE_MINIMAL_EDITOR` and `ESSENTIALS_DISABLE_ALL` symbols remove
+`MINIMAL_EDITOR_DISABLE_ALL` symbol removes
 every module. Module-specific symbols are listed in
 [Compatibility and scripting](compatibility.md).
 
-Remember that `ESSENTIALS_DISABLE_MENU_ITEM` also removes the dependent Editor
+Remember that `MINIMAL_EDITOR_DISABLE_MENU_ITEM` also removes the dependent Editor
 chrome assembly.
 
 ## A Preference Appeared in Another Project

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
     // Menu configuration and queued Editor work must survive Play Mode transitions.
 #if UNITY_6000_5_OR_NEWER

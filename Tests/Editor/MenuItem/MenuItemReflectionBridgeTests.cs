@@ -7,14 +7,14 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Tests.Editor.MenuItem
+namespace MinimalEditor.Tests.Editor.MenuItem
 {
     public sealed class MenuItemReflectionBridgeTests
     {
         const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         static Type Hider => Type.GetType(
-            "Essentials.MenuItem.Editor.MenuItemHider, Essentials.MenuItem.Editor", throwOnError: true);
+            "MinimalEditor.MenuItem.Editor.MenuItemHider, MinimalEditor.MenuItem.Editor", throwOnError: true);
 
         [SetUp, TearDown]
         public void ResetMenuItemHiderState()
@@ -32,10 +32,10 @@ namespace Essentials.Tests.Editor.MenuItem
         public void MenuItemSettingsProvider_IsProjectScoped()
         {
             var type = Type.GetType(
-                "Essentials.MenuItem.Editor.MenuItemPreferencesProvider, Essentials.MenuItem.Editor", throwOnError: true);
+                "MinimalEditor.MenuItem.Editor.MenuItemPreferencesProvider, MinimalEditor.MenuItem.Editor", throwOnError: true);
             var provider = (SettingsProvider)RequireMethod(type, "CreateProvider").Invoke(null, null);
             Assert.That(provider, Is.Not.Null);
-            Assert.That(provider.settingsPath, Is.EqualTo("Project/Essentials/Menu Item"));
+            Assert.That(provider.settingsPath, Is.EqualTo("Project/Minimal Editor/Menu Item"));
             Assert.That(provider.scope, Is.EqualTo(SettingsScope.Project));
         }
 
@@ -74,7 +74,7 @@ namespace Essentials.Tests.Editor.MenuItem
         public void SettingsData_NullBundleEntriesAndList_PreserveUsableSettings()
         {
             var type = Type.GetType(
-                "Essentials.MenuItem.Editor.MenuItemSettingsData, Essentials.MenuItem.Editor", throwOnError: true);
+                "MinimalEditor.MenuItem.Editor.MenuItemSettingsData, MinimalEditor.MenuItem.Editor", throwOnError: true);
             var data = Activator.CreateInstance(type, true);
             JsonUtility.FromJsonOverwrite(
                 "{\"customDefinitionsText\":\"keep\",\"bundles\":[{\"id\":\"jobs\",\"enabled\":false}]}", data);

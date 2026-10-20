@@ -5,11 +5,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using NUnit.Framework;
 
-namespace Essentials.Tests.Editor.MenuItem
+namespace MinimalEditor.Tests.Editor.MenuItem
 {
     public sealed class MacOSMenuVisibilityTests
     {
-        const string TypeName = "Essentials.MenuItem.Editor.MacOSMenuVisibility, Essentials.MenuItem.Editor";
+        const string TypeName = "MinimalEditor.MenuItem.Editor.MacOSMenuVisibility, MinimalEditor.MenuItem.Editor";
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         readonly List<IntPtr> items = new List<IntPtr>();

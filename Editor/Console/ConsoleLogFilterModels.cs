@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     internal enum ConsoleLogFilterMatchType
     {

@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.ProjectFolderVisibility.Editor
+namespace MinimalEditor.ProjectFolderVisibility.Editor
 {
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
     internal static class FolderVisibilityControls

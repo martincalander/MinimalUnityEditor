@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
     // Keep the Editor's title override active throughout Play Mode transitions.
 #if UNITY_6000_5_OR_NEWER

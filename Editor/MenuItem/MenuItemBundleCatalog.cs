@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]

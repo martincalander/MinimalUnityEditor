@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
     [Serializable]
     internal sealed class BundleState

@@ -3,7 +3,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
     // Editor configuration persists across Play Mode sessions.
 #if UNITY_6000_5_OR_NEWER

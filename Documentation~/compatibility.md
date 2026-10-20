@@ -85,14 +85,14 @@ changing plugin settings, then validate in both an older Editor and Unity 7.
 
 ## Assembly Identities
 
-The package retains these Editor assembly names:
+The package uses these Editor assembly names:
 
-- `Essentials.Console.Editor`
-- `Essentials.MenuItem.Editor`
-- `Essentials.PackageManager.Editor`
-- `Essentials.ProjectFolderVisibility.Editor`
-- `Essentials.FMOD.Editor`
-- `Essentials.Editor`
+- `MinimalEditor.Console.Editor`
+- `MinimalEditor.MenuItem.Editor`
+- `MinimalEditor.PackageManager.Editor`
+- `MinimalEditor.ProjectFolderVisibility.Editor`
+- `MinimalEditor.FMOD.Editor`
+- `MinimalEditor.Editor`
 
 They are Editor-only and have `autoReferenced` disabled. A consuming Editor
 asmdef must explicitly reference the assembly that exposes the API it uses.
@@ -101,68 +101,65 @@ asmdef must explicitly reference the assembly that exposes the API it uses.
 
 ### Console
 
-`Essentials.Console.Editor.ConsoleLogFilters` provides:
+`MinimalEditor.Console.Editor.ConsoleLogFilters` provides:
 
 - `SetEnabled(bool)`
 - `ClearRules()`
 - `AddStringRule(string, bool)`
 - `AddRegexRule(string, bool)`
 
-`Essentials.Console.Editor.ConsoleHyperlinks` registers and unregisters handlers
+`MinimalEditor.Console.Editor.ConsoleHyperlinks` registers and unregisters handlers
 for Console hyperlink `href` values.
 
 ### Menu and Editor Chrome
 
-`Essentials.MenuItem.Editor.MenuItemFeatureToggles` controls the menu module,
+`MinimalEditor.MenuItem.Editor.MenuItemFeatureToggles` controls the menu module,
 bundle states, custom definitions, and programmatic path inputs.
 
-`Essentials.Editor.EditorFeatureToggles` controls the short title, status-bar
+`MinimalEditor.Editor.EditorFeatureToggles` controls the short title, status-bar
 extras, and the linked Menu Item behavior.
 
 Persisted properties write the settings described below. Delegate and manual
 path inputs are session-only and need to be registered again after a domain
-reload. These types preserve their established namespaces and
-assembly-qualified names.
+reload. Update consuming code and assembly references to the current names
+when upgrading from an earlier package identity.
 
 ## Compile Symbols
 
 | Symbol | Effect |
 | --- | --- |
-| `ESSENTIALS_DISABLE_MINIMAL_EDITOR` | Disables every package feature and test asmdef |
-| `ESSENTIALS_DISABLE_ALL` | Disables all retained Essentials modules |
-| `ESSENTIALS_DISABLE_CONSOLE` | Disables Console features |
-| `ESSENTIALS_DISABLE_MENU_ITEM` | Disables Menu Item and the dependent Editor chrome assembly |
-| `ESSENTIALS_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
-| `ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
-| `ESSENTIALS_DISABLE_FMOD` | Disables FMOD menu relocation |
-| `ESSENTIALS_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
+| `MINIMAL_EDITOR_DISABLE_ALL` | Disables every package feature and test asmdef |
+| `MINIMAL_EDITOR_DISABLE_CONSOLE` | Disables Console features |
+| `MINIMAL_EDITOR_DISABLE_MENU_ITEM` | Disables Menu Item and the dependent Editor chrome assembly |
+| `MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
+| `MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
+| `MINIMAL_EDITOR_DISABLE_FMOD` | Disables FMOD menu relocation |
+| `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
 
-`ESSENTIALS_DISABLE_UNITY_EDITOR` leaves Menu Item available.
-`ESSENTIALS_DISABLE_MENU_ITEM` is broader because `Essentials.Editor` directly
-references `Essentials.MenuItem.Editor`.
+`MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` leaves Menu Item available.
+`MINIMAL_EDITOR_DISABLE_MENU_ITEM` is broader because `MinimalEditor.Editor` directly
+references `MinimalEditor.MenuItem.Editor`.
 
 ## Persisted Settings
 
 | Area | Storage |
 | --- | --- |
-| Console | EditorPrefs key `Essentials.Console.HiddenLogFilters` |
+| Console | EditorPrefs key `MinimalEditor.Console.HiddenLogFilters` |
 | Menu Item | `ProjectSettings/MenuItemSettings.json` |
-| Short title | EditorPrefs key `Essentials.Editor.WindowTitleShortener.Enabled` |
-| Status-bar extras | EditorPrefs key `Essentials.Editor.StatusBarExtrasHider.Enabled` |
-| Project Folders | EditorPrefs key `com.essentials.projectfoldervisibility.settings.` plus the hash of `Application.dataPath` |
+| Short title | EditorPrefs key `MinimalEditor.Editor.WindowTitleShortener.Enabled` |
+| Status-bar extras | EditorPrefs key `MinimalEditor.Editor.StatusBarExtrasHider.Enabled` |
+| Project Folders | EditorPrefs key `com.martincalander.minimaleditor.projectfoldervisibility.settings.` plus the hash of `Application.dataPath` |
 
-The package rename did not change these keys, public namespaces, assembly names,
-or existing Unity asset GUIDs. The Project Folders integration also retains its
-previous assembly names, source GUIDs, and project-specific preference key.
-Earlier Addressables visibility stored under
-`com.essentials.projectfoldervisibility.show.` plus the same project hash is
-still read when no newer folder rule overrides it.
+The package rename updates keys, public namespaces, and assembly names while
+preserving existing Unity asset GUIDs. Earlier local preferences need to be
+configured again under the current keys. The shared Menu Item settings file
+keeps its existing location and contents.
 
-Remove `com.essentials.projectfoldervisibility` when upgrading a project to the
-integrated module. Keeping both packages would duplicate assembly identities,
-source GUIDs, and Project window hooks. The test assembly retains the name
-`Essentials.ProjectFolderVisibility.Editor.Tests` and now belongs to Minimal
-Editor. Projects that explicitly list the old package in `testables` should
+Remove the standalone Project Folder Visibility package when upgrading a project
+to the integrated module. Keeping both packages would duplicate source GUIDs
+and Project window hooks. The integrated test assembly is
+`MinimalEditor.ProjectFolderVisibility.Editor.Tests`. Projects that explicitly
+list the old package in `testables` should
 replace that entry with `com.martincalander.minimaleditor`.
 
 ## Third-Party Binary
@@ -171,9 +168,9 @@ The Package Manager and Project Folders assemblies share package-owned,
 Editor-only Harmony builds:
 
 - Unity 6 uses the existing Harmony `2.4.1` Mono build in
-  `ThirdParty/Essentials.MinimalEditor.Harmony.dll`.
+  `ThirdParty/MinimalEditor.Harmony.dll`.
 - Unity 7 and newer use Harmony `2.4.2` for CoreCLR in
-  `ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll`.
+  `ThirdParty/CoreCLR/MinimalEditor.Harmony.dll`.
 
 Complementary importer constraints select one build. The Package Manager module
 and its tests remain disabled before Unity 6. Project Folders and its tests

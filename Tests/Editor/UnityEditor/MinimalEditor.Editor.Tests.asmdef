@@ -1,7 +1,9 @@
 {
-  "name": "Essentials.MinimalEditor.Editor.Tests",
-  "rootNamespace": "Essentials.Tests.Editor.MinimalEditor",
-  "references": [],
+  "name": "MinimalEditor.Editor.Tests",
+  "rootNamespace": "MinimalEditor.Tests.Editor.UnityEditor",
+  "references": [
+    "MinimalEditor.Editor"
+  ],
   "includePlatforms": [
     "Editor"
   ],
@@ -11,8 +13,9 @@
   "precompiledReferences": [],
   "autoReferenced": false,
   "defineConstraints": [
-    "!ESSENTIALS_DISABLE_ALL",
-    "!ESSENTIALS_DISABLE_MINIMAL_EDITOR"
+    "!MINIMAL_EDITOR_DISABLE_ALL",
+    "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR",
+    "!MINIMAL_EDITOR_DISABLE_MENU_ITEM"
   ],
   "versionDefines": [],
   "noEngineReferences": false,

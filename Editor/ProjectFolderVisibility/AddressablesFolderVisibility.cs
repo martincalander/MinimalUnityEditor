@@ -7,16 +7,16 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-[assembly: InternalsVisibleTo("Essentials.ProjectFolderVisibility.Editor.Tests")]
+[assembly: InternalsVisibleTo("MinimalEditor.ProjectFolderVisibility.Editor.Tests")]
 
-namespace Essentials.ProjectFolderVisibility.Editor
+namespace MinimalEditor.ProjectFolderVisibility.Editor
 {
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
     internal static partial class AddressablesFolderVisibility
     {
         internal const string FolderPath = FolderVisibilitySettings.AddressablesPath;
         internal const string MenuPath = "Tools/Minimal Editor/Project Folders/Hide Selected Folders";
-        const string HarmonyId = "com.essentials.projectfoldervisibility";
+        const string HarmonyId = "com.martincalander.minimaleditor.projectfoldervisibility";
         const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         static object s_Harmony;

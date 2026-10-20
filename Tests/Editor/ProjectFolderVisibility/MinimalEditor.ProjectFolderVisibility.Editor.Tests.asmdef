@@ -1,0 +1,20 @@
+{
+    "name": "MinimalEditor.ProjectFolderVisibility.Editor.Tests",
+    "rootNamespace": "MinimalEditor.ProjectFolderVisibility.Editor.Tests",
+    "references": [
+        "MinimalEditor.ProjectFolderVisibility.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "defineConstraints": [
+        "UNITY_7000_0_OR_NEWER",
+        "ENABLE_CORECLR",
+        "!MINIMAL_EDITOR_DISABLE_ALL",
+        "!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY"
+    ],
+    "autoReferenced": false
+}

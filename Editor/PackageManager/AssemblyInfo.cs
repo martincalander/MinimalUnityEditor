@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Essentials.PackageManager.Editor.Tests")]
+[assembly: InternalsVisibleTo("MinimalEditor.PackageManager.Editor.Tests")]

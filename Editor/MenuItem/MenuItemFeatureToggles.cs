@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
     public static class MenuItemFeatureToggles
     {

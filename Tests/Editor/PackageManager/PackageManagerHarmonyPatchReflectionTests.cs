@@ -3,11 +3,11 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
-using Filter = Essentials.PackageManager.Editor.PackageManagerAssetStoreDuplicateFilter;
-using LocalButton = Essentials.PackageManager.Editor.PackageManagerLocalPackageButton;
-using Patch = Essentials.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch;
+using Filter = MinimalEditor.PackageManager.Editor.PackageManagerAssetStoreDuplicateFilter;
+using LocalButton = MinimalEditor.PackageManager.Editor.PackageManagerLocalPackageButton;
+using Patch = MinimalEditor.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch;
 
-namespace Essentials.Tests.Editor.PackageManager
+namespace MinimalEditor.Tests.Editor.PackageManager
 {
     public sealed class PackageManagerHarmonyPatchReflectionTests
     {

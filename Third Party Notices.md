@@ -8,8 +8,8 @@ components remain licensed under their own terms.
 | Field | Value |
 | --- | --- |
 | Component | Harmony 2.4.1 for Mono; Harmony 2.4.2 for CoreCLR |
-| Mono binary | `ThirdParty/Essentials.MinimalEditor.Harmony.dll` (.NET Framework 4.7.2) |
-| CoreCLR binary | `ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll` (.NET 10) |
+| Mono binary | `ThirdParty/MinimalEditor.Harmony.dll` (.NET Framework 4.7.2) |
+| CoreCLR binary | `ThirdParty/CoreCLR/MinimalEditor.Harmony.dll` (.NET 10) |
 | Project | [pardeike/Harmony](https://github.com/pardeike/Harmony) |
 | License | MIT License |
 | Copyright | Copyright (c) Andreas Pardeike |

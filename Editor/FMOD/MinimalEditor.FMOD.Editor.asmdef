@@ -1,6 +1,6 @@
 {
-    "name": "Essentials.FMOD.Editor",
-    "rootNamespace": "Essentials.FMOD.Editor",
+    "name": "MinimalEditor.FMOD.Editor",
+    "rootNamespace": "MinimalEditor.FMOD.Editor",
     "references": [
         "FMODUnityEditor"
     ],
@@ -13,16 +13,15 @@
     "precompiledReferences": [],
     "autoReferenced": false,
     "defineConstraints": [
-        "!ESSENTIALS_DISABLE_ALL",
-        "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
-        "!ESSENTIALS_DISABLE_FMOD",
-        "ESSENTIALS_FMOD"
+        "!MINIMAL_EDITOR_DISABLE_ALL",
+        "!MINIMAL_EDITOR_DISABLE_FMOD",
+        "MINIMAL_EDITOR_FMOD"
     ],
     "versionDefines": [
         {
             "name": "com.fmod.fmod-for-unity-2-03",
             "expression": "0.0",
-            "define": "ESSENTIALS_FMOD"
+            "define": "MINIMAL_EDITOR_FMOD"
         }
     ],
     "noEngineReferences": false

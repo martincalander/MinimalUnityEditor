@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using Essentials.Console.Editor;
+using MinimalEditor.Console.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Essentials.Tests.Editor.Console
+namespace MinimalEditor.Tests.Editor.Console
 {
     // Guard the Unity internals used to read, classify and replace Console entries.
 #if UNITY_6000_5_OR_NEWER

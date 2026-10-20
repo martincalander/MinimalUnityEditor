@@ -22,7 +22,7 @@ All notable changes to this package are documented in this file.
   is restored when the rule is disabled, without forcing Unity to rebuild menus.
 
 - Integrated Project Folder Visibility into Minimal Editor on Unity 7 CoreCLR,
-  preserving its assembly identities, asset GUIDs, and local project preferences.
+  preserving its asset GUIDs.
 - Added built-in visibility toggles for `Assets/Plugins`, `Assets/Gizmos`, and
   `Assets/Settings`, alongside Addressables data, StreamingAssets, and custom
   folders. The three new built-ins start visible.
@@ -31,9 +31,15 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Standardized assembly names, namespaces, preference keys, settings pages,
+  patch identifiers, and asset filenames on Minimal Editor. Existing asset
+  GUIDs are preserved. Consumers must update assembly references and configure
+  earlier local preferences again.
+- Use `MINIMAL_EDITOR_DISABLE_ALL` to disable the package, with
+  `MINIMAL_EDITOR_DISABLE_*` symbols for individual modules.
 - Project Folders uses the existing Minimal Editor Harmony binary and follows
-  the package-wide disable symbols, with its own
-  `ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` opt-out.
+  the package-wide disable symbol, with its own
+  `MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` opt-out.
 
 - Adopted guarded code lifecycle callbacks with explicit event and Harmony
   cleanup, idempotent initialization, and logger lifecycle checks when
@@ -55,14 +61,13 @@ All notable changes to this package are documented in this file.
   retaining the existing stack-trace cleanup on Unity 2021.3.
 - Saved both Harmony importers in the older plugin format so Unity 2021.3 and
   2022.3 can read the Editor-only platform settings.
-- Moved the repository to Martin Calander's personal GitHub account and renamed
-  the package from `com.essentials.minimaleditor` to
-  `com.martincalander.minimaleditor`, while preserving its assembly, namespace,
-  settings, and Unity asset compatibility identities.
+- Moved the repository to Martin Calander's personal GitHub account and adopted
+  the package ID `com.martincalander.minimaleditor`.
 - Renamed the GitHub repository from `com.martincalander.minimaleditor` to
   `MinimalUnityEditor` without changing the package ID or installation path.
 - Vendored a uniquely named, package-owned Harmony binary for the Package Manager patches with Editor-only, explicit-reference importer settings.
-- Updated the Package Manager assembly to reference `Essentials.MinimalEditor.Harmony.dll` and removed the shared `com.essentials.harmony` dependency.
+- Updated the Package Manager assembly to reference `MinimalEditor.Harmony.dll`
+  and removed the shared Harmony package dependency.
 - Added focused user, compatibility, and troubleshooting guides, including the
   default menu behavior, menu-restoration caveat, and exact Unity 6 Package
   Manager duplicate rules.
@@ -71,9 +76,10 @@ All notable changes to this package are documented in this file.
 
 ### Added
 
-- Extracted the Console, Menu Item, Package Manager, optional FMOD menu, and Editor chrome modules from `com.essentials.extensions`.
-- Preserved the existing assembly names, public APIs, settings locations, persisted keys, and Unity asset GUIDs.
-- Added the package-wide `ESSENTIALS_DISABLE_MINIMAL_EDITOR` compatibility symbol alongside the existing module-specific symbols.
+- Extracted the Console, Menu Item, Package Manager, optional FMOD menu, and
+  Editor chrome modules into a standalone package.
+- Included public editor APIs, settings, and stable Unity asset GUIDs.
+- Added package-wide and module-specific compile opt-outs.
 - Retained the Harmony integration used by the Package Manager module.
 
 ### Changed

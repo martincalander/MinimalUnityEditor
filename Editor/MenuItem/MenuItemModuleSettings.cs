@@ -4,7 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.MenuItem.Editor
+namespace MinimalEditor.MenuItem.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
@@ -12,7 +12,7 @@ namespace Essentials.MenuItem.Editor
     internal static class MenuItemModuleSettings
     {
         const string SettingsPath = "ProjectSettings/MenuItemSettings.json";
-        const string AdvancedSettingsExpandedKey = "Essentials.MenuItem.AdvancedExpanded";
+        const string AdvancedSettingsExpandedKey = "MinimalEditor.MenuItem.AdvancedExpanded";
         const string MinimumSupportedUnity6Version = "6000.0.43f1";
 
         static MenuItemSettingsData s_data;

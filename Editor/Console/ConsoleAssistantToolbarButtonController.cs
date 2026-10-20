@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     internal static partial class ConsoleAssistantToolbarButtonController
     {

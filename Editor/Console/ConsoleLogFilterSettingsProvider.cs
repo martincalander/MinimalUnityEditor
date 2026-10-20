@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     internal static class ConsoleLogFilterSettingsProvider
     {

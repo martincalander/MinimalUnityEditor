@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Essentials.MenuItem.Editor;
+using MinimalEditor.MenuItem.Editor;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
     public static class EditorFeatureToggles
     {

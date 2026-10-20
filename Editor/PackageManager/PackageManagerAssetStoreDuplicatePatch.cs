@@ -3,7 +3,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEditor;
 
-namespace Essentials.PackageManager.Editor
+namespace MinimalEditor.PackageManager.Editor
 {
 #if UNITY_6000_5_OR_NEWER
     // Editor patches stay active in Play Mode and are explicitly removed before code reload.
@@ -11,7 +11,7 @@ namespace Essentials.PackageManager.Editor
 #endif
     internal static partial class PackageManagerAssetStoreDuplicatePatch
     {
-        internal const string HarmonyId = "com.essentials.extensions.package-manager.editor";
+        internal const string HarmonyId = "com.martincalander.minimaleditor.package-manager.editor";
         internal const string TargetTypeName = "UnityEditor.PackageManager.UI.Internal.InProjectPage";
         internal const string TargetMethodName = "ShouldInclude";
         internal const string PackageInterfaceTypeName = "UnityEditor.PackageManager.UI.Internal.IPackage";

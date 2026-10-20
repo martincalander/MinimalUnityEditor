@@ -1,11 +1,11 @@
 using UnityEditor;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
     internal static class UnityEditorPreferences
     {
-        internal const string ShortWindowTitleKey = "Essentials.Editor.WindowTitleShortener.Enabled";
-        internal const string HideStatusBarExtrasKey = "Essentials.Editor.StatusBarExtrasHider.Enabled";
+        internal const string ShortWindowTitleKey = "MinimalEditor.Editor.WindowTitleShortener.Enabled";
+        internal const string HideStatusBarExtrasKey = "MinimalEditor.Editor.StatusBarExtrasHider.Enabled";
 
         internal const bool ShortWindowTitleDefaultValue = true;
         internal const bool HideStatusBarExtrasDefaultValue = true;

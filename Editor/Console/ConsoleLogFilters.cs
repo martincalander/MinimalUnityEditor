@@ -1,6 +1,6 @@
 using System;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     public static class ConsoleLogFilters
     {

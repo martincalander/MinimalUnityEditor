@@ -1,6 +1,6 @@
 {
-    "name": "Essentials.MenuItem.Editor",
-    "rootNamespace": "Essentials.MenuItem.Editor",
+    "name": "MinimalEditor.MenuItem.Editor",
+    "rootNamespace": "MinimalEditor.MenuItem.Editor",
     "references": [],
     "includePlatforms": [
         "Editor"
@@ -11,9 +11,8 @@
     "precompiledReferences": [],
     "autoReferenced": false,
     "defineConstraints": [
-        "!ESSENTIALS_DISABLE_ALL",
-        "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
-        "!ESSENTIALS_DISABLE_MENU_ITEM"
+        "!MINIMAL_EDITOR_DISABLE_ALL",
+        "!MINIMAL_EDITOR_DISABLE_MENU_ITEM"
     ],
     "versionDefines": [
         {

@@ -35,12 +35,12 @@ If Unity AI Assistant is installed and its Console integration is detected,
 toggle is disabled when that optional integration is not present.
 
 Console settings are stored in the user-global Editor preference key
-`Essentials.Console.HiddenLogFilters`. They carry across Unity projects opened
+`MinimalEditor.Console.HiddenLogFilters`. They carry across Unity projects opened
 by the same operating-system user.
 
 ## Menu Item
 
-Open **Project Settings > Essentials > Menu Item**.
+Open **Project Settings > Minimal Editor > Menu Item**.
 
 The module starts enabled. Nearly every available built-in bundle also starts
 enabled; **D3D12/Vulkan** is the intentional exception. Unavailable optional
@@ -93,7 +93,7 @@ be reviewed like any other project setting.
 
 ## Unity Editor Chrome
 
-Open **Preferences > Essentials > Unity Editor**.
+Open **Preferences > Minimal Editor > Unity Editor**.
 
 - **Short Window Title** uses `PlayerSettings.productName` as the main Editor
   window title.
@@ -120,9 +120,7 @@ built-in choices are:
 | `Assets/Settings` | Visible |
 
 Use **Add folder** to include another folder inside Assets. Custom folders can
-be removed from the list; built-in entries stay available for toggling. Existing
-choices from Project Folder Visibility are preserved, including any custom
-rules for the new built-in folders.
+be removed from the list; built-in entries stay available for toggling.
 
 The Project window toolbar has a folder visibility toggle and a dropdown for
 individual folders and Preferences. Turn the toggle off to reveal every folder
@@ -136,8 +134,8 @@ newly hidden folder is open, that browser returns to Assets.
 Files remain in place and stay available to imports, builds, AssetDatabase
 queries, and object pickers. Addressables does not need to be installed.
 Preferences are saved locally for this user and project and survive Editor
-restarts. The module retains the previous Project Folder Visibility preference
-keys, so moving to Minimal Editor keeps earlier choices.
+restarts. When upgrading from the standalone Project Folder Visibility package,
+configure your earlier choices again using the current Minimal Editor settings.
 
 ## Package Manager
 
@@ -171,12 +169,12 @@ There is no FMOD settings page in Minimal Editor.
 The package keeps small public Editor APIs for projects that need to configure
 the same behavior from code:
 
-- `Essentials.Console.Editor.ConsoleLogFilters`;
-- `Essentials.Console.Editor.ConsoleHyperlinks`;
-- `Essentials.MenuItem.Editor.MenuItemFeatureToggles`;
-- `Essentials.Editor.EditorFeatureToggles`.
+- `MinimalEditor.Console.Editor.ConsoleLogFilters`;
+- `MinimalEditor.Console.Editor.ConsoleHyperlinks`;
+- `MinimalEditor.MenuItem.Editor.MenuItemFeatureToggles`;
+- `MinimalEditor.Editor.EditorFeatureToggles`.
 
-Production asmdefs are not auto-referenced. Add the matching `Essentials.*`
+Production asmdefs are not auto-referenced. Add the matching `MinimalEditor.*`
 assembly reference to the consuming Editor asmdef. Programmatic path and
 delegate inputs are session state and must be registered again after a domain
 reload. See [Compatibility and scripting](compatibility.md) for an overview.

@@ -5,7 +5,7 @@ using NUnit.Framework;
 using UnityEditor;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace Essentials.Tests.Editor.MinimalEditor
+namespace MinimalEditor.Tests.Editor.PackageContract
 {
     public sealed class MinimalEditorPackageContractTests
     {
@@ -14,9 +14,9 @@ namespace Essentials.Tests.Editor.MinimalEditor
         const string HarmonyDirectoryPath =
             "Packages/com.martincalander.minimaleditor/ThirdParty";
         const string HarmonyPath =
-            "Packages/com.martincalander.minimaleditor/ThirdParty/Essentials.MinimalEditor.Harmony.dll";
+            "Packages/com.martincalander.minimaleditor/ThirdParty/MinimalEditor.Harmony.dll";
         const string CoreClrHarmonyPath =
-            "Packages/com.martincalander.minimaleditor/ThirdParty/CoreCLR/Essentials.MinimalEditor.Harmony.dll";
+            "Packages/com.martincalander.minimaleditor/ThirdParty/CoreCLR/MinimalEditor.Harmony.dll";
 
         [Test]
         public void Package_HasExactIdentityAndEditorOnlyLayout()
@@ -28,20 +28,20 @@ namespace Essentials.Tests.Editor.MinimalEditor
             Assert.That(package.dependencies, Is.Empty);
             Assert.That(Directory.Exists(Path.Combine(package.resolvedPath, "Runtime")), Is.False);
             Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Texture2D>(
-                $"Packages/{PackageName}/EssentialsIcon.png"), Is.Not.Null);
+                $"Packages/{PackageName}/MinimalEditorIcon.png"), Is.Not.Null);
         }
 
-        [TestCase("Editor/Console/Essentials.Console.Editor.asmdef", "14cbb37563b2149acb4ac3e45bcbcd36", "Essentials.Console.Editor", "!ESSENTIALS_DISABLE_CONSOLE")]
-        [TestCase("Editor/MenuItem/Essentials.MenuItem.Editor.asmdef", "6dc2dc88be2f04b369efaca8770557e3", "Essentials.MenuItem.Editor", "!ESSENTIALS_DISABLE_MENU_ITEM")]
-        [TestCase("Editor/PackageManager/Essentials.PackageManager.Editor.asmdef", "3b105bd3244e641d2abbc87499797d3c", "Essentials.PackageManager.Editor", "!ESSENTIALS_DISABLE_PACKAGE_MANAGER")]
-        [TestCase("Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b", "Essentials.ProjectFolderVisibility.Editor", "!ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY")]
-        [TestCase("Editor/FMOD/Essentials.FMOD.Editor.asmdef", "229b6ab1758ff4b53b82e8bfb590fa30", "Essentials.FMOD.Editor", "!ESSENTIALS_DISABLE_FMOD")]
-        [TestCase("Editor/UnityEditor/Essentials.Editor.asmdef", "16e29f94ad0e4961a9e2f4cf4567b684", "Essentials.Editor", "!ESSENTIALS_DISABLE_UNITY_EDITOR")]
-        public void ProductionAssembly_PreservesIdentityAndDisableContracts(
+        [TestCase("Editor/Console/MinimalEditor.Console.Editor.asmdef", "14cbb37563b2149acb4ac3e45bcbcd36", "MinimalEditor.Console.Editor", "!MINIMAL_EDITOR_DISABLE_CONSOLE")]
+        [TestCase("Editor/MenuItem/MinimalEditor.MenuItem.Editor.asmdef", "6dc2dc88be2f04b369efaca8770557e3", "MinimalEditor.MenuItem.Editor", "!MINIMAL_EDITOR_DISABLE_MENU_ITEM")]
+        [TestCase("Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef", "3b105bd3244e641d2abbc87499797d3c", "MinimalEditor.PackageManager.Editor", "!MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER")]
+        [TestCase("Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b", "MinimalEditor.ProjectFolderVisibility.Editor", "!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY")]
+        [TestCase("Editor/FMOD/MinimalEditor.FMOD.Editor.asmdef", "229b6ab1758ff4b53b82e8bfb590fa30", "MinimalEditor.FMOD.Editor", "!MINIMAL_EDITOR_DISABLE_FMOD")]
+        [TestCase("Editor/UnityEditor/MinimalEditor.Editor.asmdef", "16e29f94ad0e4961a9e2f4cf4567b684", "MinimalEditor.Editor", "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR")]
+        public void ProductionAssembly_UsesPackageIdentityAndPreservesGuidAndDisableContracts(
             string relativePath,
             string expectedGuid,
             string assemblyName,
-            string legacyDisableSymbol)
+            string moduleDisableSymbol)
         {
             string assetPath = $"Packages/{PackageName}/{relativePath}";
             Assert.That(AssetDatabase.AssetPathToGUID(assetPath), Is.EqualTo(expectedGuid));
@@ -50,11 +50,38 @@ namespace Essentials.Tests.Editor.MinimalEditor
             Assert.That(package, Is.Not.Null);
             Assert.That(package.name, Is.EqualTo(PackageName));
 
-            string json = File.ReadAllText(Path.Combine(package.resolvedPath, relativePath));
-            StringAssert.Contains($"\"{assemblyName}\"", json);
-            StringAssert.Contains("\"!ESSENTIALS_DISABLE_ALL\"", json);
-            StringAssert.Contains("\"!ESSENTIALS_DISABLE_MINIMAL_EDITOR\"", json);
-            StringAssert.Contains($"\"{legacyDisableSymbol}\"", json);
+            AssemblyDefinition definition = ReadAssemblyDefinition(
+                Path.Combine(package.resolvedPath, relativePath));
+            Assert.That(definition.name, Is.EqualTo(assemblyName));
+            Assert.That(definition.rootNamespace, Is.EqualTo(assemblyName));
+            Assert.That(definition.defineConstraints, Does.Contain("!MINIMAL_EDITOR_DISABLE_ALL"));
+            Assert.That(definition.defineConstraints, Does.Contain(moduleDisableSymbol));
+            Assert.That(definition.defineConstraints, Is.Unique);
+        }
+
+        [Test]
+        public void AllAssemblies_HaveUniqueNamesAndExpectedReferences()
+        {
+            string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
+            AssemblyDefinition[] definitions = Directory.GetFiles(
+                    packageRoot, "*.asmdef", SearchOption.AllDirectories)
+                .Select(ReadAssemblyDefinition)
+                .ToArray();
+            string[] assemblyNames = definitions.Select(definition => definition.name).ToArray();
+
+            Assert.That(assemblyNames, Has.Length.EqualTo(12));
+            Assert.That(assemblyNames, Is.Unique);
+            foreach (AssemblyDefinition definition in definitions)
+            {
+                Assert.That(definition.name, Does.StartWith("MinimalEditor."));
+                Assert.That(definition.rootNamespace, Does.StartWith("MinimalEditor."));
+                Assert.That(definition.defineConstraints, Does.Contain("!MINIMAL_EDITOR_DISABLE_ALL"));
+                Assert.That(definition.defineConstraints, Is.Unique);
+                if (definition.name == "MinimalEditor.FMOD.Editor")
+                    Assert.That(definition.references, Is.EqualTo(new[] { "FMODUnityEditor" }));
+                else
+                    Assert.That(definition.references, Is.SubsetOf(assemblyNames));
+            }
         }
 
         [Test]
@@ -63,8 +90,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
             string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
             string[] relativePaths =
             {
-                "Editor/PackageManager/Essentials.PackageManager.Editor.asmdef",
-                "Tests/Editor/PackageManager/Essentials.PackageManager.Editor.Tests.asmdef"
+                "Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef",
+                "Tests/Editor/PackageManager/MinimalEditor.PackageManager.Editor.Tests.asmdef"
             };
 
             foreach (string relativePath in relativePaths)
@@ -74,8 +101,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
             }
         }
 
-        [TestCase("Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b")]
-        [TestCase("Tests/Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.Tests.asmdef", "8f18d14c84426447782690950e452507")]
+        [TestCase("Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b")]
+        [TestCase("Tests/Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.Tests.asmdef", "8f18d14c84426447782690950e452507")]
         public void ProjectFolderVisibilityAssemblies_PreserveGuidsAndRequireUnity7CoreClr(
             string relativePath,
             string expectedGuid)
@@ -90,9 +117,8 @@ namespace Essentials.Tests.Editor.MinimalEditor
             string json = File.ReadAllText(Path.Combine(package.resolvedPath, relativePath));
             StringAssert.Contains("\"UNITY_7000_0_OR_NEWER\"", json);
             StringAssert.Contains("\"ENABLE_CORECLR\"", json);
-            StringAssert.Contains("\"!ESSENTIALS_DISABLE_ALL\"", json);
-            StringAssert.Contains("\"!ESSENTIALS_DISABLE_MINIMAL_EDITOR\"", json);
-            StringAssert.Contains("\"!ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY\"", json);
+            StringAssert.Contains("\"!MINIMAL_EDITOR_DISABLE_ALL\"", json);
+            StringAssert.Contains("\"!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY\"", json);
             StringAssert.Contains("\"Editor\"", json);
             StringAssert.Contains("\"autoReferenced\": false", json);
         }
@@ -101,18 +127,17 @@ namespace Essentials.Tests.Editor.MinimalEditor
         public void ProjectFolderVisibility_SharesMinimalEditorHarmonyWithoutAnotherBinary()
         {
             string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
-            string json = File.ReadAllText(Path.Combine(packageRoot,
-                "Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef"));
-            StringAssert.Contains("\"Essentials.MinimalEditor.Harmony.dll\"", json);
-            StringAssert.DoesNotContain("Essentials.ProjectFolderVisibility.Harmony.dll", json);
+            AssemblyDefinition definition = ReadAssemblyDefinition(Path.Combine(packageRoot,
+                "Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef"));
+            Assert.That(definition.precompiledReferences, Is.EqualTo(new[] { "MinimalEditor.Harmony.dll" }));
 
             string[] harmonyBinaries = Directory.GetFiles(packageRoot, "*.dll", SearchOption.AllDirectories)
                 .Where(path => Path.GetFileName(path).IndexOf("Harmony", StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToArray();
             Assert.That(harmonyBinaries, Is.EquivalentTo(new[]
             {
-                Path.Combine(packageRoot, "ThirdParty", "Essentials.MinimalEditor.Harmony.dll"),
-                Path.Combine(packageRoot, "ThirdParty", "CoreCLR", "Essentials.MinimalEditor.Harmony.dll")
+                Path.Combine(packageRoot, "ThirdParty", "MinimalEditor.Harmony.dll"),
+                Path.Combine(packageRoot, "ThirdParty", "CoreCLR", "MinimalEditor.Harmony.dll")
             }));
         }
 
@@ -137,13 +162,13 @@ namespace Essentials.Tests.Editor.MinimalEditor
 
             string importerMeta = File.ReadAllText(Path.Combine(
                 package.resolvedPath,
-                "ThirdParty/Essentials.MinimalEditor.Harmony.dll.meta"));
+                "ThirdParty/MinimalEditor.Harmony.dll.meta"));
             StringAssert.Contains("isExplicitlyReferenced: 1", importerMeta);
 
             string asmdef = File.ReadAllText(Path.Combine(
                 package.resolvedPath,
-                "Editor/PackageManager/Essentials.PackageManager.Editor.asmdef"));
-            StringAssert.Contains("\"Essentials.MinimalEditor.Harmony.dll\"", asmdef);
+                "Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef"));
+            StringAssert.Contains("\"MinimalEditor.Harmony.dll\"", asmdef);
         }
 
         [Test]
@@ -162,5 +187,19 @@ namespace Essentials.Tests.Editor.MinimalEditor
             Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneLinux64), Is.False);
         }
 
+        static AssemblyDefinition ReadAssemblyDefinition(string path)
+        {
+            return UnityEngine.JsonUtility.FromJson<AssemblyDefinition>(File.ReadAllText(path));
+        }
+
+        [Serializable]
+        sealed class AssemblyDefinition
+        {
+            public string name = string.Empty;
+            public string rootNamespace = string.Empty;
+            public string[] references = Array.Empty<string>();
+            public string[] defineConstraints = Array.Empty<string>();
+            public string[] precompiledReferences = Array.Empty<string>();
+        }
     }
 }

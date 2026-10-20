@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Console.Editor
+namespace MinimalEditor.Console.Editor
 {
     // Editor preferences and their subscribers remain active in Edit and Play Mode.
 #if UNITY_6000_5_OR_NEWER
@@ -11,7 +11,7 @@ namespace Essentials.Console.Editor
 #endif
     internal static class ConsoleLogFilterSettings
     {
-        private const string EditorPrefsKey = "Essentials.Console.HiddenLogFilters";
+        private const string EditorPrefsKey = "MinimalEditor.Console.HiddenLogFilters";
 
         private static ConsoleLogFilterSettingsData s_data;
 

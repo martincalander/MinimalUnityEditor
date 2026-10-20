@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Essentials.Editor
+namespace MinimalEditor.Editor
 {
     internal static class ResolvePackagesMenuItem
     {

@@ -1,6 +1,6 @@
 {
-    "name": "Essentials.PackageManager.Editor",
-    "rootNamespace": "Essentials.PackageManager.Editor",
+    "name": "MinimalEditor.PackageManager.Editor",
+    "rootNamespace": "MinimalEditor.PackageManager.Editor",
     "references": [],
     "includePlatforms": [
         "Editor"
@@ -9,14 +9,13 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Essentials.MinimalEditor.Harmony.dll"
+        "MinimalEditor.Harmony.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [
         "UNITY_6000_0_OR_NEWER",
-        "!ESSENTIALS_DISABLE_ALL",
-        "!ESSENTIALS_DISABLE_MINIMAL_EDITOR",
-        "!ESSENTIALS_DISABLE_PACKAGE_MANAGER"
+        "!MINIMAL_EDITOR_DISABLE_ALL",
+        "!MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER"
     ],
     "versionDefines": [],
     "noEngineReferences": false
