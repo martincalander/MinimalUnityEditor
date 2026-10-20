@@ -28,7 +28,12 @@ namespace MinimalEditor.MenuItem.Editor
         // Do not invoke Unity's internal menu rebuild from this module. Rebuilding menus from the
         // projectChanged/import path has caused native editor crashes in Unity's RebuildOSMainMenu.
         static readonly MethodInfo RemoveMenuItemMethod =
-            typeof(Menu).GetMethod("RemoveMenuItem", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            typeof(Menu).GetMethod(
+                "RemoveMenuItem",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(string) },
+                null);
 
         static readonly MethodInfo ExtractSubmenusMethod =
             typeof(Menu).GetMethod(
@@ -150,9 +155,12 @@ namespace MinimalEditor.MenuItem.Editor
                 return;
             }
 
+            // Enumerate before changing the current configuration, including when the input
+            // refers to the current list or throws partway through enumeration.
+            var sanitizedItems = MenuItemPatternMatcher.SanitizeEntries(menuItems);
             s_useManualMenuItems = true;
             s_manualMenuItemsToHide.Clear();
-            s_manualMenuItemsToHide.AddRange(MenuItemPatternMatcher.SanitizeEntries(menuItems));
+            s_manualMenuItemsToHide.AddRange(sanitizedItems);
             Apply();
         }
 
@@ -322,15 +330,33 @@ namespace MinimalEditor.MenuItem.Editor
 
         static HashSet<string> BuildMenuRootSet(IReadOnlyList<string> items)
         {
-            var roots = new HashSet<string>(MenuRoots, StringComparer.OrdinalIgnoreCase);
+            var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < items.Count; i++)
             {
                 var path = items[i]?.Trim();
-                if (string.IsNullOrEmpty(path)) continue;
+                // Exact paths are removed directly and do not need menu enumeration.
+                if (string.IsNullOrEmpty(path) || !path.EndsWith("*", StringComparison.Ordinal)) continue;
 
                 var separatorIndex = path.IndexOf('/');
-                if (separatorIndex <= 0) continue;
+                if (separatorIndex < 0)
+                {
+                    // A prefix such as "Tool*" can span known roots.
+                    var prefix = path.Substring(0, path.Length - 1);
+                    if (prefix.Length == 0) continue;
+                    foreach (var knownRoot in MenuRoots)
+                        if (knownRoot.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) roots.Add(knownRoot);
+                    for (var j = 0; j < items.Count; j++)
+                    {
+                        var otherPath = items[j]?.Trim();
+                        var otherSeparator = otherPath?.IndexOf('/') ?? -1;
+                        if (otherSeparator <= 0) continue;
+                        var otherRoot = otherPath.Substring(0, otherSeparator).Trim();
+                        if (otherRoot.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) roots.Add(otherRoot);
+                    }
+                    continue;
+                }
+                if (separatorIndex == 0) continue;
 
                 var root = path.Substring(0, separatorIndex).Trim();
                 if (!string.IsNullOrEmpty(root))
@@ -626,10 +652,18 @@ namespace MinimalEditor.MenuItem.Editor
         {
             if (string.IsNullOrWhiteSpace(entry) || string.IsNullOrWhiteSpace(menuPath)) return false;
 
-            var trimmedEntry = entry.Trim();
+            var trimmedEntry = entry.Trim().TrimEnd('/');
             var trimmedMenuPath = menuPath.Trim();
-            return string.Equals(trimmedEntry, trimmedMenuPath, StringComparison.OrdinalIgnoreCase) ||
-                   IsMatch(trimmedMenuPath, trimmedEntry);
+            if (string.Equals(trimmedEntry, trimmedMenuPath, StringComparison.OrdinalIgnoreCase) ||
+                IsMatch(trimmedMenuPath, trimmedEntry)) return true;
+
+            // Applying "Path/*" also removes "Path" itself, so it must receive the same
+            // protection as an exact rule for that command.
+            return trimmedEntry.EndsWith("*", StringComparison.Ordinal) &&
+                   string.Equals(
+                       trimmedEntry.Substring(0, trimmedEntry.Length - 1).Trim().TrimEnd('/'),
+                       trimmedMenuPath,
+                       StringComparison.OrdinalIgnoreCase);
         }
 
         internal static List<string> SanitizeEntries(IEnumerable<string> entries)

@@ -6,6 +6,15 @@ All notable changes to this package are documented in this file.
 
 ### Fixed
 
+- Re-resolve packages even when the project has no package lockfile.
+- Clean helper frames from Console entries that store message and stack text
+  together, preserving Unicode message offsets.
+- Apply logger configuration atomically when logs arrive from worker threads,
+  and tolerate incompatible optional Console toolbar integrations.
+- Protect blocked menu commands from wildcard and trailing-slash variants, and
+  preserve manual menu rules when a replacement input cannot be enumerated.
+- Keep FMOD originals when no usable replacement exists, and cancel queued
+  menu mutations during code teardown.
 - Keep menu hiding active when a quit request is canceled, and tolerate missing
   or null bundle entries in saved menu settings.
 - Keep ordinary Console logs and errors when Warnings Only is enabled, bound
@@ -31,6 +40,15 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Avoid copying unchanged Console entries and formatting logs excluded by the
+  active severity setting. Removed the unused clean-stack logger subclass and
+  manual rescan entry point.
+- Cache Console regex validation and parsed menu definitions, skip unchanged
+  settings writes, and scan only menu roots needed by wildcard rules.
+- Poll hidden macOS menu headings at most five times per second, with no
+  polling callback when no whole-root rule is active.
+- Avoid per-asset path-prefix allocations and unchanged result-list copies
+  during Project folder filtering; skip filtering when no folder is hidden.
 - Standardized assembly names, namespaces, preference keys, settings pages,
   patch identifiers, and asset filenames on Minimal Editor. Existing asset
   GUIDs are preserved. Consumers must update assembly references and configure

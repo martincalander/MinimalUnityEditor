@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace MinimalEditor.Console.Editor
 
         private static readonly GUIContent EnableFiltersContent = new(
             "Enable Hidden Log Filters",
-            "Suppresses matching logs before they are written to the Console.");
+            "Hides matching logs from the Console.");
 
         private static readonly GUIContent WarningsOnlyContent = new(
             "Warnings Only",
@@ -29,13 +30,21 @@ namespace MinimalEditor.Console.Editor
             "String or regex pattern to hide.");
         private static readonly GUIContent RemoveRuleContent = BuildRemoveRuleContent();
 
+        private sealed class RegexValidation
+        {
+            internal string Pattern;
+            internal bool CaseSensitive;
+            internal string Error;
+        }
+
         [SettingsProvider]
         private static SettingsProvider CreateSettingsProvider()
         {
+            var regexValidation = new ConditionalWeakTable<ConsoleLogFilterRuleData, RegexValidation>();
             return new SettingsProvider(SettingsPath, SettingsScope.User)
             {
                 label = "Console",
-                guiHandler = DrawGUI,
+                guiHandler = searchContext => DrawGUI(regexValidation),
                 keywords = new HashSet<string>
                 {
                     "console",
@@ -67,14 +76,14 @@ namespace MinimalEditor.Console.Editor
             return new GUIContent("X", tooltip);
         }
 
-        private static void DrawGUI(string searchContext)
+        private static void DrawGUI(ConditionalWeakTable<ConsoleLogFilterRuleData, RegexValidation> regexValidation)
         {
             var settings = ConsoleLogFilterSettings.Data;
             var changed = false;
             var assistantToolbarAvailable = ConsoleAssistantToolbarButtonController.IsAssistantConsoleToolbarAvailable;
 
             EditorGUILayout.HelpBox(
-                "Matching logs are hidden before they are written to Console. Current rows are also re-filtered while the editor is open.",
+                "Matching logs are hidden from the Console. With Clean Stack Traces enabled, new rows can appear briefly before they are filtered.",
                 MessageType.Info);
 
             EditorGUI.BeginChangeCheck();
@@ -153,11 +162,18 @@ namespace MinimalEditor.Console.Editor
                     if (EditorGUI.EndChangeCheck())
                         changed = true;
 
-                    if (rule.matchType == ConsoleLogFilterMatchType.Regex &&
-                        !string.IsNullOrWhiteSpace(rule.pattern) &&
-                        !ConsoleLogFilterInstaller.TryCreateRegex(rule.pattern, rule.caseSensitive, out _, out var regexError))
+                    if (rule.matchType == ConsoleLogFilterMatchType.Regex && !string.IsNullOrWhiteSpace(rule.pattern))
                     {
-                        EditorGUILayout.HelpBox(regexError, MessageType.Error);
+                        var validation = regexValidation.GetValue(rule, _ => new RegexValidation());
+                        if (validation.Pattern != rule.pattern || validation.CaseSensitive != rule.caseSensitive)
+                        {
+                            validation.Pattern = rule.pattern;
+                            validation.CaseSensitive = rule.caseSensitive;
+                            ConsoleLogFilterInstaller.TryCreateRegex(rule.pattern, rule.caseSensitive, out _, out validation.Error);
+                        }
+
+                        if (validation.Error != null)
+                            EditorGUILayout.HelpBox(validation.Error, MessageType.Error);
                     }
                 }
             }

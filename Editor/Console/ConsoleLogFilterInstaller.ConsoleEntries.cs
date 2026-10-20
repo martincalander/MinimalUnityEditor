@@ -11,6 +11,7 @@ namespace MinimalEditor.Console.Editor
         {
             internal abstract int GetTotalCount();
             internal abstract int BeginRead();
+            // Each read returns an independent snapshot that survives EndRead.
             internal abstract object Read(int index);
             internal abstract void EndRead();
             internal virtual object Clone(object entry, out bool cleanedStackTrace) => CloneLogEntry(entry, out cleanedStackTrace);
@@ -20,14 +21,14 @@ namespace MinimalEditor.Console.Editor
 
         private sealed class ReflectedConsoleEntryAccess : ConsoleEntryAccess
         {
+            private readonly object[] m_countArguments = { 0, 0, 0 };
             private readonly object[] m_readArguments = new object[2];
             private readonly object[] m_addArguments = new object[1];
 
             internal override int GetTotalCount()
             {
-                var counts = new object[] { 0, 0, 0 };
-                s_logEntriesGetCountsByTypeMethod.Invoke(null, counts);
-                return checked((int)counts[0] + (int)counts[1] + (int)counts[2]);
+                s_logEntriesGetCountsByTypeMethod.Invoke(null, m_countArguments);
+                return checked((int)m_countArguments[0] + (int)m_countArguments[1] + (int)m_countArguments[2]);
             }
 
             internal override int BeginRead() => Convert.ToInt32(
@@ -42,15 +43,28 @@ namespace MinimalEditor.Console.Editor
                     : null;
             }
 
-            internal override void EndRead() => s_logEntriesEndGettingEntriesMethod.Invoke(null, null);
+            internal override void EndRead()
+            {
+                m_readArguments[1] = null;
+                s_logEntriesEndGettingEntriesMethod.Invoke(null, null);
+            }
             internal override void Clear() => s_logEntriesClearMethod.Invoke(null, null);
 
             internal override void Add(object entry)
             {
                 m_addArguments[0] = entry;
-                s_logEntriesAddMessageMethod.Invoke(null, m_addArguments);
+                try
+                {
+                    s_logEntriesAddMessageMethod.Invoke(null, m_addArguments);
+                }
+                finally
+                {
+                    m_addArguments[0] = null;
+                }
             }
         }
+
+        private static readonly ReflectedConsoleEntryAccess s_consoleEntryAccess = new();
 
         private static bool TryApplyFiltersToCurrentConsoleEntries(bool force, out bool removedAny, out string message)
         {
@@ -68,7 +82,7 @@ namespace MinimalEditor.Console.Editor
                 return false;
             }
 
-            return TryApplyFiltersToConsoleEntries(new ReflectedConsoleEntryAccess(), force, out removedAny, out message);
+            return TryApplyFiltersToConsoleEntries(s_consoleEntryAccess, force, out removedAny, out message);
         }
 
         internal static bool TryApplyFiltersToConsoleEntries(ConsoleEntryAccess entries, bool force, out bool removedAny, out string message)
@@ -104,7 +118,7 @@ namespace MinimalEditor.Console.Editor
         {
             removedAny = false;
             message = string.Empty;
-            var keptEntries = new List<object>();
+            List<object> keptEntries = null;
             var removedCount = 0;
             var cleanedStackTraceCount = 0;
             var started = false;
@@ -119,6 +133,7 @@ namespace MinimalEditor.Console.Editor
                 if (entryCount != totalCount)
                     throw new InvalidOperationException("Console rows are filtered, collapsed, or changed during the scan. Current logs were preserved.");
 
+                keptEntries = new List<object>(entryCount);
                 for (var i = 0; i < entryCount; i++)
                 {
                     var entry = entries.Read(i);
@@ -235,30 +250,63 @@ namespace MinimalEditor.Console.Editor
         private static object CloneLogEntry(object entry, out bool cleanedStackTrace)
         {
             cleanedStackTrace = false;
-            var clone = Activator.CreateInstance(s_logEntryType);
+            object clone = null;
             for (var i = 0; i < s_logEntryFields.Length; i++)
             {
                 var field = s_logEntryFields[i];
-                var value = field.GetValue(entry);
-                if (ReferenceEquals(field, s_logEntryMessageField) ||
-                    ReferenceEquals(field, s_logEntryConditionField) ||
-                    ReferenceEquals(field, s_logEntryFileField))
+                if (field.FieldType != typeof(string))
+                    continue;
+
+                var original = field.GetValue(entry) as string;
+                var value = original;
+                if (field.Equals(s_logEntryMessageField) ||
+                    field.Equals(s_logEntryConditionField) ||
+                    field.Equals(s_logEntryFileField))
                     value ??= string.Empty;
 
-                if (s_cleanStackTracesEnabled && value is string stringValue && IsStackTraceField(field.Name))
+                if (s_cleanStackTracesEnabled && !string.IsNullOrEmpty(value))
                 {
-                    var cleaned = CleanStackTrace(stringValue);
-                    if (!string.Equals(cleaned, stringValue, StringComparison.Ordinal))
+                    string cleaned = value;
+                    if (field.Equals(s_logEntryMessageField) &&
+                        s_logEntryCallstackStartField?.FieldType == typeof(int))
                     {
-                        value = cleaned;
-                        cleanedStackTrace = true;
+                        var stackStart = (int)s_logEntryCallstackStartField.GetValue(entry);
+                        if (stackStart > 0 && stackStart < value.Length &&
+                            ShouldStripStackTraceLine(value))
+                        {
+                            var stack = value.Substring(stackStart);
+                            var cleanStack = CleanStackTrace(stack);
+                            if (!string.Equals(stack, cleanStack, StringComparison.Ordinal))
+                                cleaned = value.Substring(0, stackStart) + cleanStack;
+                        }
                     }
+                    else if (IsStackTraceField(field.Name))
+                    {
+                        cleaned = CleanStackTrace(value);
+                    }
+
+                    cleanedStackTrace |= !string.Equals(cleaned, value, StringComparison.Ordinal);
+                    value = cleaned;
                 }
 
+                if (string.Equals(original, value, StringComparison.Ordinal))
+                    continue;
+
+                // Read already owns a complete snapshot. Copy it only when a field
+                // needs normalization or cleanup, never for every unchanged row.
+                if (clone == null)
+                {
+                    clone = Activator.CreateInstance(s_logEntryType);
+                    for (var fieldIndex = 0; fieldIndex < s_logEntryFields.Length; fieldIndex++)
+                    {
+                        var copiedField = s_logEntryFields[fieldIndex];
+                        copiedField.SetValue(clone, copiedField.GetValue(entry));
+                    }
+                }
                 field.SetValue(clone, value);
             }
 
-            return clone;
+            return clone ?? entry;
         }
 
         private static bool IsStackTraceField(string fieldName)
@@ -271,7 +319,7 @@ namespace MinimalEditor.Console.Editor
 
         private static string CleanStackTrace(string stackTrace)
         {
-            if (string.IsNullOrEmpty(stackTrace))
+            if (string.IsNullOrEmpty(stackTrace) || !ShouldStripStackTraceLine(stackTrace))
                 return stackTrace;
 
             var lines = stackTrace.Replace("\r\n", "\n").Split('\n');

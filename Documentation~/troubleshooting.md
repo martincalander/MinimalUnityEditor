@@ -80,9 +80,10 @@ again under **Preferences > Minimal Editor > Project Folders**.
 
 ## Re-resolve All Packages Did Not Run
 
-The command acts only when `Packages/packages-lock.json` exists. It removes that
-file and calls Unity Package Manager resolve. Review the regenerated lockfile
-before committing it.
+The command removes `Packages/packages-lock.json` when present and calls Unity
+Package Manager resolve even when lockfiles are disabled. Check the Console for
+Package Manager errors if resolution fails. Projects with lockfiles enabled
+should review the regenerated file before committing it.
 
 ## FMOD Still Has Root Menu Items
 

@@ -110,6 +110,49 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         }
 
         [Test]
+        public void PathChecksDoNotAllocateForEachAsset()
+        {
+            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, true);
+            Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);
+            const string hiddenChild = CustomFolderPath + "/Child.asset";
+            const string visibleSibling = CustomFolderPath + "Sibling/Child.asset";
+            for (var i = 0; i < 100; i++)
+            {
+                FolderVisibilitySettings.IsHiddenPath(hiddenChild);
+                FolderVisibilitySettings.IsHiddenPath(visibleSibling);
+            }
+
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            var hiddenCount = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                if (FolderVisibilitySettings.IsHiddenPath(hiddenChild))
+                    hiddenCount++;
+                if (FolderVisibilitySettings.IsHiddenPath(visibleSibling))
+                    hiddenCount++;
+            }
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(hiddenCount, Is.EqualTo(1000));
+            Assert.That(allocated, Is.LessThanOrEqualTo(64),
+                "Allow fixed runtime bookkeeping, but no allocation per asset across 2,000 path checks.");
+        }
+
+        [Test]
+        public void HiddenFolderAvailabilityTracksRulesAndMasterToggle()
+        {
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.False);
+            Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.True);
+            FolderVisibilitySettings.Enabled = false;
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.False);
+            FolderVisibilitySettings.Enabled = true;
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.True);
+            FolderVisibilitySettings.RemoveFolder(CustomFolderPath);
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.False);
+        }
+
+        [Test]
         public void RemovingACustomRuleRestoresVisibilityAndProtectsBuiltInRules()
         {
             Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);

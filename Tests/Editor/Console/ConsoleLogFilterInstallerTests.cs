@@ -5,6 +5,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace MinimalEditor.Tests.Editor.Console
@@ -193,6 +194,54 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(inner.MessageCount, Is.EqualTo(forwardedCount));
         }
 
+        [TestCase(LogType.Log, 0)]
+        [TestCase(LogType.Warning, 1)]
+        [TestCase(LogType.Error, 0)]
+        [TestCase(LogType.Assert, 0)]
+        [TestCase(LogType.Exception, 0)]
+        public void WarningsOnly_LiveHandlerFormatsOnlyWarnings(LogType logType, int formattingCount)
+        {
+            var inner = new RecordingLogHandler();
+            Debug.unityLogger.logHandler = inner;
+            ApplyWithActiveRule();
+            var argument = new CountingFormatArgument();
+
+            Debug.unityLogger.logHandler.LogFormat(logType, null, "{0}", argument);
+
+            Assert.That(argument.FormatCount, Is.EqualTo(formattingCount));
+            Assert.That(inner.MessageCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WarningsOnly_DoesNotFormatExceptions()
+        {
+            var inner = new RecordingLogHandler();
+            Debug.unityLogger.logHandler = inner;
+            ApplyWithActiveRule();
+            var exception = new CountingException();
+
+            Debug.unityLogger.logHandler.LogException(exception, null);
+
+            Assert.That(exception.FormatCount, Is.Zero);
+            Assert.That(inner.MessageCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Shutdown_RetainedHandlerDoesNotFormatArguments()
+        {
+            var inner = new RecordingLogHandler();
+            Debug.unityLogger.logHandler = inner;
+            ApplyWithActiveRule();
+            var retainedHandler = Debug.unityLogger.logHandler;
+            ConsoleLogFilterInstaller.Shutdown();
+            var argument = new CountingFormatArgument();
+
+            retainedHandler.LogFormat(LogType.Warning, null, "{0}", argument);
+
+            Assert.That(argument.FormatCount, Is.Zero);
+            Assert.That(inner.MessageCount, Is.EqualTo(1));
+        }
+
         [TestCase("Log", "ignore me", false)]
         [TestCase("ScriptingLog", "ignore me: warning CS1234", false)]
         [TestCase("ScriptingError", "ignore me: warning CS1234", false)]
@@ -301,6 +350,81 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(entries.Rows.Count, Is.EqualTo(1));
         }
 
+        [Test]
+        public void CleanStackTrace_CleansCombinedMessageAndPreservesUnicodeOffsets()
+        {
+            Apply(cleanStackTraces: true);
+            const string prefix = "Meddelande ö: MinimalEditor.Console.Editor.ConsoleLogFilterInstaller\n";
+            const string ownFrame = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller:LogFormat()\n";
+            const string userFrame = "Game.Player:Update() (at Assets/Player.cs:12)";
+            var entry = CreateEntry("ScriptingLog", prefix + ownFrame + userFrame);
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            var type = entry.GetType();
+            var utf16 = type.GetField("callstackTextStartUTF16", flags);
+            var utf8 = type.GetField("callstackTextStartUTF8", flags);
+            utf16.SetValue(entry, prefix.Length);
+            utf8.SetValue(entry, Encoding.UTF8.GetByteCount(prefix));
+            var entries = new MemoryConsoleEntries(entry);
+
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out var removed, out var message), Is.True, message);
+
+            Assert.That(removed, Is.False);
+            Assert.That(entries.ClearCount, Is.EqualTo(1));
+            Assert.That(entries.Rows.Count, Is.EqualTo(1));
+            var cleaned = entries.Rows[0];
+            Assert.That(type.GetField("message", flags).GetValue(cleaned), Is.EqualTo(prefix + userFrame));
+            Assert.That(type.GetField("message", flags).GetValue(entry), Is.EqualTo(prefix + ownFrame + userFrame),
+                "Cleaning the retained snapshot must not mutate the original entry.");
+            Assert.That(utf16.GetValue(cleaned), Is.EqualTo(prefix.Length));
+            Assert.That(utf8.GetValue(cleaned), Is.EqualTo(Encoding.UTF8.GetByteCount(prefix)));
+        }
+
+        [TestCase(-1)]
+        [TestCase(0)]
+        [TestCase(999)]
+        public void CleanStackTrace_InvalidOrAbsentOffsetPreservesMessage(int stackStart)
+        {
+            Apply(cleanStackTraces: true);
+            const string text = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller is in this message";
+            var entry = CreateEntry("ScriptingLog", text);
+            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, stackStart);
+            var entries = new MemoryConsoleEntries(entry);
+
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out _, out var message), Is.True, message);
+
+            Assert.That(entries.ClearCount, Is.Zero);
+            Assert.That(entry.GetType().GetField("message").GetValue(entries.Rows[0]), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void CleanStackTrace_OffsetAtEndPreservesMessage()
+        {
+            Apply(cleanStackTraces: true);
+            const string text = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller";
+            var entry = CreateEntry("ScriptingLog", text);
+            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, text.Length);
+            var entries = new MemoryConsoleEntries(entry);
+
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out _, out var message), Is.True, message);
+
+            Assert.That(entries.ClearCount, Is.Zero);
+            Assert.That(entry.GetType().GetField("message").GetValue(entries.Rows[0]), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void CleanStackTrace_UnchangedSnapshotDoesNotNeedAnotherCopy()
+        {
+            Apply(cleanStackTraces: true);
+            var entry = CreateEntry("ScriptingLog", "keep me");
+            entry.GetType().GetField("file").SetValue(entry, string.Empty);
+            var entries = new MemoryConsoleEntries(entry);
+
+            var copy = entries.Clone(entry, out var cleaned);
+
+            Assert.That(copy, Is.SameAs(entry));
+            Assert.That(cleaned, Is.False);
+        }
+
         private static object CreateEntry(string mode, string message)
         {
             var assembly = typeof(EditorWindow).Assembly;
@@ -404,6 +528,26 @@ namespace MinimalEditor.Tests.Editor.Console
             {
                 MessageCount++;
                 inner?.LogFormat(logType, context, format, args);
+            }
+        }
+
+        private sealed class CountingFormatArgument
+        {
+            internal int FormatCount;
+            public override string ToString()
+            {
+                FormatCount++;
+                return "keep me";
+            }
+        }
+
+        private sealed class CountingException : Exception
+        {
+            internal int FormatCount;
+            public override string ToString()
+            {
+                FormatCount++;
+                return "keep me";
             }
         }
 

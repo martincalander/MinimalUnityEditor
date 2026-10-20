@@ -13,6 +13,8 @@ namespace MinimalEditor.MenuItem.Editor
         readonly List<IntPtr> retiredItems = new List<IntPtr>();
         readonly HashSet<string> hiddenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        internal bool HasHiddenRoots => hiddenRoots.Count > 0;
+
         internal void Configure(IReadOnlyList<string> patterns)
         {
             hiddenRoots.Clear();

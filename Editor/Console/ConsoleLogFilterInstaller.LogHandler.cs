@@ -63,21 +63,32 @@ namespace MinimalEditor.Console.Editor
             bool ShouldSuppressMode(int mode, string message);
         }
 
-        private abstract class FilterLogHandlerBase : IFilteringLogHandler
+        private sealed class FilterConfiguration
         {
-            private volatile bool m_enabled;
-            private volatile bool m_warningsOnly;
-            private volatile CompiledRule[] m_rules = Array.Empty<CompiledRule>();
-            private ILogHandler m_inner;
+            internal readonly bool Enabled;
+            internal readonly bool WarningsOnly;
+            internal readonly CompiledRule[] Rules;
 
-            public bool FilteringEnabled => m_enabled && m_rules.Length > 0;
+            internal FilterConfiguration(bool enabled, bool warningsOnly, CompiledRule[] rules)
+            {
+                Rules = rules ?? Array.Empty<CompiledRule>();
+                Enabled = enabled && Rules.Length > 0;
+                WarningsOnly = warningsOnly;
+            }
+        }
+
+        private sealed class FilterLogHandler : IFilteringLogHandler
+        {
+            private volatile FilterConfiguration m_configuration = new(false, true, null);
+            private volatile ILogHandler m_inner;
+
+            public bool FilteringEnabled => m_configuration.Enabled;
             public ILogHandler Inner => m_inner;
 
             public void Configure(bool enabled, bool warningsOnly, CompiledRule[] rules)
             {
-                m_enabled = enabled;
-                m_warningsOnly = warningsOnly;
-                m_rules = rules ?? Array.Empty<CompiledRule>();
+                // Logs can arrive on worker threads while preferences change.
+                m_configuration = new FilterConfiguration(enabled, warningsOnly, rules);
             }
 
             public void SetInner(ILogHandler inner)
@@ -88,25 +99,29 @@ namespace MinimalEditor.Console.Editor
                 m_inner = inner;
             }
 
-            protected void LogExceptionCore(Exception exception, Object context)
+            public void LogException(Exception exception, Object context)
             {
                 var inner = m_inner;
                 if (inner == null || ReferenceEquals(inner, this))
                     return;
 
-                if (ShouldSuppressLogType(LogType.Exception, exception?.ToString()))
+                var configuration = m_configuration;
+                if (configuration.Enabled && !configuration.WarningsOnly &&
+                    MatchesRules(configuration.Rules, exception?.ToString()))
                     return;
 
                 inner.LogException(exception, context);
             }
 
-            protected void LogFormatCore(LogType logType, Object context, string format, params object[] args)
+            public void LogFormat(LogType logType, Object context, string format, params object[] args)
             {
                 var inner = m_inner;
                 if (inner == null || ReferenceEquals(inner, this))
                     return;
 
-                if (ShouldSuppressLogType(logType, FormatMessage(format, args)))
+                var configuration = m_configuration;
+                if (configuration.Enabled && (!configuration.WarningsOnly || logType == LogType.Warning) &&
+                    MatchesRules(configuration.Rules, FormatMessage(format, args)))
                     return;
 
                 inner.LogFormat(logType, context, format, args);
@@ -114,41 +129,29 @@ namespace MinimalEditor.Console.Editor
 
             public bool ShouldSuppressMode(int mode, string message)
             {
-                if (!m_enabled)
+                var configuration = m_configuration;
+                if (!configuration.Enabled)
                     return false;
 
-                if (m_warningsOnly)
+                if (configuration.WarningsOnly)
                 {
                     var isWarning = IsWarningMode(mode);
                     var isError = IsErrorMode(mode);
-                    var looksLikeCompilerWarning = IsCompilerWarningMessage(message);
 
                     // Unity displays mixed error/warning modes as errors. Keep those
                     // visible, and use message text only for otherwise unclassified rows.
-                    if (isError || (!isWarning && (IsLogMode(mode) || !looksLikeCompilerWarning)))
+                    if (isError || (!isWarning && (IsLogMode(mode) || !IsCompilerWarningMessage(message))))
                         return false;
                 }
 
-                return MatchesRules(message);
+                return MatchesRules(configuration.Rules, message);
             }
 
-            protected bool ShouldSuppressLogType(LogType logType, string message)
-            {
-                if (!m_enabled)
-                    return false;
-
-                if (m_warningsOnly && logType != LogType.Warning)
-                    return false;
-
-                return MatchesRules(message);
-            }
-
-            private bool MatchesRules(string message)
+            private static bool MatchesRules(CompiledRule[] rules, string message)
             {
                 if (string.IsNullOrEmpty(message))
                     return false;
 
-                var rules = m_rules;
                 for (var i = 0; i < rules.Length; i++)
                 {
                     if (rules[i].Matches(message))
@@ -166,55 +169,6 @@ namespace MinimalEditor.Console.Editor
                 return message.IndexOf(" warning CS", StringComparison.OrdinalIgnoreCase) >= 0 ||
                        message.IndexOf("): warning ", StringComparison.OrdinalIgnoreCase) >= 0 ||
                        message.IndexOf(": warning ", StringComparison.OrdinalIgnoreCase) >= 0;
-            }
-
-            public abstract void LogException(Exception exception, Object context);
-            public abstract void LogFormat(LogType logType, Object context, string format, params object[] args);
-        }
-
-        private sealed class FilterLogHandler : FilterLogHandlerBase
-        {
-            public override void LogException(Exception exception, Object context)
-            {
-                LogExceptionCore(exception, context);
-            }
-
-            public override void LogFormat(LogType logType, Object context, string format, params object[] args)
-            {
-                LogFormatCore(logType, context, format, args);
-            }
-        }
-
-        private sealed class DeclutteredFilterLogHandler : FilterLogHandlerBase
-        {
-#if UNITY_2022_2_OR_NEWER
-            [HideInCallstack]
-#endif
-            public override void LogException(Exception exception, Object context)
-            {
-                var inner = Inner;
-                if (inner == null || ReferenceEquals(inner, this))
-                    return;
-
-                if (ShouldSuppressLogType(LogType.Exception, exception?.ToString()))
-                    return;
-
-                inner.LogException(exception, context);
-            }
-
-#if UNITY_2022_2_OR_NEWER
-            [HideInCallstack]
-#endif
-            public override void LogFormat(LogType logType, Object context, string format, params object[] args)
-            {
-                var inner = Inner;
-                if (inner == null || ReferenceEquals(inner, this))
-                    return;
-
-                if (ShouldSuppressLogType(logType, FormatMessage(format, args)))
-                    return;
-
-                inner.LogFormat(logType, context, format, args);
             }
         }
     }

@@ -60,6 +60,19 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
 
         internal static IReadOnlyList<FolderVisibilityRule> Folders => s_Settings.folders;
 
+        internal static bool HasHiddenFolders
+        {
+            get
+            {
+                if (!Enabled)
+                    return false;
+                foreach (var rule in s_Settings.folders)
+                    if (rule.Hidden)
+                        return true;
+                return false;
+            }
+        }
+
         internal static bool IsBuiltInFolder(string path) =>
             string.Equals(path, AddressablesPath, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(path, StreamingAssetsPath, StringComparison.OrdinalIgnoreCase) ||
@@ -103,9 +116,8 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             if (!Enabled || string.IsNullOrEmpty(path))
                 return false;
             foreach (var rule in s_Settings.folders)
-                if (rule.Hidden &&
-                    (path.Equals(rule.Path, StringComparison.OrdinalIgnoreCase) ||
-                     path.StartsWith(rule.Path + "/", StringComparison.OrdinalIgnoreCase)))
+                if (rule.Hidden && path.StartsWith(rule.Path, StringComparison.OrdinalIgnoreCase) &&
+                    (path.Length == rule.Path.Length || path[rule.Path.Length] == '/'))
                     return true;
             return false;
         }

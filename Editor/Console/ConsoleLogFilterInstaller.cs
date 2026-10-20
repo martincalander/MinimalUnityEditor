@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace MinimalEditor.Console.Editor
 {
@@ -20,7 +19,7 @@ namespace MinimalEditor.Console.Editor
         private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromMilliseconds(50);
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
-        private static readonly DeclutteredFilterLogHandler s_cleanStackFilteringLogHandler = new();
+        private static readonly FilterLogHandler s_cleanStackFilteringLogHandler = new();
         private static readonly Type s_logEntryType = typeof(EditorWindow).Assembly.GetType("UnityEditor.LogEntry");
         private static readonly Type s_logEntriesType = typeof(EditorWindow).Assembly.GetType("UnityEditor.LogEntries");
         private static readonly Type s_consoleWindowModeType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ConsoleWindow+Mode");
@@ -36,6 +35,7 @@ namespace MinimalEditor.Console.Editor
         private static readonly FieldInfo s_logEntryConditionField = s_logEntryType?.GetField("condition", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryModeField = s_logEntryType?.GetField("mode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo s_logEntryFileField = s_logEntryType?.GetField("file", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo s_logEntryCallstackStartField = s_logEntryType?.GetField("callstackTextStartUTF16", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly int s_warningModeMask = BuildModeMask(modeName =>
             modeName.IndexOf("Warning", StringComparison.OrdinalIgnoreCase) >= 0);
         private static readonly int s_errorModeMask = BuildModeMask(modeName =>
@@ -284,22 +284,6 @@ namespace MinimalEditor.Console.Editor
                 UnityEngine.Debug.unityLogger.logHandler = fallbackHandler;
                 s_hasInstalledLogHandler = false;
             }
-        }
-
-        internal static bool TryUpdateCurrentLogs(out string message)
-        {
-            EnsureLogHandlerState();
-
-            if (!s_activeFilteringLogHandler.FilteringEnabled)
-            {
-                message = "Enable hidden log filters and add at least one active rule first.";
-                return false;
-            }
-
-            if (!TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out message))
-                return false;
-
-            return true;
         }
 
         private static bool IsManagedFilteringHandler(ILogHandler handler)

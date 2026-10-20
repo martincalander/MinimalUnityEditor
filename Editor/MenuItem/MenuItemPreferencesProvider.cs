@@ -69,7 +69,6 @@ namespace MinimalEditor.MenuItem.Editor
                     GUILayout.MinWidth(220f));
                 if (EditorGUI.EndChangeCheck())
                 {
-                    MenuItemModuleSettings.ModuleEnabled = moduleEnabled;
                     MenuItemHider.SetActive(moduleEnabled);
                 }
 

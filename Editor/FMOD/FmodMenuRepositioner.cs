@@ -10,8 +10,7 @@ namespace MinimalEditor.FMOD.Editor
 #if UNITY_6000_5_OR_NEWER
     [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
 #endif
-    [InitializeOnLoad]
-    internal static class FmodMenuRepositioner
+    internal static partial class FmodMenuRepositioner
     {
         const string TargetRoot = "Tools/FMOD";
 
@@ -48,8 +47,10 @@ namespace MinimalEditor.FMOD.Editor
         static readonly FmodMenuCommand EventBrowserCommand =
             new FmodMenuCommand("FMOD/Event Browser", "FMODUnity.EventBrowser", "ShowWindow");
 
+#if !FMOD_SERIALIZE_GUID_ONLY
         static readonly FmodMenuCommand FindAndReplaceCommand =
             new FmodMenuCommand("FMOD/Find and Replace", "FMODUnity.FindAndReplace", "ShowFindAndReplace");
+#endif
 
         static readonly FmodMenuCommand UpdateEventReferencesCommand =
             new FmodMenuCommand("FMOD/Update Event References", "FMODUnity.EventReferenceUpdater", "ShowWindow");
@@ -88,7 +89,9 @@ namespace MinimalEditor.FMOD.Editor
             RefreshBanksCommand,
             SetupWizardCommand,
             EventBrowserCommand,
+#if !FMOD_SERIALIZE_GUID_ONLY
             FindAndReplaceCommand,
+#endif
             UpdateEventReferencesCommand,
             ReorganizePluginFilesCommand,
             GenerateVisualScriptingUnitsCommand,
@@ -101,14 +104,43 @@ namespace MinimalEditor.FMOD.Editor
         };
 
         static readonly Dictionary<string, Type> TypeCache = new Dictionary<string, Type>();
+        static readonly Dictionary<(string Type, string Method), MethodInfo> MethodCache =
+            new Dictionary<(string Type, string Method), MethodInfo>();
         static readonly HashSet<string> MissingCommandWarnings = new HashSet<string>();
 
         static int s_removalAttemptCount;
         static bool s_loggedMissingRemoveMenuItemMethod;
+        static bool s_mutationSuppressed;
 
-        static FmodMenuRepositioner()
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        static void Initialize()
         {
+            s_mutationSuppressed = false;
+            s_removalAttemptCount = 0;
+            EditorApplication.quitting -= SuppressMutationForTeardown;
+            EditorApplication.quitting += SuppressMutationForTeardown;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= SuppressMutationForTeardown;
+            AssemblyReloadEvents.beforeAssemblyReload += SuppressMutationForTeardown;
+#endif
             QueueRootMenuRemoval();
+        }
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
+#endif
+        static void SuppressMutationForTeardown()
+        {
+            s_mutationSuppressed = true;
+            EditorApplication.delayCall -= RemoveRootMenuItems;
+            EditorApplication.quitting -= SuppressMutationForTeardown;
+#if !UNITY_6000_5_OR_NEWER
+            AssemblyReloadEvents.beforeAssemblyReload -= SuppressMutationForTeardown;
+#endif
         }
 
         [MenuItem(EditSettingsPath, true)]
@@ -283,11 +315,20 @@ namespace MinimalEditor.FMOD.Editor
 
         static void QueueRootMenuRemoval()
         {
+            if (s_mutationSuppressed) return;
+            EditorApplication.delayCall -= RemoveRootMenuItems;
             EditorApplication.delayCall += RemoveRootMenuItems;
         }
 
         static void RemoveRootMenuItems()
         {
+            if (s_mutationSuppressed) return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                QueueRootMenuRemoval();
+                return;
+            }
+
             s_removalAttemptCount++;
 
             for (var i = 0; i < Commands.Length; i++)
@@ -328,15 +369,16 @@ namespace MinimalEditor.FMOD.Editor
 
         static bool ValidateOriginal(FmodMenuCommand command)
         {
+            if (!CanInvokeOriginal(command)) return false;
             if (string.IsNullOrEmpty(command.ValidationMethodName))
             {
-                return CanInvokeOriginal(command);
+                return true;
             }
 
             var validationMethod = GetOriginalMethod(command.TypeName, command.ValidationMethodName);
             if (validationMethod == null)
             {
-                return CanInvokeOriginal(command);
+                return true;
             }
 
             try
@@ -383,17 +425,25 @@ namespace MinimalEditor.FMOD.Editor
 
         static MethodInfo GetOriginalMethod(string typeName, string methodName)
         {
+            var key = (typeName, methodName);
+            if (MethodCache.TryGetValue(key, out var cachedMethod)) return cachedMethod;
+
+            MethodInfo method = null;
             try
             {
                 var type = ResolveFmodEditorType(typeName);
-                var method = type?.GetMethod(methodName, StaticMemberFlags, null, Type.EmptyTypes, null);
-                return method != null && !method.ContainsGenericParameters ? method : null;
+                method = type?.GetMethod(methodName, StaticMemberFlags, null, Type.EmptyTypes, null);
+                if (method != null && method.ContainsGenericParameters) method = null;
             }
             catch
             {
                 // Leave the original command available when FMOD's reflected API is incompatible.
-                return null;
             }
+
+            // Optional commands can be absent for the whole code lifetime. Cache misses too,
+            // so opening the menu does not repeatedly search assemblies or throw exceptions.
+            MethodCache[key] = method;
+            return method;
         }
 
         static Type ResolveFmodEditorType(string typeName)
@@ -404,25 +454,7 @@ namespace MinimalEditor.FMOD.Editor
             }
 
             var type = Type.GetType(typeName + ", FMODUnityEditor");
-            if (type == null)
-            {
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-                for (var i = 0; i < assemblies.Length; i++)
-                {
-                    if (assemblies[i].GetName().Name != "FMODUnityEditor")
-                    {
-                        continue;
-                    }
-
-                    type = assemblies[i].GetType(typeName);
-                    break;
-                }
-            }
-
-            if (type != null)
-            {
-                TypeCache[typeName] = type;
-            }
+            TypeCache[typeName] = type;
 
             return type;
         }

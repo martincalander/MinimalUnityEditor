@@ -15,7 +15,12 @@ namespace MinimalEditor.MenuItem.Editor
         const string AdvancedSettingsExpandedKey = "MinimalEditor.MenuItem.AdvancedExpanded";
         const string MinimumSupportedUnity6Version = "6000.0.43f1";
 
+        static readonly bool CurrentEditorSupported = !IsKnownUnsafeEditorVersion(Application.unityVersion);
         static MenuItemSettingsData s_data;
+        static string s_cachedDefinitionText;
+        static List<string> s_cachedDefinitionEntries;
+        static IReadOnlyList<string> s_cachedUnsupportedWarnings;
+        static IReadOnlyList<string> s_cachedErrorProneWarnings;
 
         static MenuItemSettingsData Data
         {
@@ -32,14 +37,14 @@ namespace MinimalEditor.MenuItem.Editor
 
         internal static bool IsSupportedInCurrentEditor
         {
-            get => !IsKnownUnsafeEditorVersion(Application.unityVersion);
+            get => CurrentEditorSupported;
         }
 
         internal static string UnsupportedEditorMessage
         {
             get
             {
-                if (!IsKnownUnsafeEditorVersion(Application.unityVersion))
+                if (IsSupportedInCurrentEditor)
                 {
                     return string.Empty;
                 }
@@ -56,19 +61,35 @@ namespace MinimalEditor.MenuItem.Editor
         internal static bool ModuleEnabled
         {
             get => IsSupportedInCurrentEditor && Data.moduleEnabled;
-            set { Data.moduleEnabled = value; Save(); }
+            set
+            {
+                if (Data.moduleEnabled == value) return;
+                Data.moduleEnabled = value;
+                Save();
+            }
         }
 
         internal static bool CustomDefinitionsEnabled
         {
             get => Data.customDefinitionsEnabled;
-            set { Data.customDefinitionsEnabled = value; Save(); }
+            set
+            {
+                if (Data.customDefinitionsEnabled == value) return;
+                Data.customDefinitionsEnabled = value;
+                Save();
+            }
         }
 
         internal static string CustomDefinitionsText
         {
             get => Data.customDefinitionsText ?? string.Empty;
-            set { Data.customDefinitionsText = NormalizeDefinitionText(value); Save(); }
+            set
+            {
+                var normalized = NormalizeDefinitionText(value);
+                if (CustomDefinitionsText == normalized) return;
+                Data.customDefinitionsText = normalized;
+                Save();
+            }
         }
 
         internal static bool AdvancedSettingsExpanded
@@ -96,6 +117,7 @@ namespace MinimalEditor.MenuItem.Editor
                 return;
             }
 
+            if (Data.GetBundleEnabled(bundle.Id, bundle.DefaultEnabled) == enabled) return;
             Data.SetBundleEnabled(bundle.Id, enabled);
             Save();
         }
@@ -106,7 +128,7 @@ namespace MinimalEditor.MenuItem.Editor
             for (var i = 0; i < MenuItemBundleCatalog.Bundles.Count; i++)
             {
                 var bundle = MenuItemBundleCatalog.Bundles[i];
-                if (bundle == null || !bundle.IsAvailable || !GetBundleEnabled(bundle.Id))
+                if (bundle == null || !bundle.IsAvailable || !Data.GetBundleEnabled(bundle.Id, bundle.DefaultEnabled))
                 {
                     continue;
                 }
@@ -119,7 +141,7 @@ namespace MinimalEditor.MenuItem.Editor
 
             if (CustomDefinitionsEnabled)
             {
-                var customPaths = ResolveCustomDefinitionPaths();
+                var customPaths = GetCustomDefinitionEntries();
                 for (var i = 0; i < customPaths.Count; i++)
                 {
                     paths.Add(customPaths[i]);
@@ -141,17 +163,33 @@ namespace MinimalEditor.MenuItem.Editor
 
         internal static int CustomDefinitionEntryCount()
         {
-            return ParseDefinitionEntries(CustomDefinitionsText).Count;
+            return GetCustomDefinitionEntries().Count;
         }
 
         internal static IReadOnlyList<string> GetCustomDefinitionWarnings(MenuItemBlockedEntryKind kind)
         {
-            return MenuItemPatternMatcher.GetWarningMessages(ParseDefinitionEntries(CustomDefinitionsText), kind);
+            var entries = GetCustomDefinitionEntries();
+            if (kind == MenuItemBlockedEntryKind.Unsupported)
+                return s_cachedUnsupportedWarnings ?? (s_cachedUnsupportedWarnings =
+                    MenuItemPatternMatcher.GetWarningMessages(entries, kind));
+            if (kind == MenuItemBlockedEntryKind.ErrorProne)
+                return s_cachedErrorProneWarnings ?? (s_cachedErrorProneWarnings =
+                    MenuItemPatternMatcher.GetWarningMessages(entries, kind));
+            return Array.Empty<string>();
         }
 
-        static IReadOnlyList<string> ResolveCustomDefinitionPaths()
+        static List<string> GetCustomDefinitionEntries()
         {
-            return MenuItemPatternMatcher.SanitizeEntries(ParseDefinitionEntries(CustomDefinitionsText));
+            var text = CustomDefinitionsText;
+            if (s_cachedDefinitionEntries == null || s_cachedDefinitionText != text)
+            {
+                s_cachedDefinitionText = text;
+                s_cachedDefinitionEntries = ParseDefinitionEntries(text);
+                s_cachedUnsupportedWarnings = null;
+                s_cachedErrorProneWarnings = null;
+            }
+
+            return s_cachedDefinitionEntries;
         }
 
         static List<string> ParseDefinitionEntries(string text)

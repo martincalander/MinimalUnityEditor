@@ -4,6 +4,9 @@ using UnityEditor;
 
 namespace MinimalEditor.Console.Editor
 {
+#if UNITY_6000_5_OR_NEWER
+    [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
+#endif
     internal static partial class ConsoleAssistantToolbarButtonController
     {
         private const string AssistantBridgeAssemblyName = "Unity.AI.Assistant.Bridge.Editor";
@@ -12,6 +15,9 @@ namespace MinimalEditor.Console.Editor
         private const string AssistantUiConsoleTypeName = "Unity.AI.Assistant.UI.Editor.Scripts.ConsoleUI";
         private const string ToolbarEventName = "s_DrawCustomToolbarGuiEvent";
         private const string ToolbarHandlerMethodName = "OnDrawCustomGuiEvent";
+        private static bool s_toolbarHandlerResolved;
+        private static EventInfo s_toolbarEvent;
+        private static Delegate s_toolbarHandler;
 
 #if UNITY_6000_5_OR_NEWER
         [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
@@ -20,6 +26,7 @@ namespace MinimalEditor.Console.Editor
 #endif
         internal static void Initialize()
         {
+            s_toolbarHandlerResolved = false;
             ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
             EditorApplication.delayCall -= ApplySettings;
@@ -35,6 +42,9 @@ namespace MinimalEditor.Console.Editor
 #endif
         internal static void Shutdown()
         {
+            s_toolbarHandlerResolved = false;
+            s_toolbarEvent = null;
+            s_toolbarHandler = null;
             ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
             EditorApplication.delayCall -= ApplySettings;
 #if !UNITY_6000_5_OR_NEWER
@@ -49,17 +59,43 @@ namespace MinimalEditor.Console.Editor
             if (!TryGetToolbarHandler(out var toolbarEvent, out var toolbarHandler))
                 return;
 
-            var removeMethod = toolbarEvent.GetRemoveMethod(true);
-            removeMethod?.Invoke(null, new object[] { toolbarHandler });
-
-            if (!ConsoleLogFilterSettings.Data.hideAssistantToolbarButton)
+            try
             {
-                var addMethod = toolbarEvent.GetAddMethod(true);
-                addMethod?.Invoke(null, new object[] { toolbarHandler });
+                var arguments = new object[] { toolbarHandler };
+                toolbarEvent.GetRemoveMethod(true)?.Invoke(null, arguments);
+                if (!ConsoleLogFilterSettings.Data.hideAssistantToolbarButton)
+                    toolbarEvent.GetAddMethod(true)?.Invoke(null, arguments);
+            }
+            catch
+            {
+                // An incompatible optional integration must not interrupt settings updates.
+                s_toolbarEvent = null;
+                s_toolbarHandler = null;
             }
         }
 
         private static bool TryGetToolbarHandler(out EventInfo toolbarEvent, out Delegate toolbarHandler)
+        {
+            if (!s_toolbarHandlerResolved)
+            {
+                s_toolbarHandlerResolved = true;
+                try
+                {
+                    ResolveToolbarHandler(out s_toolbarEvent, out s_toolbarHandler);
+                }
+                catch
+                {
+                    s_toolbarEvent = null;
+                    s_toolbarHandler = null;
+                }
+            }
+
+            toolbarEvent = s_toolbarEvent;
+            toolbarHandler = s_toolbarHandler;
+            return toolbarEvent != null && toolbarHandler != null;
+        }
+
+        private static bool ResolveToolbarHandler(out EventInfo toolbarEvent, out Delegate toolbarHandler)
         {
             toolbarEvent = null;
             toolbarHandler = null;
@@ -81,15 +117,8 @@ namespace MinimalEditor.Console.Editor
             if (toolbarHandlerMethod == null)
                 return false;
 
-            try
-            {
-                toolbarHandler = Delegate.CreateDelegate(toolbarEvent.EventHandlerType, toolbarHandlerMethod);
-                return toolbarHandler != null;
-            }
-            catch
-            {
-                return false;
-            }
+            toolbarHandler = Delegate.CreateDelegate(toolbarEvent.EventHandlerType, toolbarHandlerMethod);
+            return toolbarHandler != null;
         }
 
         private static Type FindLoadedType(string assemblyName, string typeName)

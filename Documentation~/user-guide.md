@@ -147,8 +147,9 @@ when its matching read-only UPM package already resolves outside the project's
 Store row; that row's details toolbar receives **Go To Local Package** instead.
 
 **Window > Package Management > Re-resolve All Packages** deletes
-`Packages/packages-lock.json` and asks Unity Package Manager to resolve the
-project again. There is no confirmation dialog. Commit or otherwise preserve
+`Packages/packages-lock.json` when present and asks Unity Package Manager to
+resolve the project again, including projects with lockfiles disabled.
+There is no confirmation dialog. Commit or otherwise preserve
 intentional lockfile changes before using it, then review the regenerated file.
 
 The Package Manager integration patches exact Unity internals. If those

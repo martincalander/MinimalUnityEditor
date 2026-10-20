@@ -122,6 +122,156 @@ namespace MinimalEditor.Tests.Editor.MenuItem
             Assert.That(path.PropertyType, Is.EqualTo(typeof(string)));
         }
 
+        [Test]
+        public void MenuRootScan_ExactRules_DoNotEnumerateMenus()
+        {
+            Assert.That(MenuRoots("Assets/Create/Material", "Custom/Command", "Jobs"), Is.Empty);
+        }
+
+        [Test]
+        public void MenuRootScan_OnlyIncludesRootsNeededByWildcards()
+        {
+            Assert.That(MenuRoots("Assets/Create/Material", "Window/Analysis/*", " window/UI* ", "Custom/Tools/*"),
+                Is.EquivalentTo(new[] { "Window", "Custom" }));
+        }
+
+        [Test]
+        public void MenuRootScan_RootPrefixesPreserveKnownCustomRoots()
+        {
+            Assert.That(MenuRoots("Tool*", "Custom/Command", "Custom*", "*", null, ""),
+                Is.EquivalentTo(new[] { "Tools", "Custom" }));
+        }
+
+        [TestCase("GameObject/Center On Children")]
+        [TestCase(" GameObject/Center On Children/ ")]
+        [TestCase("GameObject/Center On Children/*")]
+        [TestCase("GameObject/Center On Children//*")]
+        [TestCase("GameObject/Center On*")]
+        [TestCase("GameObject/*")]
+        public void ProtectedCommand_CannotBeHiddenThroughEquivalentRules(string rule)
+        {
+            var matcher = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemPatternMatcher, MinimalEditor.MenuItem.Editor", true);
+            var paths = (IEnumerable<string>)RequireMethod(matcher, "SanitizeEntries", typeof(IEnumerable<string>))
+                .Invoke(null, new object[] { new[] { rule, "Window/Analysis/*" } });
+
+            Assert.That(paths, Is.EqualTo(new[] { "Window/Analysis/*" }));
+        }
+
+        [Test]
+        public void ManualRules_CanReuseCurrentList()
+        {
+            WithManualRules(list =>
+            {
+                SetMenuItems(list);
+                Assert.That(list, Is.EqualTo(new[] { "Tools/Keep" }));
+            });
+        }
+
+        [Test]
+        public void ManualRules_FailedEnumerationPreservesPreviousConfiguration()
+        {
+            WithManualRules(list =>
+            {
+                SetBool("s_useManualMenuItems", false);
+                var exception = Assert.Throws<TargetInvocationException>(() => SetMenuItems(ThrowingPaths()));
+                Assert.That(exception.InnerException, Is.TypeOf<InvalidOperationException>());
+                Assert.That(list, Is.EqualTo(new[] { "Tools/Keep" }));
+                Assert.That(GetBool("s_useManualMenuItems"), Is.False);
+            });
+        }
+
+        [Test]
+        public void CustomDefinitionCache_RefreshesWhenSettingsTextChanges()
+        {
+            var settings = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemModuleSettings, MinimalEditor.MenuItem.Editor", true);
+            var dataField = settings.GetField("s_data", AnyStatic);
+            var originalData = dataField.GetValue(null);
+            var data = Activator.CreateInstance(dataField.FieldType, true);
+            var text = dataField.FieldType.GetField("customDefinitionsText", AnyInstance);
+            var getEntries = RequireMethod(settings, "GetCustomDefinitionEntries");
+            var warningKind = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemBlockedEntryKind, MinimalEditor.MenuItem.Editor", true);
+            var getWarnings = RequireMethod(settings, "GetCustomDefinitionWarnings", warningKind);
+            try
+            {
+                dataField.SetValue(null, data);
+                text.SetValue(data, "Services/*\n# ignored\n'Window/Analysis/*'");
+                var entries = getEntries.Invoke(null, null);
+                Assert.That((IEnumerable<string>)entries, Is.EqualTo(new[] { "Services/*", "Window/Analysis/*" }));
+                Assert.That(getEntries.Invoke(null, null), Is.SameAs(entries));
+                var warnings = getWarnings.Invoke(null, new[] { Enum.Parse(warningKind, "Unsupported") });
+                Assert.That(((IEnumerable<string>)warnings).Count(), Is.EqualTo(1));
+                Assert.That(getWarnings.Invoke(null, new[] { Enum.Parse(warningKind, "Unsupported") }), Is.SameAs(warnings));
+
+                text.SetValue(data, "Tools/Keep");
+                Assert.That((IEnumerable<string>)getEntries.Invoke(null, null), Is.EqualTo(new[] { "Tools/Keep" }));
+                Assert.That((IEnumerable<string>)getWarnings.Invoke(null, new[] { Enum.Parse(warningKind, "Unsupported") }),
+                    Is.Empty);
+            }
+            finally
+            {
+                dataField.SetValue(null, originalData);
+            }
+        }
+
+#if UNITY_EDITOR_OSX
+        [Test]
+        public void NativeRootPolling_OnlySubscribesOnceWhileWholeRootRulesExist()
+        {
+            var configure = RequireMethod(Hider, "ConfigureNativeRootVisibility", typeof(IReadOnlyList<string>));
+            var update = typeof(EditorApplication).GetField("update", AnyStatic);
+            Assert.That(update, Is.Not.Null);
+            int SubscriptionCount() => (update.GetValue(null) as Delegate)?.GetInvocationList().Count(
+                callback => callback.Method.DeclaringType == Hider &&
+                            callback.Method.Name == "UpdateNativeRootVisibility") ?? 0;
+
+            configure.Invoke(null, new object[] { new[] { "Minimal Editor Test Root/*" } });
+            configure.Invoke(null, new object[] { new[] { "Minimal Editor Test Root/*" } });
+            Assert.That(SubscriptionCount(), Is.EqualTo(1));
+
+            configure.Invoke(null, new object[] { new[] { "Tools/Exact Command" } });
+            Assert.That(SubscriptionCount(), Is.Zero);
+
+            configure.Invoke(null, new object[] { new[] { "Minimal Editor Test Root/*" } });
+            Invoke("SuppressMutationForTeardown");
+            Assert.That(SubscriptionCount(), Is.Zero);
+        }
+#endif
+
+        static IEnumerable<string> MenuRoots(params string[] rules) =>
+            (IEnumerable<string>)RequireMethod(Hider, "BuildMenuRootSet", typeof(IReadOnlyList<string>))
+                .Invoke(null, new object[] { rules });
+
+        static void SetMenuItems(IEnumerable<string> items) =>
+            RequireMethod(Hider, "SetMenuItems", typeof(IEnumerable<string>)).Invoke(null, new object[] { items });
+
+        static IEnumerable<string> ThrowingPaths()
+        {
+            yield return "Tools/Partial";
+            throw new InvalidOperationException("Incomplete input");
+        }
+
+        static void WithManualRules(Action<List<string>> assertion)
+        {
+            var list = (List<string>)RequireField("s_manualMenuItemsToHide").GetValue(null);
+            var originalItems = list.ToArray();
+            var originalManualState = GetBool("s_useManualMenuItems");
+            Invoke("SuppressMutationForTeardown");
+            try
+            {
+                SetMenuItems(new[] { "Tools/Keep" });
+                assertion(list);
+            }
+            finally
+            {
+                list.Clear();
+                list.AddRange(originalItems);
+                SetBool("s_useManualMenuItems", originalManualState);
+            }
+        }
+
         static bool GetBool(string name) => (bool)RequireField(name).GetValue(null);
         static void SetBool(string name, bool value) => RequireField(name).SetValue(null, value);
 

@@ -155,7 +155,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
 
         internal static bool IsHiddenPath(string path) => FolderVisibilitySettings.IsHiddenPath(path);
 
-        static bool ShouldFilter => IsPatched && FolderVisibilitySettings.Enabled;
+        static bool ShouldFilter => IsPatched && FolderVisibilitySettings.HasHiddenFolders;
 
         // These data sources also serve other Editor windows. Only alter a Project browser's data.
         static void FilterTree(object __instance)
@@ -210,14 +210,25 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             var results = (Array)field.GetValue(hierarchy);
             if (results == null || results.Length == 0)
                 return;
-            var kept = new List<object>(results.Length);
-            foreach (var result in results)
+            List<object> kept = null;
+            for (var i = 0; i < results.Length; i++)
             {
+                var result = results.GetValue(i);
                 var guid = (string)s_Members.ResultGuid.GetValue(result);
-                if (!IsHiddenPath(AssetDatabase.GUIDToAssetPath(guid)))
-                    kept.Add(result);
+                if (IsHiddenPath(AssetDatabase.GUIDToAssetPath(guid)))
+                {
+                    if (kept != null)
+                        continue;
+                    kept = new List<object>(results.Length - 1);
+                    for (var preceding = 0; preceding < i; preceding++)
+                        kept.Add(results.GetValue(preceding));
+                }
+                else
+                {
+                    kept?.Add(result);
+                }
             }
-            if (kept.Count == results.Length)
+            if (kept == null)
                 return;
             var filtered = Array.CreateInstance(results.GetType().GetElementType(), kept.Count);
             for (var i = 0; i < kept.Count; i++)

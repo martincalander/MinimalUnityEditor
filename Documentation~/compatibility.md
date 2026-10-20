@@ -19,8 +19,9 @@ The short window title uses the public callback on Unity 2023.2 and newer.
 Earlier supported Editors use the equivalent internal callback through
 reflection.
 
-Console stack-trace cleanup is available at the declared baseline. Unity's
-additional `HideInCallstack` attribute is used only on Unity 2022.2 and newer.
+Console stack-trace cleanup is available at the declared baseline. Cleanup runs
+when Console entries are rescanned, including newer Editors that store the stack
+trace after the message text.
 
 ### Play Mode lifecycle
 
@@ -49,7 +50,20 @@ Editor results below predate these lifecycle changes.
 
 ### Verified Editors
 
-On 2026-10-20, all 199 Minimal Editor tests passed in Unity `7000.0.0a10` on
+The 2026-10-20 performance and stability audit passed all 231 Minimal Editor
+tests in Unity `7000.0.0a11` and all 183 applicable tests in Unity `6000.7.0b2`
+on macOS Apple silicon, with no failures or skips. The Unity 6 run used an
+isolated project containing copies of the package sources. These runs cover
+Console cleanup, menu input recovery and polling, folder filtering, package
+resolution with no lockfile, reflection hooks, and repeated Play sessions.
+Unity 2021.3 and 2022.3 were not rerun for this audit.
+
+FMOD was not installed. Its optional module compiled in Unity `6000.7.0b2`
+against a fixture-only stub assembly and passed four integration checks, plus
+96 isolated checks across modern and legacy lifecycle and GUID configurations.
+These checks cover the adapter; they do not establish real FMOD integration.
+
+Earlier on 2026-10-20, all 199 Minimal Editor tests passed in Unity `7000.0.0a10` on
 macOS Apple silicon, with no failures or skips. This includes the Console
 snapshot and logger regressions, canceled-quit handling, menu settings recovery,
 package-location checks, status-bar recovery, and repeated Play sessions.

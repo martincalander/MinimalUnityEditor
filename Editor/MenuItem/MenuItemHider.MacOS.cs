@@ -9,24 +9,28 @@ namespace MinimalEditor.MenuItem.Editor
 #if UNITY_EDITOR_OSX
         static MacOSMenuVisibility s_nativeMenuVisibility;
         static bool s_nativeMenuVisibilityFailed;
+        static double s_nextNativeMenuUpdate;
+        const double NativeMenuUpdateInterval = 0.2;
 #endif
 
         static void InitializeNativeRootVisibility()
         {
 #if UNITY_EDITOR_OSX
             if (s_nativeMenuVisibilityFailed) return;
-            s_nativeMenuVisibility = s_nativeMenuVisibility ?? new MacOSMenuVisibility();
-            s_nativeMenuVisibility.Configure(ResolveActiveState() ? ResolveMenuPaths() : null);
-            EditorApplication.update -= UpdateNativeRootVisibility;
-            EditorApplication.update += UpdateNativeRootVisibility;
-            UpdateNativeRootVisibility();
+            ConfigureNativeRootVisibility(ResolveActiveState() ? ResolveMenuPaths() : null);
 #endif
         }
 
         static void ConfigureNativeRootVisibility(IReadOnlyList<string> patterns)
         {
 #if UNITY_EDITOR_OSX
-            s_nativeMenuVisibility?.Configure(patterns);
+            if (IsMutationSuppressed() || s_nativeMenuVisibilityFailed) return;
+            s_nativeMenuVisibility = s_nativeMenuVisibility ?? new MacOSMenuVisibility();
+            s_nativeMenuVisibility.Configure(patterns);
+            EditorApplication.update -= UpdateNativeRootVisibility;
+            if (s_nativeMenuVisibility.HasHiddenRoots)
+                EditorApplication.update += UpdateNativeRootVisibility;
+            s_nextNativeMenuUpdate = 0;
             UpdateNativeRootVisibility();
 #endif
         }
@@ -44,9 +48,13 @@ namespace MinimalEditor.MenuItem.Editor
         static void UpdateNativeRootVisibility()
         {
             if (IsMutationSuppressed() || s_nativeMenuVisibilityFailed) return;
+            var now = EditorApplication.timeSinceStartup;
+            if (now < s_nextNativeMenuUpdate) return;
+            s_nextNativeMenuUpdate = now + NativeMenuUpdateInterval;
             try
             {
                 // Unity can replace or unhide native roots without a projectChanged event.
+                // Poll at a bounded rate instead of copying native menu titles every frame.
                 s_nativeMenuVisibility?.Apply();
             }
             catch (Exception exception)
