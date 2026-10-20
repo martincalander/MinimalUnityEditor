@@ -76,6 +76,7 @@ namespace Essentials.MenuItem.Editor
             }
 
             s_mutationSuppressed = false;
+            InitializeNativeRootVisibility();
             EditorApplication.wantsToQuit -= OnWantsToQuit;
             EditorApplication.wantsToQuit += OnWantsToQuit;
             EditorApplication.quitting -= SuppressMutationForTeardown;
@@ -192,6 +193,7 @@ namespace Essentials.MenuItem.Editor
         static void SuppressMutationForTeardown()
         {
             s_mutationSuppressed = true;
+            StopNativeRootVisibility();
             s_applyQueued = false;
             s_forceApplyQueued = false;
             EditorApplication.delayCall -= FlushQueuedApply;
@@ -271,10 +273,11 @@ namespace Essentials.MenuItem.Editor
             s_isApplying = true;
             try
             {
+                var items = isActive ? ResolveMenuPaths() : null;
+                ConfigureNativeRootVisibility(items);
                 if (!isActive) return;
                 if (RemoveMenuItemMethod == null) return;
 
-                var items = ResolveMenuPaths();
                 if (items == null || items.Count == 0) return;
 
                 var menuRootsToScan = BuildMenuRootSet(items);
@@ -476,6 +479,7 @@ namespace Essentials.MenuItem.Editor
             if (s_failSafeMode) return;
 
             s_failSafeMode = true;
+            ConfigureNativeRootVisibility(null);
             UnityEngine.Debug.LogWarning(
                 "[MenuItemHider] Disabled menu item hiding for this editor session after an unexpected failure. " +
                 "Menu changes will be skipped until the next domain reload. " +

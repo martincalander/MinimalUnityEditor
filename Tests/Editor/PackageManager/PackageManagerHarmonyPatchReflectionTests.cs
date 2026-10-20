@@ -1,7 +1,11 @@
+using System;
 using System.Collections;
+using System.Linq;
 using System.Reflection;
-using Essentials.PackageManager.Editor;
 using NUnit.Framework;
+using Filter = Essentials.PackageManager.Editor.PackageManagerAssetStoreDuplicateFilter;
+using LocalButton = Essentials.PackageManager.Editor.PackageManagerLocalPackageButton;
+using Patch = Essentials.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch;
 
 namespace Essentials.Tests.Editor.PackageManager
 {
@@ -9,90 +13,43 @@ namespace Essentials.Tests.Editor.PackageManager
     {
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        [Test]
-        public void HarmonyPatch_TargetType_InProjectPage_ExistsInUnityEditorAssembly()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HarmonyPatch_TargetMethod_HasExpectedSignature(bool detailHeader)
         {
-            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.TargetTypeName);
-
-            Assert.That(type, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.TargetTypeName} was not found. " +
-                "Unity moved or renamed the in-project Package Manager page, so the duplicate filter cannot patch All Packages or Updates.");
+            var method = detailHeader ? Patch.GetPackageDetailsHeaderRefreshMethod() : Patch.GetTargetMethod();
+            AssertMethodSignature(method, detailHeader ? typeof(void) : typeof(bool), GetUnityType(Patch.PackageInterfaceTypeName));
         }
 
-        [Test]
-        public void HarmonyPatch_TargetMethod_ShouldInclude_HasExpectedSignature()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HarmonyPatch_PostfixMethod_UsesHarmonyArgumentNames(bool detailHeader)
         {
-            var method = PackageManagerAssetStoreDuplicatePatch.GetTargetMethod();
-
-            Assert.That(method, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.TargetTypeName}.{PackageManagerAssetStoreDuplicatePatch.TargetMethodName}(IPackage) was not found. " +
-                "The duplicate filter patches this method because All Packages and Updates both use it to decide whether rows are visible.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(bool)),
-                "InProjectPage.ShouldInclude must return bool so the postfix can turn visible Asset Store duplicate rows off.");
-
-            var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(1),
-                "InProjectPage.ShouldInclude must keep exactly one package parameter for the Harmony __0 postfix binding.");
-            Assert.That(parameters[0].ParameterType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName),
-                "InProjectPage.ShouldInclude no longer receives UnityEditor.PackageManager.UI.Internal.IPackage; update the patch and filter reflection.");
-        }
-
-        [Test]
-        public void HarmonyPatch_PostfixMethod_UsesHarmonyArgumentNamesAndResultRef()
-        {
-            var method = PackageManagerAssetStoreDuplicatePatch.GetPostfixMethod();
-
-            Assert.That(method, Is.Not.Null,
-                "PackageManagerAssetStoreDuplicatePatch.ShouldIncludePostfix was not found. " +
-                "The Harmony patch must bind this method as the InProjectPage.ShouldInclude postfix.");
-            Assert.That(method.IsStatic, Is.True, "Harmony postfix must remain static.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)), "Harmony postfix should mutate __result and return void.");
-
-            var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(2),
-                "ShouldIncludePostfix must keep object __0 and ref bool __result.");
-            Assert.That(parameters[0].Name, Is.EqualTo("__0"),
-                "Harmony binds the original package argument by the special __0 parameter name.");
-            Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(object)),
-                "The original package argument stays typed as object because Unity's IPackage interface is internal.");
-            Assert.That(parameters[1].Name, Is.EqualTo("__result"),
-                "Harmony binds the original bool result by the special __result parameter name.");
-            Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(bool).MakeByRefType()),
-                "The postfix must receive ref bool __result so it can hide only matching rows.");
-        }
-
-        [Test]
-        public void HarmonyPatch_RuntimePatchRegistration_ContainsExpectedOwnerAndPostfix()
-        {
-            PackageManagerAssetStoreDuplicatePatch.TryPatch();
-
-            Assert.That(PackageManagerAssetStoreDuplicatePatch.IsPatchApplied(), Is.True,
-                "Harmony does not report the Package Manager duplicate filter postfix on InProjectPage.ShouldInclude. " +
-                "Check the Harmony id, target lookup, postfix lookup, and assembly load order. " +
-                PackageManagerAssetStoreDuplicatePatch.LastPatchError);
+            var method = detailHeader ? Patch.GetPackageDetailsHeaderRefreshPostfixMethod() : Patch.GetPostfixMethod();
+            AssertMethodSignature(method, typeof(void), typeof(object), detailHeader ? typeof(object) : typeof(bool).MakeByRefType());
+            Assert.That(method.IsStatic, Is.True);
+            Assert.That(method.GetParameters().Select(parameter => parameter.Name),
+                Is.EqualTo(detailHeader ? new[] { "__instance", "__0" } : new[] { "__0", "__result" }));
         }
 
         [Test]
         public void HarmonyPatch_RepeatedInitializationAndCleanup_PreserveSingleOwnedPostfixes()
         {
-            var patchType = typeof(PackageManagerAssetStoreDuplicatePatch);
             const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
-            var initialize = patchType.GetMethod("Initialize", flags);
-            var cleanup = patchType.GetMethod("OnBeforeAssemblyReload", flags);
+            var initialize = typeof(Patch).GetMethod("Initialize", flags);
+            var cleanup = typeof(Patch).GetMethod("OnBeforeAssemblyReload", flags);
             Assert.That(initialize, Is.Not.Null);
             Assert.That(cleanup, Is.Not.Null);
 
-            var targets = new[]
-            {
-                PackageManagerAssetStoreDuplicatePatch.GetTargetMethod(),
-                PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshMethod()
-            };
+            var targets = new[] { Patch.GetTargetMethod(), Patch.GetPackageDetailsHeaderRefreshMethod() };
             try
             {
                 initialize.Invoke(null, null);
                 initialize.Invoke(null, null);
                 foreach (var target in targets)
                     Assert.That(CountOwnedPostfixes(target), Is.EqualTo(1));
+                Assert.That(Patch.IsPatchApplied(), Is.True, Patch.LastPatchError);
+                Assert.That(Patch.IsLocalPackageButtonPatchApplied(), Is.True, Patch.LastPatchError);
 
                 cleanup.Invoke(null, null);
                 cleanup.Invoke(null, null);
@@ -109,388 +66,129 @@ namespace Essentials.Tests.Editor.PackageManager
             }
         }
 
-        static int CountOwnedPostfixes(MethodInfo target)
-        {
-            Assert.That(target, Is.Not.Null);
-            var harmony = System.Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
-            var patchInfo = harmony.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
-                .Invoke(null, new object[] { target });
-            if (patchInfo == null)
-                return 0;
-
-            var count = 0;
-            var postfixes = (IEnumerable)patchInfo.GetType().GetField("Postfixes").GetValue(patchInfo);
-            foreach (var postfix in postfixes)
-            {
-                var owner = postfix.GetType().GetField("owner").GetValue(postfix) as string;
-                if (owner == PackageManagerAssetStoreDuplicatePatch.HarmonyId)
-                    count++;
-            }
-            return count;
-        }
-
         [Test]
         public void HarmonyPatch_MissingTargetOrPostfix_IsNotReportedAsPatched()
         {
-            Assert.That(
-                PackageManagerAssetStoreDuplicatePatch.PatchPostfix(null, PackageManagerAssetStoreDuplicatePatch.GetPostfixMethod()),
-                Is.False);
-            Assert.That(
-                PackageManagerAssetStoreDuplicatePatch.PatchPostfix(PackageManagerAssetStoreDuplicatePatch.GetTargetMethod(), null),
-                Is.False);
-        }
-
-        [Test]
-        public void HarmonyPatch_DetailHeaderRefresh_HasExpectedSignature()
-        {
-            var method = PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshMethod();
-
-            Assert.That(method, Is.Not.Null,
-                $"{PackageManagerLocalPackageButton.DetailHeaderTypeName}.{PackageManagerLocalPackageButton.DetailHeaderRefreshMethodName}(IPackage) was not found. " +
-                "The local package button is injected when the Package Manager details header refreshes for the selected package.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)),
-                "PackageDetailsHeader.Refresh(IPackage) must keep returning void so the postfix can update the toolbar after Unity renders its buttons.");
-
-            var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(1));
-            Assert.That(parameters[0].ParameterType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName),
-                "PackageDetailsHeader.Refresh no longer receives IPackage; update the local package button patch.");
-        }
-
-        [Test]
-        public void HarmonyPatch_DetailHeaderRefreshPostfix_UsesHarmonyArgumentNames()
-        {
-            var method = PackageManagerAssetStoreDuplicatePatch.GetPackageDetailsHeaderRefreshPostfixMethod();
-
-            Assert.That(method, Is.Not.Null,
-                "PackageManagerAssetStoreDuplicatePatch.PackageDetailsHeaderRefreshPostfix was not found. " +
-                "The Harmony patch must bind this method as the PackageDetailsHeader.Refresh postfix.");
-            Assert.That(method.IsStatic, Is.True, "Harmony postfix must remain static.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
-
-            var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(2),
-                "PackageDetailsHeaderRefreshPostfix must keep object __instance and object __0.");
-            Assert.That(parameters[0].Name, Is.EqualTo("__instance"),
-                "Harmony binds the PackageDetailsHeader instance by the special __instance parameter name.");
-            Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(object)));
-            Assert.That(parameters[1].Name, Is.EqualTo("__0"),
-                "Harmony binds the refreshed package argument by the special __0 parameter name.");
-            Assert.That(parameters[1].ParameterType, Is.EqualTo(typeof(object)));
-        }
-
-        [Test]
-        public void HarmonyPatch_DetailHeaderRefreshRuntimePatchRegistration_ContainsExpectedOwnerAndPostfix()
-        {
-            PackageManagerAssetStoreDuplicatePatch.TryPatch();
-
-            Assert.That(PackageManagerAssetStoreDuplicatePatch.IsLocalPackageButtonPatchApplied(), Is.True,
-                "Harmony does not report the local package button postfix on PackageDetailsHeader.Refresh. " +
-                "Check the Harmony id, target lookup, postfix lookup, and assembly load order. " +
-                PackageManagerAssetStoreDuplicatePatch.LastPatchError);
+            Assert.That(Patch.PatchPostfix(null, Patch.GetPostfixMethod()), Is.False);
+            Assert.That(Patch.PatchPostfix(Patch.GetTargetMethod(), null), Is.False);
         }
 
         [Test]
         public void PageRebuildHook_SimplePage_SupportedRebuildMethodExists()
         {
-            var method = PackageManagerAssetStoreDuplicatePatch.GetPageRebuildMethod();
-
-            Assert.That(method, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName} has neither Rebuild(bool) nor its legacy parameterless rebuild method. " +
-                "The duplicate filter uses this after patching so already-open All Packages and Updates pages rebuild immediately.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
-
-            var parameters = method.GetParameters();
-            if (method.Name == PackageManagerAssetStoreDuplicatePatch.RebuildMethodName)
-            {
-                Assert.That(parameters, Has.Length.EqualTo(1));
-                Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(bool)),
-                    "SimplePage.Rebuild must keep its triggerEvent bool parameter.");
-            }
+            var method = Patch.GetPageRebuildMethod();
+            Assert.That(method, Is.Not.Null, "SimplePage has no supported rebuild method.");
+            if (method.Name == Patch.RebuildMethodName)
+                AssertMethodSignature(method, typeof(void), typeof(bool));
             else
             {
-                Assert.That(method.Name, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.LegacyRebuildMethodName));
-                Assert.That(parameters, Is.Empty,
-                    "The legacy list rebuild entry point must remain parameterless.");
+                Assert.That(method.Name, Is.EqualTo(Patch.LegacyRebuildMethodName));
+                AssertMethodSignature(method, typeof(void));
             }
         }
 
         [Test]
-        public void PageRebuildHook_PageManager_GetPageStringMethodExists()
+        public void PageManagerReflection_NavigationAndSelectionApis_AreAvailable()
         {
-            var pageManagerType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName);
-            Assert.That(pageManagerType, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName} was not found. " +
-                "The duplicate filter cannot ask Package Manager for the All Packages and Updates pages to rebuild.");
+            var pageManagerType = GetUnityType(Patch.PageManagerInterfaceName);
+            var pageType = GetUnityType(Patch.SimplePageTypeName);
+            var getPage = pageManagerType.GetMethod(Patch.GetPageMethodName, AnyInstance, null, new[] { typeof(string) }, null);
+            AssertMethodSignature(getPage, GetUnityType(Patch.PageInterfaceTypeName), typeof(string));
 
-            var method = pageManagerType.GetMethod(
-                PackageManagerAssetStoreDuplicatePatch.GetPageMethodName,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(string) },
-                null);
-
-            Assert.That(method, Is.Not.Null,
-                "IPageManager.GetPage(string) was not found. " +
-                "The duplicate filter uses it to rebuild the InProject and Updates pages after installing the Harmony patch.");
-            Assert.That(method.ReturnType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PageInterfaceTypeName));
+            var activePage = AssertProperty(Patch.PageManagerInterfaceName, Patch.PageActivePagePropertyName, Patch.PageInterfaceTypeName);
+            Assert.That(activePage.CanWrite, Is.True, "The local package button must be able to switch pages.");
+            Assert.That(pageType.GetMethod(Patch.PageLoadMethodName, AnyInstance, null, new[] { typeof(string) }, null),
+                Is.Not.Null, "SimplePage.Load(string) is required before selecting a local package.");
+            AssertMethodSignature(pageType.GetMethod(Patch.PageSetNewSelectionMethodName, AnyInstance, null,
+                new[] { typeof(string), typeof(bool) }, null), typeof(bool), typeof(string), typeof(bool));
         }
 
         [Test]
         public void PageRebuildHook_ServicesContainer_CanResolvePageManager()
         {
-            var editorAssembly = typeof(UnityEditor.Editor).Assembly;
-            var servicesContainerType = editorAssembly.GetType(PackageManagerAssetStoreDuplicatePatch.ServicesContainerTypeName);
-            var pageManagerType = editorAssembly.GetType(PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName);
+            GetUnityType(Patch.PageManagerInterfaceName);
+            var resolveMethod = Patch.GetServiceResolveMethod(GetUnityType(Patch.ServicesContainerTypeName));
+            Assert.That(resolveMethod, Is.Not.Null, "ServicesContainer.Resolve<T>() is required to reach IPageManager.");
+            Assert.That(resolveMethod.IsGenericMethodDefinition, Is.True);
+            Assert.That(resolveMethod.GetParameters(), Is.Empty);
+        }
 
-            Assert.That(servicesContainerType, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.ServicesContainerTypeName} was not found. " +
-                "The duplicate filter cannot reach Package Manager services to trigger a page rebuild.");
-            Assert.That(pageManagerType, Is.Not.Null);
+        [TestCase(LocalButton.ToolbarTypeName, typeof(UnityEngine.UIElements.VisualElement))]
+        [TestCase(LocalButton.PackageManagerWindowTypeName, typeof(UnityEditor.EditorWindow))]
+        public void LocalPackageButtonReflection_UiType_HasExpectedBaseType(string typeName, Type baseType)
+        {
+            Assert.That(baseType.IsAssignableFrom(GetUnityType(typeName)), Is.True);
+        }
 
-            var resolveMethod = PackageManagerAssetStoreDuplicatePatch.GetServiceResolveMethod(servicesContainerType);
+        [TestCase(LocalButton.DetailHeaderTypeName, LocalButton.DetailHeaderPackageFieldName, Patch.PackageInterfaceTypeName)]
+        [TestCase(Filter.AssetTypeName, Filter.AssetImportedPathFieldName, "System.String")]
+        public void ReflectedField_HasExpectedType(string typeName, string fieldName, string expectedType)
+        {
+            var field = GetUnityType(typeName).GetField(fieldName, AnyInstance);
+            Assert.That(field, Is.Not.Null, $"{typeName}.{fieldName} was not found.");
+            Assert.That(field.FieldType.FullName, Is.EqualTo(expectedType));
+        }
 
-            Assert.That(resolveMethod, Is.Not.Null,
-                "ServicesContainer.Resolve<T>() was not found. " +
-                "The duplicate filter uses it to resolve IPageManager after patching.");
-            Assert.That(resolveMethod.IsGenericMethodDefinition, Is.True,
-                "ServicesContainer.Resolve must remain generic so the filter can resolve IPageManager by reflected type.");
-            Assert.That(resolveMethod.GetParameters(), Is.Empty,
-                "ServicesContainer.Resolve<T>() must stay parameterless so the filter can invoke it by reflection.");
+        [TestCase(Filter.PackageConcreteTypeName, Filter.PackageNamePropertyName, "System.String")]
+        [TestCase(Patch.PackageInterfaceTypeName, Filter.PackageProductPropertyName, Filter.ProductInterfaceTypeName)]
+        [TestCase(Patch.PackageInterfaceTypeName, Filter.PackageVersionsPropertyName, Filter.VersionListInterfaceTypeName)]
+        public void FilterReflection_PackageProperty_HasExpectedType(string typeName, string propertyName, string expectedType)
+        {
+            AssertProperty(typeName, propertyName, expectedType);
+        }
+
+        [TestCase(Filter.VersionListImportedPropertyName)]
+        [TestCase(Filter.VersionListPrimaryPropertyName)]
+        [TestCase(Filter.VersionListImportAvailablePropertyName)]
+        [TestCase(Filter.VersionListSuggestedUpdatePropertyName)]
+        [TestCase(Filter.VersionListLatestPropertyName)]
+        public void FilterReflection_VersionSlot_ReturnsPackageVersion(string propertyName)
+        {
+            AssertProperty(Filter.VersionListInterfaceTypeName, propertyName, Filter.PackageVersionInterfaceTypeName);
         }
 
         [Test]
-        public void LocalPackageButtonReflection_DetailHeaderPackageField_Exists()
+        public void FilterReflection_ImportedAssets_AreEnumerable()
         {
-            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.DetailHeaderTypeName);
-            Assert.That(type, Is.Not.Null,
-                $"{PackageManagerLocalPackageButton.DetailHeaderTypeName} was not found. " +
-                "The local package button refreshes already-open Package Manager windows by reading this header.");
-
-            var field = type.GetField(PackageManagerLocalPackageButton.DetailHeaderPackageFieldName, AnyInstance);
-            Assert.That(field, Is.Not.Null,
-                "PackageDetailsHeader.m_Package was not found. " +
-                "The local package button uses it when refreshing an already-open Package Manager window after domain reload.");
-            Assert.That(field.FieldType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName));
+            var property = GetUnityType(Filter.PackageVersionInterfaceTypeName).GetProperty(Filter.VersionImportedAssetsPropertyName, AnyInstance);
+            Assert.That(property, Is.Not.Null, "IPackageVersion.importedAssets was not found.");
+            Assert.That(typeof(IEnumerable).IsAssignableFrom(property.PropertyType), Is.True);
         }
 
-        [Test]
-        public void LocalPackageButtonReflection_PackageToolbarType_Exists()
+        static Type GetUnityType(string typeName)
         {
-            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.ToolbarTypeName);
-            Assert.That(type, Is.Not.Null,
-                $"{PackageManagerLocalPackageButton.ToolbarTypeName} was not found. " +
-                "The local package button inserts itself into this toolbar next to Unity's In Project button.");
-            Assert.That(typeof(UnityEngine.UIElements.VisualElement).IsAssignableFrom(type), Is.True,
-                "PackageToolbar must remain a VisualElement so the local package button can be inserted into it.");
-        }
-
-        [Test]
-        public void LocalPackageButtonReflection_PackageManagerWindowType_Exists()
-        {
-            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.PackageManagerWindowTypeName);
-            Assert.That(type, Is.Not.Null,
-                $"{PackageManagerLocalPackageButton.PackageManagerWindowTypeName} was not found. " +
-                "The local package button scans open Package Manager windows after assembly reload.");
-            Assert.That(typeof(UnityEditor.EditorWindow).IsAssignableFrom(type), Is.True);
-        }
-
-        [Test]
-        public void LocalPackageButtonReflection_InProjectPageSelectionMethods_Exist()
-        {
-            var pageType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName);
-            Assert.That(pageType, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.SimplePageTypeName} was not found. " +
-                "The local package button uses page selection APIs to jump from an Asset Store row to the local package row.");
-
-            var loadMethod = pageType.GetMethod(
-                PackageManagerAssetStoreDuplicatePatch.PageLoadMethodName,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(string) },
-                null);
-            Assert.That(loadMethod, Is.Not.Null,
-                "IPage.Load(string) was not found. " +
-                "The local package button uses it to ensure the local package item is available before selecting it.");
-
-            var setNewSelectionMethod = pageType.GetMethod(
-                PackageManagerAssetStoreDuplicatePatch.PageSetNewSelectionMethodName,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new[] { typeof(string), typeof(bool) },
-                null);
-            Assert.That(setNewSelectionMethod, Is.Not.Null,
-                "IPage.SetNewSelection(string, bool) was not found. " +
-                "The local package button uses it to select the local package row.");
-            Assert.That(setNewSelectionMethod.ReturnType, Is.EqualTo(typeof(bool)));
-        }
-
-        [Test]
-        public void LocalPackageButtonReflection_PageManagerActivePage_SetterExists()
-        {
-            var pageManagerType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName);
-            Assert.That(pageManagerType, Is.Not.Null,
-                $"{PackageManagerAssetStoreDuplicatePatch.PageManagerInterfaceName} was not found. " +
-                "The local package button uses it to switch to All Packages before selecting the local package.");
-
-            var property = pageManagerType.GetProperty(
-                PackageManagerAssetStoreDuplicatePatch.PageActivePagePropertyName,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            Assert.That(property, Is.Not.Null,
-                "IPageManager.activePage was not found. " +
-                "The local package button uses it to switch to the InProject page.");
-            Assert.That(property.CanWrite, Is.True,
-                "IPageManager.activePage must remain settable so the local package button can switch pages.");
-            Assert.That(property.PropertyType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicatePatch.PageInterfaceTypeName));
-        }
-
-        [Test]
-        public void FilterReflection_ConcretePackage_NameProperty_ExistsAndReturnsString()
-        {
-            var packageType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicateFilter.PackageConcreteTypeName);
-            Assert.That(packageType, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.Package was not found. " +
-                "Harmony receives the concrete package instance as __0, and the duplicate filter reflects this type for the technical package name.");
-
-            var property = packageType.GetProperty(
-                PackageManagerAssetStoreDuplicateFilter.PackageNamePropertyName,
-                AnyInstance);
-
-            Assert.That(property, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.Package no longer exposes the name property used to match Asset Store rows to registered UPM packages.");
-            Assert.That(property.PropertyType, Is.EqualTo(typeof(string)),
-                "Package.name must remain a string technical package name such as com.vendor.tool.");
-        }
-
-        [Test]
-        public void FilterReflection_IPackage_ProductProperty_ExistsAndIdentifiesAssetStoreRows()
-        {
-            var packageType = GetInternalPackageInterface();
-            Assume.That(packageType, Is.Not.Null);
-
-            var property = packageType.GetProperty(
-                PackageManagerAssetStoreDuplicateFilter.PackageProductPropertyName,
-                AnyInstance);
-
-            Assert.That(property, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.IPackage no longer exposes the product property used to detect Asset Store-backed rows.");
-            Assert.That(property.PropertyType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicateFilter.ProductInterfaceTypeName),
-                "IPackage.product must keep returning UnityEditor.PackageManager.UI.Internal.IProduct so null means non-Asset-Store and non-null means Asset Store-backed.");
-        }
-
-        [Test]
-        public void FilterReflection_IPackage_VersionsProperty_ExistsAndReturnsInternalVersionList()
-        {
-            var packageType = GetInternalPackageInterface();
-            Assume.That(packageType, Is.Not.Null);
-
-            var property = packageType.GetProperty(
-                PackageManagerAssetStoreDuplicateFilter.PackageVersionsPropertyName,
-                AnyInstance);
-
-            Assert.That(property, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.IPackage no longer exposes the versions property used to inspect imported Asset Store assets.");
-            Assert.That(property.PropertyType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicateFilter.VersionListInterfaceTypeName),
-                "IPackage.versions must keep returning UnityEditor.PackageManager.UI.Internal.IVersionList.");
-        }
-
-        [Test]
-        public void FilterReflection_IVersionList_ImportedAndPrimaryProperties_Exist()
-        {
-            var versionListType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicateFilter.VersionListInterfaceTypeName);
-            Assert.That(versionListType, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.IVersionList was not found. " +
-                "The duplicate filter uses it to inspect imported legacy Asset Store versions.");
-
-            AssertVersionProperty(versionListType, PackageManagerAssetStoreDuplicateFilter.VersionListImportedPropertyName);
-            AssertVersionProperty(versionListType, PackageManagerAssetStoreDuplicateFilter.VersionListPrimaryPropertyName);
-            AssertVersionProperty(versionListType, PackageManagerAssetStoreDuplicateFilter.VersionListImportAvailablePropertyName);
-            AssertVersionProperty(versionListType, PackageManagerAssetStoreDuplicateFilter.VersionListSuggestedUpdatePropertyName);
-            AssertVersionProperty(versionListType, PackageManagerAssetStoreDuplicateFilter.VersionListLatestPropertyName);
-        }
-
-        [Test]
-        public void FilterReflection_IPackageVersion_ImportedAssetsProperty_Exists()
-        {
-            var versionType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicateFilter.PackageVersionInterfaceTypeName);
-            Assert.That(versionType, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.IPackageVersion was not found. " +
-                "The duplicate filter uses it to read importedAssets from legacy Asset Store versions.");
-
-            var property = versionType.GetProperty(
-                PackageManagerAssetStoreDuplicateFilter.VersionImportedAssetsPropertyName,
-                AnyInstance);
-
-            Assert.That(property, Is.Not.Null,
-                "IPackageVersion.importedAssets was not found. " +
-                "Without it, the filter cannot map legacy Asset Store rows back to package asset paths.");
-            Assert.That(typeof(IEnumerable).IsAssignableFrom(property.PropertyType), Is.True,
-                "IPackageVersion.importedAssets must remain enumerable so the duplicate filter can inspect its assets.");
-        }
-
-        [Test]
-        public void FilterReflection_Asset_ImportedPathField_ExistsAndReturnsString()
-        {
-            var assetType = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicateFilter.AssetTypeName);
-            Assert.That(assetType, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.Asset was not found. " +
-                "The duplicate filter uses it to read legacy Asset Store imported asset paths.");
-
-            var field = assetType.GetField(
-                PackageManagerAssetStoreDuplicateFilter.AssetImportedPathFieldName,
-                AnyInstance);
-
-            Assert.That(field, Is.Not.Null,
-                "Asset.importedPath was not found. " +
-                "Without it, the filter cannot detect Asset Store rows whose files live under Packages/<package-name>/.");
-            Assert.That(field.FieldType, Is.EqualTo(typeof(string)),
-                "Asset.importedPath must stay a string project-relative path.");
-        }
-
-        [Test]
-        public void PackageInfo_FindForPackageName_ReturnsRegisteredPackageWithResolvedPath()
-        {
-            var method = typeof(UnityEditor.PackageManager.PackageInfo).GetMethod(
-                nameof(UnityEditor.PackageManager.PackageInfo.FindForPackageName),
-                BindingFlags.Static | BindingFlags.Public);
-
-            Assert.That(method, Is.Not.Null,
-                "PackageInfo.FindForPackageName(string) was not found. " +
-                "The duplicate filter uses it to locate the real installed package behind an Asset Store row.");
-            Assert.That(method.ReturnType, Is.EqualTo(typeof(UnityEditor.PackageManager.PackageInfo)),
-                "PackageInfo.FindForPackageName must keep returning PackageInfo.");
-
-            var parameters = method.GetParameters();
-            Assert.That(parameters, Has.Length.EqualTo(1));
-            Assert.That(parameters[0].ParameterType, Is.EqualTo(typeof(string)));
-
-            var resolvedPathProperty = typeof(UnityEditor.PackageManager.PackageInfo).GetProperty(
-                nameof(UnityEditor.PackageManager.PackageInfo.resolvedPath),
-                BindingFlags.Instance | BindingFlags.Public);
-
-            Assert.That(resolvedPathProperty, Is.Not.Null,
-                "PackageInfo.resolvedPath was not found. " +
-                "The duplicate filter uses it to distinguish project-local Packages/ installs from read-only PackageCache installs.");
-            Assert.That(resolvedPathProperty.PropertyType, Is.EqualTo(typeof(string)));
-        }
-
-        static System.Type GetInternalPackageInterface()
-        {
-            var type = typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerAssetStoreDuplicatePatch.PackageInterfaceTypeName);
-            Assert.That(type, Is.Not.Null,
-                "UnityEditor.PackageManager.UI.Internal.IPackage was not found. " +
-                "The Package Manager internal package model changed; update filter reflection and Harmony target tests.");
+            var type = typeof(UnityEditor.Editor).Assembly.GetType(typeName);
+            Assert.That(type, Is.Not.Null, $"{typeName} was not found in this Unity version.");
             return type;
         }
 
-        static void AssertVersionProperty(System.Type versionListType, string propertyName)
+        static PropertyInfo AssertProperty(string typeName, string propertyName, string expectedType)
         {
-            var property = versionListType.GetProperty(propertyName, AnyInstance);
-            Assert.That(property, Is.Not.Null,
-                $"IVersionList.{propertyName} was not found. " +
-                "The duplicate filter reads this version slot while searching for legacy Asset Store imported assets.");
-            Assert.That(property.PropertyType.FullName, Is.EqualTo(PackageManagerAssetStoreDuplicateFilter.PackageVersionInterfaceTypeName),
-                $"IVersionList.{propertyName} must keep returning IPackageVersion.");
+            var property = GetUnityType(typeName).GetProperty(propertyName, AnyInstance);
+            Assert.That(property, Is.Not.Null, $"{typeName}.{propertyName} was not found.");
+            Assert.That(property.PropertyType.FullName, Is.EqualTo(expectedType), $"{typeName}.{propertyName}");
+            return property;
+        }
+
+        static void AssertMethodSignature(MethodInfo method, Type returnType, params Type[] parameterTypes)
+        {
+            Assert.That(method, Is.Not.Null, "The required Package Manager method was not found.");
+            Assert.That(method.ReturnType, Is.EqualTo(returnType), method.Name);
+            Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(parameterTypes), method.Name);
+        }
+
+        static int CountOwnedPostfixes(MethodInfo target)
+        {
+            Assert.That(target, Is.Not.Null);
+            var harmony = Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
+            var patchInfo = harmony.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
+                .Invoke(null, new object[] { target });
+            if (patchInfo == null)
+                return 0;
+
+            var postfixes = (IEnumerable)patchInfo.GetType().GetField("Postfixes").GetValue(patchInfo);
+            return postfixes.Cast<object>().Count(postfix =>
+                (string)postfix.GetType().GetField("owner").GetValue(postfix) == Patch.HarmonyId);
         }
     }
 }

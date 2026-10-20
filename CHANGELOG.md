@@ -6,6 +6,10 @@ All notable changes to this package are documented in this file.
 
 ### Added
 
+- On macOS, whole-root menu rules such as `Jobs/*` hide the menu-bar heading
+  without hovering and keep it hidden when Unity recreates it. Native visibility
+  is restored when the rule is disabled, without forcing Unity to rebuild menus.
+
 - Integrated Project Folder Visibility into Minimal Editor on Unity 7 CoreCLR,
   preserving its assembly identities, asset GUIDs, and local project preferences.
 - Added built-in visibility toggles for `Assets/Plugins`, `Assets/Gizmos`, and

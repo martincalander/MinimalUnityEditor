@@ -31,10 +31,12 @@ Editor, then only the currently enabled paths will be removed.
 Custom definitions accept exact paths or a trailing `*` prefix wildcard. They
 do not support arbitrary glob syntax.
 
-Root-only paths cannot be removed safely. `Services/**` paths are ignored as
-unreliable, and known error-prone entries produce a warning in Project
-Settings. If an unexpected apply failure occurs, the menu module enters a
-fail-safe state until the next domain reload.
+Bare root paths cannot be removed safely. On macOS, use a whole-root wildcard
+such as `Jobs/*` to hide the native heading as well as its commands. The heading
+is kept hidden when Unity recreates it, without forcing a menu rebuild.
+`Services/**` paths are ignored as unreliable, and known error-prone entries
+produce a warning in Project Settings. If an unexpected apply failure occurs,
+the menu module enters a fail-safe state until the next domain reload.
 
 ## Menu Hiding Is Disabled on Unity 6.0
 

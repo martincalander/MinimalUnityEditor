@@ -31,29 +31,16 @@ namespace Essentials.Tests.Editor.Console
             ConsoleAssistantToolbarButtonController.Initialize();
         }
 
-        [Test]
-        public void AutomaticConsoleEntryMaintenance_Disabled_WhenNoActiveRulesExist()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AutomaticConsoleEntryMaintenance_RequiresActiveRules(bool hasActiveRule)
         {
-            Apply(enabled: true, cleanStackTraces: true);
+            if (hasActiveRule)
+                ApplyWithActiveRule(cleanStackTraces: true);
+            else
+                Apply(cleanStackTraces: true);
 
-            Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.False);
-        }
-
-        [Test]
-        public void AutomaticConsoleEntryMaintenance_Enabled_WhenAtLeastOneRuleExists()
-        {
-            Apply(
-                enabled: true,
-                cleanStackTraces: true,
-                new ConsoleLogFilterRuleData
-                {
-                    enabled = true,
-                    matchType = ConsoleLogFilterMatchType.Contains,
-                    caseSensitive = false,
-                    pattern = "ignore me"
-                });
-
-            Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.True);
+            Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.EqualTo(hasActiveRule));
         }
 
         [Test]
@@ -64,13 +51,8 @@ namespace Essentials.Tests.Editor.Console
                 BindingFlags.Static | BindingFlags.NonPublic);
 
             Assert.That(method, Is.Not.Null);
-            Assert.That(
-                method.Invoke(
-                    null,
-                    new object[]
-                    {
-                        "at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)"
-                    }),
+            const string frame = "at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)";
+            Assert.That(method.Invoke(null, new object[] { frame }),
                 Is.True);
         }
 
@@ -163,9 +145,9 @@ namespace Essentials.Tests.Editor.Console
             return callback?.GetInvocationList().Count(handler => handler.Method.DeclaringType == owner) ?? 0;
         }
 
-        private static void ApplyWithActiveRule()
+        private static void ApplyWithActiveRule(bool cleanStackTraces = false)
         {
-            Apply(true, false, new ConsoleLogFilterRuleData
+            Apply(cleanStackTraces, new ConsoleLogFilterRuleData
             {
                 enabled = true,
                 matchType = ConsoleLogFilterMatchType.Contains,
@@ -188,10 +170,10 @@ namespace Essentials.Tests.Editor.Console
             }
         }
 
-        private static void Apply(bool enabled, bool cleanStackTraces, params ConsoleLogFilterRuleData[] rules)
+        private static void Apply(bool cleanStackTraces, params ConsoleLogFilterRuleData[] rules)
         {
             var settings = ConsoleLogFilterSettings.Data;
-            settings.enabled = enabled;
+            settings.enabled = true;
             settings.warningsOnly = true;
             settings.cleanStackTraces = cleanStackTraces;
             settings.hideAssistantToolbarButton = true;

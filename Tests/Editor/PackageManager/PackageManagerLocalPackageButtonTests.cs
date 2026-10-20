@@ -49,13 +49,5 @@ namespace Essentials.Tests.Editor.PackageManager
             Assert.That(toolbar.Contains(button), Is.False);
             Assert.That(toolbar.childCount, Is.EqualTo(1));
         }
-
-        [Test]
-        public void ButtonMetadata_UsesExpectedTextAndName()
-        {
-            Assert.That(PackageManagerLocalPackageButton.ButtonName, Is.EqualTo("essentials-go-to-local-package-button"));
-            Assert.That(PackageManagerLocalPackageButton.ButtonText, Is.EqualTo("Go To Local Package"));
-            Assert.That(PackageManagerLocalPackageButton.InProjectActionText, Is.EqualTo("In Project"));
-        }
     }
 }

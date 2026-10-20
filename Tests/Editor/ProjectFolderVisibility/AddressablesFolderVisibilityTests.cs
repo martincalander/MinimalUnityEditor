@@ -431,14 +431,15 @@ namespace Essentials.ProjectFolderVisibility.Editor.Tests
             AssertFolderVisibility(columns, tree, path, true);
         }
 
-        [TestCase("Assets/Plugins", "OneColumn")]
-        [TestCase("Assets/Plugins", "TwoColumns")]
-        [TestCase("Assets/Gizmos", "OneColumn")]
-        [TestCase("Assets/Gizmos", "TwoColumns")]
-        [TestCase("Assets/Settings", "OneColumn")]
-        [TestCase("Assets/Settings", "TwoColumns")]
-        public void AdditionalBuiltInFolderTogglesAlsoFilterSearchResults(string path, string layout)
+        [TestCase("Assets/StreamingAssets", "OneColumn")]
+        [TestCase("Assets/StreamingAssets", "TwoColumns")]
+        [TestCase("Assets/FolderVisibilityTestGenerated", "OneColumn")]
+        [TestCase("Assets/FolderVisibilityTestGenerated", "TwoColumns")]
+        public void SearchResultsFollowFolderAndMasterToggles(string path, string layout)
         {
+            if (!FolderVisibilitySettings.IsBuiltInFolder(path))
+                Assert.That(FolderVisibilitySettings.AddFolder(path), Is.True);
+            FolderVisibilitySettings.SetFolderHidden(path, false);
             string childPath = CreateAdditionalProbe(path);
             EditorWindow browser = CreateBrowser(layout);
             Invoke(browser, "SetSearch", childPath.Substring(childPath.LastIndexOf('/') + 1));
@@ -476,73 +477,20 @@ namespace Essentials.ProjectFolderVisibility.Editor.Tests
             AssertFolderVisibility(columns, tree, StreamingAssetsPath, false);
         }
 
-        [TestCase("OneColumn")]
-        [TestCase("TwoColumns")]
-        public void StreamingAssetsSearchResultsFollowTheFolderAndMasterToggles(string layout)
+        [TestCase("Assets/AddressableAssetsData")]
+        [TestCase("Assets/StreamingAssets")]
+        public void HidingTheCurrentlyBrowsedFolderReturnsTheListToAssets(string path)
         {
-            CreateStreamingAssetsProbe();
-            EditorWindow browser = CreateBrowser(layout);
-            string probeName = streamingAssetsProbePath.Substring(streamingAssetsProbePath.LastIndexOf('/') + 1);
-            Invoke(browser, "SetSearch", probeName);
-            Assert.That(ListPaths(browser), Does.Contain(streamingAssetsProbePath));
-
-            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, true);
-            Assert.That(ListPaths(browser), Has.None.EqualTo(streamingAssetsProbePath));
-
-            FolderVisibilitySettings.Enabled = false;
-            Assert.That(ListPaths(browser), Does.Contain(streamingAssetsProbePath));
-
-            FolderVisibilitySettings.Enabled = true;
-            Assert.That(ListPaths(browser), Has.None.EqualTo(streamingAssetsProbePath));
-
-            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, false);
-            Assert.That(ListPaths(browser), Does.Contain(streamingAssetsProbePath));
-        }
-
-        [Test]
-        public void HidingTheCurrentlyBrowsedStreamingAssetsFolderReturnsTheListToAssets()
-        {
-            CreateStreamingAssetsProbe();
+            string childPath = path == AddressablesFolderVisibility.FolderPath ? probePath : CreateAdditionalProbe(path);
             EditorWindow browser = CreateBrowser("TwoColumns");
-            EntityId folderId = AssetDatabase.LoadMainAssetAtPath(StreamingAssetsPath).GetEntityId();
+            EntityId folderId = AssetDatabase.LoadMainAssetAtPath(path).GetEntityId();
             Invoke(browser, "ShowFolderContents", folderId, false);
-            Assert.That(ListPaths(browser), Does.Contain(streamingAssetsProbePath));
+            Assert.That(ListPaths(browser), Does.Contain(childPath));
 
-            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, true);
+            FolderVisibilitySettings.SetFolderHidden(path, true);
 
             CollectionAssert.AreEqual(new[] { "Assets" }, (string[])Member(Member(browser, "m_SearchFilter"), "folders"));
-            Assert.That(ListPaths(browser), Has.None.EqualTo(streamingAssetsProbePath));
-            Assert.That(AddressablesFolderVisibility.IsPatched, Is.True, AddressablesFolderVisibility.PatchError);
-        }
-
-        [TestCase("OneColumn")]
-        [TestCase("TwoColumns")]
-        public void SearchResultsHideDescendantsAndRestoreThemWhenShown(string layout)
-        {
-            EditorWindow browser = CreateBrowser(layout);
-            string probeName = probePath.Substring(probePath.LastIndexOf('/') + 1);
-            Invoke(browser, "SetSearch", probeName);
-            Assert.That(ListPaths(browser), Does.Contain(probePath));
-
-            AddressablesFolderVisibility.ShowFolder = false;
-            Assert.That(ListPaths(browser), Has.None.EqualTo(probePath));
-
-            AddressablesFolderVisibility.ShowFolder = true;
-            Assert.That(ListPaths(browser), Does.Contain(probePath));
-        }
-
-        [Test]
-        public void HidingTheCurrentlyBrowsedFolderReturnsTheListToAssets()
-        {
-            EditorWindow browser = CreateBrowser("TwoColumns");
-            EntityId folderId = AssetDatabase.LoadMainAssetAtPath(AddressablesFolderVisibility.FolderPath).GetEntityId();
-            Invoke(browser, "ShowFolderContents", folderId, false);
-            Assert.That(ListPaths(browser), Does.Contain(probePath));
-
-            AddressablesFolderVisibility.ShowFolder = false;
-
-            CollectionAssert.AreEqual(new[] { "Assets" }, (string[])Member(Member(browser, "m_SearchFilter"), "folders"));
-            Assert.That(ListPaths(browser), Has.None.EqualTo(probePath));
+            Assert.That(ListPaths(browser), Has.None.EqualTo(childPath));
             Assert.That(AddressablesFolderVisibility.IsPatched, Is.True, AddressablesFolderVisibility.PatchError);
         }
 

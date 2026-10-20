@@ -69,9 +69,17 @@ Assets/Import Package/Custom Package...
 Window/Analysis/*
 ```
 
-Unity does not expose every menu path safely. Root-only paths and `Services/**`
-entries are ignored, and known error-prone entries are reported in the
-settings page.
+On macOS, a whole-root rule such as `Jobs/*` also hides the native menu-bar
+heading without needing to hover over it. Minimal Editor reapplies that
+visibility when Unity recreates or unhides the heading. Turning off the rule
+restores the heading; removed commands still return after a normal domain reload
+or Editor reopen. This changes visibility after registration and does not
+prevent Unity from discovering the commands during startup.
+
+Unity does not expose every menu path safely. Bare root paths such as `Jobs`
+and `Services/**` entries are ignored, and known error-prone entries are reported
+in the settings page. Use `Jobs/*` to hide the whole Jobs menu. Partial rules
+such as `Tools/My Tool/*` do not hide the Tools heading.
 
 Menu choices are saved in `ProjectSettings/MenuItemSettings.json` and should
 be reviewed like any other project setting.

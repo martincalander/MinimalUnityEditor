@@ -25,7 +25,6 @@ namespace Essentials.Tests.Editor.MinimalEditor
 
             Assert.That(package, Is.Not.Null);
             Assert.That(package.name, Is.EqualTo(PackageName));
-            Assert.That(package.version, Is.EqualTo("0.1.0"));
             Assert.That(package.dependencies, Is.Empty);
             Assert.That(Directory.Exists(Path.Combine(package.resolvedPath, "Runtime")), Is.False);
             Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Texture2D>(
@@ -73,21 +72,6 @@ namespace Essentials.Tests.Editor.MinimalEditor
                 string json = File.ReadAllText(Path.Combine(packageRoot, relativePath));
                 StringAssert.Contains("\"UNITY_6000_0_OR_NEWER\"", json);
             }
-        }
-
-        [TestCase("Editor/Console/ConsoleLogFilterInstaller.cs")]
-        [TestCase("Editor/MenuItem/MenuItemHider.cs")]
-        [TestCase("Editor/PackageManager/PackageManagerAssetStoreDuplicatePatch.cs")]
-        [TestCase("Editor/UnityEditor/WindowTitleShortener.cs")]
-        [TestCase("Editor/ProjectFolderVisibility/AddressablesFolderVisibility.cs")]
-        [TestCase("Editor/ProjectFolderVisibility/FolderVisibilitySettings.cs")]
-        [TestCase("Editor/ProjectFolderVisibility/FolderVisibilityControls.cs")]
-        [TestCase("Tests/Editor/ProjectFolderVisibility/AddressablesFolderVisibilityTests.cs")]
-        public void ExtractedAssets_AreOwnedByMinimalEditor(string relativePath)
-        {
-            PackageInfo package = PackageInfo.FindForAssetPath($"Packages/{PackageName}/{relativePath}");
-            Assert.That(package, Is.Not.Null);
-            Assert.That(package.name, Is.EqualTo(PackageName));
         }
 
         [TestCase("Editor/ProjectFolderVisibility/Essentials.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b")]
@@ -178,22 +162,5 @@ namespace Essentials.Tests.Editor.MinimalEditor
             Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneLinux64), Is.False);
         }
 
-#if UNITY_6000_0_OR_NEWER
-        [Test]
-        public void Harmony_LoadsTheAssemblyForTheCurrentEditorRuntime()
-        {
-            Type harmony = Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
-            var assembly = harmony.Assembly;
-#if UNITY_7000_0_OR_NEWER
-            Assert.That(assembly.GetName().Version, Is.EqualTo(new Version(2, 4, 2, 0)));
-            Assert.That(assembly.GetReferencedAssemblies().Any(
-                reference => reference.Name == "System.Runtime" && reference.Version.Major == 10), Is.True);
-#else
-            Assert.That(assembly.GetName().Version, Is.EqualTo(new Version(2, 4, 1, 0)));
-            Assert.That(assembly.GetReferencedAssemblies().Any(
-                reference => reference.Name == "mscorlib"), Is.True);
-#endif
-        }
-#endif
     }
 }

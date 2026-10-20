@@ -6,8 +6,8 @@ namespace Essentials.Tests.Editor.UnityEditor
 {
     public sealed class UnityEditorPreferencesTests
     {
-        PreferenceSnapshot shortWindowTitleSnapshot;
-        PreferenceSnapshot hideStatusBarExtrasSnapshot;
+        (bool HasKey, bool Value) shortWindowTitleSnapshot;
+        (bool HasKey, bool Value) hideStatusBarExtrasSnapshot;
 
         [SetUp]
         public void SetUp()
@@ -71,33 +71,21 @@ namespace Essentials.Tests.Editor.UnityEditor
             Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideStatusBarExtrasKey, false), Is.True);
         }
 
-        static PreferenceSnapshot Capture(string key)
+        static (bool HasKey, bool Value) Capture(string key)
         {
-            return new PreferenceSnapshot(EditorPrefs.HasKey(key), EditorPrefs.GetBool(key, false));
+            return (EditorPrefs.HasKey(key), EditorPrefs.GetBool(key, false));
         }
 
         static void Restore(
             string key,
             bool defaultValue,
-            PreferenceSnapshot snapshot,
+            (bool HasKey, bool Value) snapshot,
             System.Action<bool> apply)
         {
             apply(snapshot.HasKey ? snapshot.Value : defaultValue);
 
             if (!snapshot.HasKey)
                 EditorPrefs.DeleteKey(key);
-        }
-
-        readonly struct PreferenceSnapshot
-        {
-            internal PreferenceSnapshot(bool hasKey, bool value)
-            {
-                HasKey = hasKey;
-                Value = value;
-            }
-
-            internal bool HasKey { get; }
-            internal bool Value { get; }
         }
     }
 }
