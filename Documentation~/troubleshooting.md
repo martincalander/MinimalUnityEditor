@@ -13,6 +13,13 @@ Open **Preferences > Console** and check:
 The default rule list is empty. Matching rows are revisited while active rules
 exist, so a new row can appear briefly before it is removed.
 
+Regex matching stops a rule after a 50 ms timeout to keep the Editor responsive.
+Simplify the expression and save the settings to enable it again.
+
+If Console search, severity toggles, or Collapse hide rows, rescans pause to
+preserve those logs. Clear the search, show all severities, and turn off
+Collapse before updating existing logs.
+
 ## The Assistant Toggle Is Disabled
 
 Minimal Editor enables that toggle only when the optional Unity AI Assistant
@@ -82,7 +89,8 @@ before committing it.
 Confirm the installed FMOD package ID is
 `com.fmod.fmod-for-unity-2-03`. Minimal Editor retries removal of the original
 FMOD entries a limited number of times; API or menu changes in another FMOD
-release can leave some originals in place.
+release can leave some originals in place. An original stays available when
+Minimal Editor cannot call its replacement.
 
 ## A Whole Module Is Missing
 

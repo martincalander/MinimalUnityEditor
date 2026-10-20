@@ -1,8 +1,11 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 
 namespace Essentials.Tests.Editor.MenuItem
 {
@@ -54,6 +57,46 @@ namespace Essentials.Tests.Editor.MenuItem
         }
 
         [Test]
+        public void CancelledQuitRequest_KeepsMenuHidingActive()
+        {
+            // Invoke only this module's handlers and a veto, without requesting a real Editor quit.
+            var callbacks = QuitRequestCallbacks().Where(callback => callback.Method.DeclaringType == Hider)
+                .Cast<Func<bool>>().Concat(new Func<bool>[] { () => false });
+            Assert.That(callbacks.All(callback => callback()), Is.False);
+            Assert.That(GetBool("s_mutationSuppressed"), Is.False);
+
+            Invoke("QueueApply", true);
+
+            Assert.That(GetBool("s_applyQueued"), Is.True);
+        }
+
+        [Test]
+        public void SettingsData_NullBundleEntriesAndList_PreserveUsableSettings()
+        {
+            var type = Type.GetType(
+                "Essentials.MenuItem.Editor.MenuItemSettingsData, Essentials.MenuItem.Editor", throwOnError: true);
+            var data = Activator.CreateInstance(type, true);
+            JsonUtility.FromJsonOverwrite(
+                "{\"customDefinitionsText\":\"keep\",\"bundles\":[{\"id\":\"jobs\",\"enabled\":false}]}", data);
+            var bundles = type.GetField("bundles", AnyInstance);
+            var get = type.GetMethod("GetBundleEnabled", AnyInstance);
+            var set = type.GetMethod("SetBundleEnabled", AnyInstance);
+            ((IList)bundles.GetValue(data)).Insert(0, null);
+
+            Assert.That(get.Invoke(data, new object[] { "jobs", true }), Is.False);
+            set.Invoke(data, new object[] { "jobs", true });
+            set.Invoke(data, new object[] { "tools", false });
+            Assert.That(get.Invoke(data, new object[] { "jobs", false }), Is.True);
+            Assert.That(get.Invoke(data, new object[] { "tools", true }), Is.False);
+
+            bundles.SetValue(data, null);
+            Assert.That(get.Invoke(data, new object[] { "jobs", true }), Is.True);
+            set.Invoke(data, new object[] { "jobs", false });
+            Assert.That(get.Invoke(data, new object[] { "jobs", true }), Is.False);
+            Assert.That(type.GetField("customDefinitionsText", AnyInstance).GetValue(data), Is.EqualTo("keep"));
+        }
+
+        [Test]
         public void RepeatedInitialization_QueuesOnce_AndTeardownCancelsWork()
         {
             var callback = CreateDelayCall("FlushQueuedApply");
@@ -81,6 +124,27 @@ namespace Essentials.Tests.Editor.MenuItem
 
         static bool GetBool(string name) => (bool)RequireField(name).GetValue(null);
         static void SetBool(string name, bool value) => RequireField(name).SetValue(null, value);
+
+        static IEnumerable<Delegate> QuitRequestCallbacks()
+        {
+            var field = typeof(EditorApplication).GetField("wantsToQuit", AnyStatic);
+            if (field != null)
+                return (field.GetValue(null) as Delegate)?.GetInvocationList() ?? Array.Empty<Delegate>();
+
+            var tracker = typeof(EditorApplication).GetField("m_WantsToQuitEvent", AnyStatic)?.GetValue(null);
+            Assert.That(tracker, Is.Not.Null);
+            var enumerator = (IEnumerator)tracker.GetType().GetMethod("GetEnumerator").Invoke(tracker, null);
+            var callbacks = new List<Delegate>();
+            try
+            {
+                while (enumerator.MoveNext()) callbacks.Add((Delegate)enumerator.Current);
+            }
+            finally
+            {
+                (enumerator as IDisposable)?.Dispose();
+            }
+            return callbacks;
+        }
 
         static void Invoke(string name, params object[] arguments)
         {

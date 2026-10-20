@@ -21,14 +21,14 @@ namespace Essentials.MenuItem.Editor
 
         internal bool GetBundleEnabled(string bundleId, bool defaultValue)
         {
-            if (string.IsNullOrEmpty(bundleId))
+            if (string.IsNullOrEmpty(bundleId) || bundles == null)
             {
                 return defaultValue;
             }
 
             for (var i = 0; i < bundles.Count; i++)
             {
-                if (string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
+                if (bundles[i] != null && string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
                 {
                     return bundles[i].enabled;
                 }
@@ -44,9 +44,12 @@ namespace Essentials.MenuItem.Editor
                 return;
             }
 
+            if (bundles == null)
+                bundles = new List<BundleState>();
+
             for (var i = 0; i < bundles.Count; i++)
             {
-                if (string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
+                if (bundles[i] != null && string.Equals(bundles[i].id, bundleId, StringComparison.OrdinalIgnoreCase))
                 {
                     bundles[i].enabled = enabled;
                     return;

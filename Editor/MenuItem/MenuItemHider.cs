@@ -77,8 +77,7 @@ namespace Essentials.MenuItem.Editor
 
             s_mutationSuppressed = false;
             InitializeNativeRootVisibility();
-            EditorApplication.wantsToQuit -= OnWantsToQuit;
-            EditorApplication.wantsToQuit += OnWantsToQuit;
+            // A quit request can be canceled, so keep hiding active until quitting is committed.
             EditorApplication.quitting -= SuppressMutationForTeardown;
             EditorApplication.quitting += SuppressMutationForTeardown;
 #if !UNITY_6000_5_OR_NEWER
@@ -181,12 +180,6 @@ namespace Essentials.MenuItem.Editor
             QueueApply(force: false);
         }
 
-        static bool OnWantsToQuit()
-        {
-            SuppressMutationForTeardown();
-            return true;
-        }
-
 #if UNITY_6000_5_OR_NEWER
         [Unity.Scripting.LifecycleManagement.OnCodeUnloading]
 #endif
@@ -198,7 +191,6 @@ namespace Essentials.MenuItem.Editor
             s_forceApplyQueued = false;
             EditorApplication.delayCall -= FlushQueuedApply;
             EditorApplication.projectChanged -= OnProjectChanged;
-            EditorApplication.wantsToQuit -= OnWantsToQuit;
             EditorApplication.quitting -= SuppressMutationForTeardown;
 #if !UNITY_6000_5_OR_NEWER
             AssemblyReloadEvents.beforeAssemblyReload -= SuppressMutationForTeardown;

@@ -31,7 +31,9 @@ does not clear them on each Play entry.
 
 On Unity 6.5 and newer, `OnCodeInitializing` and `OnCodeUnloading` pair service
 registration with cleanup. The Console also uses `OnEnteringPlayMode` and
-`OnEnteringEditMode` to restore its logger wrapper immediately when needed.
+`OnEnteringEditMode` to check its logger lifecycle. If another extension takes
+over the log handler, Minimal Editor keeps that ownership intact and continues
+filtering through Console rescans.
 Older Editors use the corresponding initialization and reload events.
 Registration is idempotent, and cleanup removes owned callbacks and Harmony
 patches before code unloads.
@@ -46,6 +48,19 @@ FMOD was not installed, so its optional assembly was not compiled. The older
 Editor results below predate these lifecycle changes.
 
 ### Verified Editors
+
+On 2026-10-20, all 199 Minimal Editor tests passed in Unity `7000.0.0a10` on
+macOS Apple silicon, with no failures or skips. This includes the Console
+snapshot and logger regressions, canceled-quit handling, menu settings recovery,
+package-location checks, status-bar recovery, and repeated Play sessions.
+A live Console probe confirmed that search and severity filters restrict the
+enumerated rows while total counts remain unchanged; incomplete rescans now
+leave those logs intact.
+
+The optional FMOD source passed an isolated harness with 14 checks under each
+of the modern and legacy lifecycle configurations. The harness uses Editor
+stubs and fake FMOD types. FMOD was not installed in this workspace, so real
+integration remains unverified. Older Editors were not rerun for this pass.
 
 EditMode tests passed on macOS Apple silicon on 2026-10-08:
 

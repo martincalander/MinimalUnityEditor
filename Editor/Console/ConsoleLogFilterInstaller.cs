@@ -17,6 +17,7 @@ namespace Essentials.Console.Editor
     {
         private const double SyncIntervalSeconds = 0.5d;
         private const double ConsoleRescanIntervalSeconds = 0.25d;
+        private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromMilliseconds(50);
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
         private static readonly DeclutteredFilterLogHandler s_cleanStackFilteringLogHandler = new();
@@ -24,6 +25,8 @@ namespace Essentials.Console.Editor
         private static readonly Type s_logEntriesType = typeof(EditorWindow).Assembly.GetType("UnityEditor.LogEntries");
         private static readonly Type s_consoleWindowModeType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ConsoleWindow+Mode");
         private static readonly MethodInfo s_logEntriesClearMethod = GetLogEntriesMethod("Clear");
+        private static readonly MethodInfo s_logEntriesGetCountsByTypeMethod = GetLogEntriesMethod("GetCountsByType",
+            typeof(int).MakeByRefType(), typeof(int).MakeByRefType(), typeof(int).MakeByRefType());
         private static readonly MethodInfo s_logEntriesStartGettingEntriesMethod = GetLogEntriesMethod("StartGettingEntries");
         private static readonly MethodInfo s_logEntriesEndGettingEntriesMethod = GetLogEntriesMethod("EndGettingEntries");
         private static readonly MethodInfo s_logEntriesGetEntryInternalMethod = GetLogEntriesMethod("GetEntryInternal");
@@ -48,6 +51,9 @@ namespace Essentials.Console.Editor
         private static bool s_isUpdatingConsoleEntries;
         private static IFilteringLogHandler s_activeFilteringLogHandler = s_cleanStackFilteringLogHandler;
         private static bool s_cleanStackTracesEnabled = true;
+        // A replacement logger may retain our wrapper. Rewrapping it with the same
+        // instance would create a cycle, so only reclaim a wrapper we still own.
+        private static bool s_hasInstalledLogHandler;
 
         internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
             s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
@@ -84,12 +90,16 @@ namespace Essentials.Console.Editor
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
 #endif
 
+            s_fullStackFilteringLogHandler.Configure(false, true, Array.Empty<CompiledRule>());
+            s_cleanStackFilteringLogHandler.Configure(false, true, Array.Empty<CompiledRule>());
+
             var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
             if (IsManagedFilteringHandler(currentHandler) &&
                 currentHandler is IFilteringLogHandler filteringHandler &&
                 filteringHandler.Inner != null && !IsManagedFilteringHandler(filteringHandler.Inner))
             {
                 UnityEngine.Debug.unityLogger.logHandler = filteringHandler.Inner;
+                s_hasInstalledLogHandler = false;
             }
         }
 
@@ -127,7 +137,7 @@ namespace Essentials.Console.Editor
                 if (!caseSensitive)
                     options |= RegexOptions.IgnoreCase;
 
-                regex = new Regex(pattern, options);
+                regex = new Regex(pattern, options, RegexMatchTimeout);
                 return true;
             }
             catch (Exception ex)
@@ -205,6 +215,7 @@ namespace Essentials.Console.Editor
 
             if (previousHandler != null)
             {
+                previousHandler.Configure(false, true, Array.Empty<CompiledRule>());
                 var previousInner = previousHandler.Inner;
                 if (previousInner != null && !IsManagedFilteringHandler(previousInner))
                     selectedHandler.SetInner(previousInner);
@@ -232,7 +243,10 @@ namespace Essentials.Console.Editor
                 {
                     var cleanStackFallbackHandler = filteringHandler.Inner;
                     if (cleanStackFallbackHandler != null && !IsManagedFilteringHandler(cleanStackFallbackHandler))
+                    {
                         UnityEngine.Debug.unityLogger.logHandler = cleanStackFallbackHandler;
+                        s_hasInstalledLogHandler = false;
+                    }
                 }
 
                 return;
@@ -240,7 +254,7 @@ namespace Essentials.Console.Editor
 
             if (activeHandler.FilteringEnabled)
             {
-                if (ReferenceEquals(currentHandler, activeHandler))
+                if (ReferenceEquals(currentHandler, activeHandler) || s_hasInstalledLogHandler)
                     return;
 
                 if (currentHandler != null && !ReferenceEquals(currentHandler, activeHandler))
@@ -257,6 +271,7 @@ namespace Essentials.Console.Editor
                 }
 
                 UnityEngine.Debug.unityLogger.logHandler = activeHandler;
+                s_hasInstalledLogHandler = true;
                 return;
             }
 
@@ -265,7 +280,10 @@ namespace Essentials.Console.Editor
 
             var fallbackHandler = activeHandler.Inner;
             if (fallbackHandler != null && !IsManagedFilteringHandler(fallbackHandler))
+            {
                 UnityEngine.Debug.unityLogger.logHandler = fallbackHandler;
+                s_hasInstalledLogHandler = false;
+            }
         }
 
         internal static bool TryUpdateCurrentLogs(out string message)

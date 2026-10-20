@@ -77,7 +77,8 @@ namespace Essentials.PackageManager.Editor
                 if (!TryGetRegisteredPackageResolvedPath(packageName, registeredPackageResolvedPathResolver, out string resolvedPath))
                     continue;
 
-                if (IsPathInsideProjectPackages(resolvedPath, projectRoot))
+                if (!TryGetPackageLocation(resolvedPath, projectRoot, out bool insideProjectPackages) ||
+                    insideProjectPackages)
                     return false;
 
                 foundReadOnlyRegisteredPackage = true;
@@ -100,7 +101,8 @@ namespace Essentials.PackageManager.Editor
                 return false;
             }
 
-            return !IsPathInsideProjectPackages(resolvedPath, projectRoot);
+            return TryGetPackageLocation(resolvedPath, projectRoot, out bool insideProjectPackages) &&
+                   !insideProjectPackages;
         }
 
         internal static string ExtractPackageNameFromImportedAssetPath(string importedAssetPath)
@@ -123,16 +125,24 @@ namespace Essentials.PackageManager.Editor
 
         internal static bool IsPathInsideProjectPackages(string resolvedPath, string projectRoot)
         {
-            if (string.IsNullOrEmpty(resolvedPath) || string.IsNullOrEmpty(projectRoot))
+            return TryGetPackageLocation(resolvedPath, projectRoot, out bool insideProjectPackages) &&
+                   insideProjectPackages;
+        }
+
+        static bool TryGetPackageLocation(string resolvedPath, string projectRoot, out bool insideProjectPackages)
+        {
+            insideProjectPackages = false;
+            if (string.IsNullOrWhiteSpace(resolvedPath) || string.IsNullOrWhiteSpace(projectRoot))
                 return false;
 
-            string packagePath = NormalizePath(Path.Combine(projectRoot, "Packages"));
+            string packagePath = NormalizePath(projectRoot, "Packages");
             string candidatePath = NormalizePath(resolvedPath);
             if (string.IsNullOrEmpty(packagePath) || string.IsNullOrEmpty(candidatePath))
                 return false;
 
-            return string.Equals(candidatePath, packagePath, PathComparison) ||
-                   candidatePath.StartsWith(packagePath + "/", PathComparison);
+            insideProjectPackages = string.Equals(candidatePath, packagePath, PathComparison) ||
+                                    candidatePath.StartsWith(packagePath + "/", PathComparison);
+            return true;
         }
 
         internal static bool TryGetLocalPackageForAssetStorePackage(
@@ -338,10 +348,12 @@ namespace Essentials.PackageManager.Editor
             }
         }
 
-        static string NormalizePath(string path)
+        static string NormalizePath(string path, string child = null)
         {
             try
             {
+                if (child != null)
+                    path = Path.Combine(path, child);
                 return Path.GetFullPath(path)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     .Replace('\\', '/');

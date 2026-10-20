@@ -23,6 +23,35 @@ namespace Essentials.Tests.Editor.UnityEditor
         }
 
         [Test]
+        public void StatusBarExtrasHider_FallbackPoll_RepairsResetVisibility()
+        {
+            var type = typeof(global::UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
+            var field = type.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
+            var timestamp = typeof(StatusBarExtrasHider).GetField("s_lastPollTimestamp", AnyStatic);
+            var poll = typeof(StatusBarExtrasHider).GetMethod("PollFallback", AnyStatic);
+            var previousInput = StatusBarExtrasHider.ActiveInput;
+            var previousTimestamp = timestamp.GetValue(null);
+            var statusBar = UnityEngine.ScriptableObject.CreateInstance(type);
+            try
+            {
+                StatusBarExtrasHider.ActiveInput = () => true;
+                Assert.That(field.GetValue(statusBar), Is.False);
+
+                field.SetValue(statusBar, true);
+                timestamp.SetValue(null, -15d);
+                poll.Invoke(null, null);
+                Assert.That(field.GetValue(statusBar), Is.False,
+                    "The fallback must repair a reset bar even when the number of bars stays unchanged.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(statusBar);
+                StatusBarExtrasHider.ActiveInput = previousInput;
+                timestamp.SetValue(null, previousTimestamp);
+            }
+        }
+
+        [Test]
         public void WindowTitleShortener_Callback_UsesProductNameWhenEnabled()
         {
             Assert.That(WindowTitleShortener.TryRefreshTitle(), Is.True,

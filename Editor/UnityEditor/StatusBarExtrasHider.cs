@@ -14,8 +14,6 @@ namespace Essentials.Editor
         const double FallbackPollIntervalSeconds = 15d;
 
         static Func<bool> s_activeInput;
-        static bool s_lastHideState;
-        static int s_lastStatusBarCount = -1;
         static double s_lastPollTimestamp;
 
         static readonly Type AppStatusBarType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
@@ -52,7 +50,6 @@ namespace Essentials.Editor
             AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
 #endif
             s_activeInput = null;
-            s_lastStatusBarCount = -1;
             s_lastPollTimestamp = 0d;
         }
 
@@ -88,11 +85,6 @@ namespace Essentials.Editor
             Apply();
         }
 
-        internal static void Apply()
-        {
-            ApplyCore(force: true);
-        }
-
 #if UNITY_6000_5_OR_NEWER
         [UnityEngine.OnEnteringPlayMode]
         [UnityEditor.Scripting.LifecycleManagement.OnEnteringEditMode]
@@ -114,10 +106,10 @@ namespace Essentials.Editor
         {
             if (EditorApplication.timeSinceStartup - s_lastPollTimestamp < FallbackPollIntervalSeconds) return;
             s_lastPollTimestamp = EditorApplication.timeSinceStartup;
-            ApplyCore(force: false);
+            Apply();
         }
 
-        static void ApplyCore(bool force)
+        internal static void Apply()
         {
             if (AppStatusBarType == null || DrawExtraFeaturesField == null) return;
 
@@ -134,17 +126,13 @@ namespace Essentials.Editor
             if (statusBars == null) return;
 
             var hide = IsActive();
-            if (!force && hide == s_lastHideState && statusBars.Length == s_lastStatusBarCount) return;
-
-            s_lastHideState = hide;
-            s_lastStatusBarCount = statusBars.Length;
-
             foreach (var statusBar in statusBars)
             {
                 if (statusBar == null) continue;
                 try
                 {
-                    DrawExtraFeaturesField.SetValue(statusBar, !hide);
+                    if ((bool)DrawExtraFeaturesField.GetValue(statusBar) != !hide)
+                        DrawExtraFeaturesField.SetValue(statusBar, !hide);
                 }
                 catch
                 {

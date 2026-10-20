@@ -7,11 +7,12 @@ namespace Essentials.Console.Editor
 {
     internal static partial class ConsoleLogFilterInstaller
     {
-        private readonly struct CompiledRule
+        private sealed class CompiledRule
         {
             private readonly string m_pattern;
             private readonly StringComparison m_stringComparison;
             private readonly Regex m_regex;
+            private volatile bool m_timedOut;
 
             private CompiledRule(string pattern, StringComparison stringComparison, Regex regex)
             {
@@ -22,10 +23,23 @@ namespace Essentials.Console.Editor
 
             public bool Matches(string message)
             {
-                if (m_regex != null)
-                    return m_regex.IsMatch(message);
+                if (m_timedOut)
+                    return false;
 
-                return message.IndexOf(m_pattern, m_stringComparison) >= 0;
+                if (m_regex == null)
+                    return message.IndexOf(m_pattern, m_stringComparison) >= 0;
+
+                try
+                {
+                    return m_regex.IsMatch(message);
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    // Leave the message visible and stop retrying this rule on every
+                    // Console rescan. Saving settings creates a fresh compiled rule.
+                    m_timedOut = true;
+                    return false;
+                }
             }
 
             public static CompiledRule ForContains(string pattern, bool caseSensitive)
@@ -109,9 +123,9 @@ namespace Essentials.Console.Editor
                     var isError = IsErrorMode(mode);
                     var looksLikeCompilerWarning = IsCompilerWarningMessage(message);
 
-                    // Keep true error rows visible even when warning filtering is enabled.
-                    // Mixed mode rows (some compiler/import warnings) are treated as warning-capable.
-                    if (isError && !isWarning && !looksLikeCompilerWarning)
+                    // Unity displays mixed error/warning modes as errors. Keep those
+                    // visible, and use message text only for otherwise unclassified rows.
+                    if (isError || (!isWarning && (IsLogMode(mode) || !looksLikeCompilerWarning)))
                         return false;
                 }
 

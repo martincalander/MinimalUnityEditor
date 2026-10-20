@@ -62,6 +62,31 @@ namespace Essentials.Tests.Editor.PackageManager
                 package, _ => throw new System.InvalidOperationException("Resolver failed."), ProjectRoot), Is.False);
         }
 
+        [TestCase(true, null)]
+        [TestCase(true, "")]
+        [TestCase(true, " ")]
+        [TestCase(true, "invalid\0root")]
+        [TestCase(false, null)]
+        [TestCase(false, "")]
+        [TestCase(false, " ")]
+        [TestCase(false, "invalid\0package")]
+        public void UnknownPackageLocation_KeepsPackageVisible_AndDoesNotOfferLocalNavigation(
+            bool invalidProjectRoot, string invalidPath)
+        {
+            var package = CreatePackage("com.vendor.tool", true);
+            string root = invalidProjectRoot ? invalidPath : ProjectRoot;
+            string resolvedPath = invalidProjectRoot ? ResolvePath("Library/PackageCache/com.vendor.tool@abc123") : invalidPath;
+
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
+                package, _ => resolvedPath, root), Is.False);
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
+                true, "com.vendor.tool", resolvedPath, root), Is.False);
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
+                package, _ => resolvedPath, root, out string packageName, out string localPath), Is.False);
+            Assert.That(packageName, Is.Empty);
+            Assert.That(localPath, Is.Empty);
+        }
+
         [TestCase(true, "Assets/Plugins/Vendor/Tool.cs")]
         [TestCase(false, "Packages/com.vendor.tool/Feature/Tool.cs")]
         public void ShouldHideAssetStoreDuplicate_UnrelatedImportedAssets_ReturnsFalse(bool assetStoreBacked, string assetPath)
@@ -102,6 +127,17 @@ namespace Essentials.Tests.Editor.PackageManager
         {
             Assert.That(PackageManagerAssetStoreDuplicateFilter.IsPathInsideProjectPackages(
                 ResolvePath("PackagesExternal/com.vendor.tool"), ProjectRoot), Is.False);
+        }
+
+        [Test]
+        public void PackageLocation_ProjectAtFilesystemRoot_PreservesEmbeddedAndCachedDistinction()
+        {
+            string projectRoot = Path.GetPathRoot(ProjectRoot);
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.IsPathInsideProjectPackages(
+                Path.Combine(projectRoot, "Packages", "com.vendor.tool"), projectRoot), Is.True);
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
+                true, "com.vendor.tool", Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.tool"),
+                projectRoot), Is.True);
         }
 
         static string ResolvePath(string relativePath)

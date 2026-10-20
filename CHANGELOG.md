@@ -4,6 +4,17 @@ All notable changes to this package are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep menu hiding active when a quit request is canceled, and tolerate missing
+  or null bundle entries in saved menu settings.
+- Keep ordinary Console logs and errors when Warnings Only is enabled, bound
+  regex matching time, and preserve Console rows when a rescan cannot read them.
+- Avoid logger wrapper cycles when another extension replaces the log handler.
+- Restore hidden status-bar extras after Unity resets or recreates the bar.
+- Keep Package Manager entries visible when their package location is unknown.
+- Keep original FMOD commands when their replacement API cannot be called.
+
 ### Added
 
 - On macOS, whole-root menu rules such as `Jobs/*` hide the menu-bar heading
@@ -25,7 +36,7 @@ All notable changes to this package are documented in this file.
   `ESSENTIALS_DISABLE_PROJECT_FOLDER_VISIBILITY` opt-out.
 
 - Adopted guarded code lifecycle callbacks with explicit event and Harmony
-  cleanup, idempotent initialization, and immediate logger rebinding when
+  cleanup, idempotent initialization, and logger lifecycle checks when
   entering Play or Edit Mode without a domain reload.
 - Added regression coverage for repeated Play sessions with domain reload
   disabled and scene reload either enabled or disabled.

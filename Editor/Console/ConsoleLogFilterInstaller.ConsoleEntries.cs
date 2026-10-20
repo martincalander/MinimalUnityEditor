@@ -7,11 +7,74 @@ namespace Essentials.Console.Editor
 {
     internal static partial class ConsoleLogFilterInstaller
     {
+        internal abstract class ConsoleEntryAccess
+        {
+            internal abstract int GetTotalCount();
+            internal abstract int BeginRead();
+            internal abstract object Read(int index);
+            internal abstract void EndRead();
+            internal virtual object Clone(object entry, out bool cleanedStackTrace) => CloneLogEntry(entry, out cleanedStackTrace);
+            internal abstract void Clear();
+            internal abstract void Add(object entry);
+        }
+
+        private sealed class ReflectedConsoleEntryAccess : ConsoleEntryAccess
+        {
+            private readonly object[] m_readArguments = new object[2];
+            private readonly object[] m_addArguments = new object[1];
+
+            internal override int GetTotalCount()
+            {
+                var counts = new object[] { 0, 0, 0 };
+                s_logEntriesGetCountsByTypeMethod.Invoke(null, counts);
+                return checked((int)counts[0] + (int)counts[1] + (int)counts[2]);
+            }
+
+            internal override int BeginRead() => Convert.ToInt32(
+                s_logEntriesStartGettingEntriesMethod.Invoke(null, null), CultureInfo.InvariantCulture);
+
+            internal override object Read(int index)
+            {
+                m_readArguments[0] = index;
+                m_readArguments[1] = Activator.CreateInstance(s_logEntryType);
+                return Convert.ToBoolean(s_logEntriesGetEntryInternalMethod.Invoke(null, m_readArguments), CultureInfo.InvariantCulture)
+                    ? m_readArguments[1]
+                    : null;
+            }
+
+            internal override void EndRead() => s_logEntriesEndGettingEntriesMethod.Invoke(null, null);
+            internal override void Clear() => s_logEntriesClearMethod.Invoke(null, null);
+
+            internal override void Add(object entry)
+            {
+                m_addArguments[0] = entry;
+                s_logEntriesAddMessageMethod.Invoke(null, m_addArguments);
+            }
+        }
+
         private static bool TryApplyFiltersToCurrentConsoleEntries(bool force, out bool removedAny, out string message)
+        {
+            if (s_logEntriesGetCountsByTypeMethod == null ||
+                s_logEntriesStartGettingEntriesMethod == null ||
+                s_logEntriesEndGettingEntriesMethod == null ||
+                s_logEntriesGetEntryInternalMethod == null ||
+                s_logEntriesClearMethod == null ||
+                s_logEntriesAddMessageMethod == null ||
+                s_logEntryType == null ||
+                s_logEntryModeField == null)
+            {
+                removedAny = false;
+                message = "Unity internal Console API changed. Could not update existing logs.";
+                return false;
+            }
+
+            return TryApplyFiltersToConsoleEntries(new ReflectedConsoleEntryAccess(), force, out removedAny, out message);
+        }
+
+        internal static bool TryApplyFiltersToConsoleEntries(ConsoleEntryAccess entries, bool force, out bool removedAny, out string message)
         {
             removedAny = false;
             message = string.Empty;
-
             if (s_isUpdatingConsoleEntries)
             {
                 message = "Console filter update already in progress.";
@@ -25,69 +88,65 @@ namespace Essentials.Console.Editor
                 return false;
             }
 
-            if (s_logEntriesStartGettingEntriesMethod == null ||
-                s_logEntriesEndGettingEntriesMethod == null ||
-                s_logEntriesGetEntryInternalMethod == null ||
-                s_logEntriesClearMethod == null ||
-                s_logEntriesAddMessageMethod == null ||
-                s_logEntryType == null)
+            s_isUpdatingConsoleEntries = true;
+            try
             {
-                message = "Unity internal Console API changed. Could not update existing logs.";
-                return false;
+                return ApplyFiltersToConsoleEntries(entries, force, canSuppressByRule, out removedAny, out message);
             }
+            finally
+            {
+                s_isUpdatingConsoleEntries = false;
+            }
+        }
 
+        private static bool ApplyFiltersToConsoleEntries(ConsoleEntryAccess entries, bool force, bool canSuppressByRule,
+            out bool removedAny, out string message)
+        {
+            removedAny = false;
+            message = string.Empty;
             var keptEntries = new List<object>();
             var removedCount = 0;
             var cleanedStackTraceCount = 0;
             var started = false;
+            var snapshotComplete = false;
+            var snapshotCount = 0;
 
             try
             {
-                var entryCount = Convert.ToInt32(s_logEntriesStartGettingEntriesMethod.Invoke(null, null), CultureInfo.InvariantCulture);
+                var totalCount = entries.GetTotalCount();
+                var entryCount = entries.BeginRead();
                 started = true;
+                if (entryCount != totalCount)
+                    throw new InvalidOperationException("Console rows are filtered, collapsed, or changed during the scan. Current logs were preserved.");
 
-                var getEntryArgs = new object[2];
                 for (var i = 0; i < entryCount; i++)
                 {
-                    try
+                    var entry = entries.Read(i);
+                    if (entry == null)
+                        throw new InvalidOperationException($"Could not read Console entry {i}. Current logs were preserved.");
+
+                    var entryMessage = ReadLogEntryMessage(entry);
+                    var entryMode = ReadLogEntryMode(entry);
+                    if (canSuppressByRule && s_activeFilteringLogHandler.ShouldSuppressMode(entryMode, entryMessage))
                     {
-                        getEntryArgs[0] = i;
-                        getEntryArgs[1] = Activator.CreateInstance(s_logEntryType);
-
-                        if (!Convert.ToBoolean(s_logEntriesGetEntryInternalMethod.Invoke(null, getEntryArgs), CultureInfo.InvariantCulture))
-                            continue;
-
-                        var entry = getEntryArgs[1];
-                        if (entry == null)
-                            continue;
-
-                        var entryMessage = ReadLogEntryMessage(entry);
-                        var entryMode = ReadLogEntryMode(entry);
-
-                        if (canSuppressByRule && s_activeFilteringLogHandler.ShouldSuppressMode(entryMode, entryMessage))
-                        {
-                            removedCount++;
-                            continue;
-                        }
-
-                        var clonedEntry = CloneLogEntry(entry, out var cleanedStackTrace);
-                        if (clonedEntry != null)
-                        {
-                            keptEntries.Add(clonedEntry);
-                            if (cleanedStackTrace)
-                                cleanedStackTraceCount++;
-                        }
+                        removedCount++;
+                        continue;
                     }
-                    catch
-                    {
-                        // Skip malformed rows instead of aborting the whole filter pass.
-                    }
+
+                    var clonedEntry = entries.Clone(entry, out var cleanedStackTrace);
+                    if (clonedEntry == null)
+                        throw new InvalidOperationException($"Could not copy Console entry {i}. Current logs were preserved.");
+                    keptEntries.Add(clonedEntry);
+                    if (cleanedStackTrace)
+                        cleanedStackTraceCount++;
                 }
+
+                snapshotCount = entryCount;
+                snapshotComplete = true;
             }
             catch (Exception ex)
             {
                 message = ex.InnerException?.Message ?? ex.Message;
-                return false;
             }
             finally
             {
@@ -95,40 +154,60 @@ namespace Essentials.Console.Editor
                 {
                     try
                     {
-                        s_logEntriesEndGettingEntriesMethod.Invoke(null, null);
+                        entries.EndRead();
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // ignored
+                        snapshotComplete = false;
+                        message = ex.InnerException?.Message ?? ex.Message;
                     }
                 }
             }
+
+            // Clearing is safe only when every retained row was copied successfully
+            // and Unity released the read session.
+            if (!snapshotComplete)
+                return false;
 
             if (removedCount <= 0 && cleanedStackTraceCount <= 0)
             {
                 if (force)
                     message = "No currently shown logs matched active rules.";
-
                 return true;
             }
 
             try
             {
-                s_isUpdatingConsoleEntries = true;
-                s_logEntriesClearMethod.Invoke(null, null);
+                // Background logging can add rows while the snapshot is processed.
+                // Keep the original Console if its contents grew after the read session.
+                if (entries.GetTotalCount() != snapshotCount)
+                {
+                    message = "Console entries changed during the scan. Current logs were preserved.";
+                    return false;
+                }
 
-                var addMessageArgs = new object[1];
+                entries.Clear();
+                removedAny = removedCount > 0;
+                var failedCount = 0;
+                string firstFailure = null;
                 for (var i = 0; i < keptEntries.Count; i++)
                 {
                     try
                     {
-                        addMessageArgs[0] = keptEntries[i];
-                        s_logEntriesAddMessageMethod.Invoke(null, addMessageArgs);
+                        entries.Add(keptEntries[i]);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Drop only the failing row; keep processing the rest.
+                        // Continue restoring the other rows, but report partial failure.
+                        failedCount++;
+                        firstFailure ??= ex.InnerException?.Message ?? ex.Message;
                     }
+                }
+
+                if (failedCount > 0)
+                {
+                    message = $"Could not restore {failedCount} Console entr{(failedCount == 1 ? "y" : "ies")}: {firstFailure}";
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -136,12 +215,7 @@ namespace Essentials.Console.Editor
                 message = ex.InnerException?.Message ?? ex.Message;
                 return false;
             }
-            finally
-            {
-                s_isUpdatingConsoleEntries = false;
-            }
 
-            removedAny = removedCount > 0;
             if (removedCount > 0 && cleanedStackTraceCount > 0)
             {
                 message = $"Removed {removedCount} matching console entr{(removedCount == 1 ? "y" : "ies")} and cleaned stack traces on {cleanedStackTraceCount} entr{(cleanedStackTraceCount == 1 ? "y" : "ies")}.";
@@ -161,49 +235,27 @@ namespace Essentials.Console.Editor
         private static object CloneLogEntry(object entry, out bool cleanedStackTrace)
         {
             cleanedStackTrace = false;
-            if (entry == null || s_logEntryType == null)
-                return null;
-
-            object clone;
-            try
-            {
-                clone = Activator.CreateInstance(s_logEntryType);
-            }
-            catch
-            {
-                return null;
-            }
-
-            if (clone == null)
-                return null;
-
+            var clone = Activator.CreateInstance(s_logEntryType);
             for (var i = 0; i < s_logEntryFields.Length; i++)
             {
                 var field = s_logEntryFields[i];
-                try
-                {
-                    var value = field.GetValue(entry);
-                    if (ReferenceEquals(field, s_logEntryMessageField) ||
-                        ReferenceEquals(field, s_logEntryConditionField) ||
-                        ReferenceEquals(field, s_logEntryFileField))
-                        value ??= string.Empty;
+                var value = field.GetValue(entry);
+                if (ReferenceEquals(field, s_logEntryMessageField) ||
+                    ReferenceEquals(field, s_logEntryConditionField) ||
+                    ReferenceEquals(field, s_logEntryFileField))
+                    value ??= string.Empty;
 
-                    if (s_cleanStackTracesEnabled && value is string stringValue && IsStackTraceField(field.Name))
+                if (s_cleanStackTracesEnabled && value is string stringValue && IsStackTraceField(field.Name))
+                {
+                    var cleaned = CleanStackTrace(stringValue);
+                    if (!string.Equals(cleaned, stringValue, StringComparison.Ordinal))
                     {
-                        var cleaned = CleanStackTrace(stringValue);
-                        if (!string.Equals(cleaned, stringValue, StringComparison.Ordinal))
-                        {
-                            value = cleaned;
-                            cleanedStackTrace = true;
-                        }
+                        value = cleaned;
+                        cleanedStackTrace = true;
                     }
+                }
 
-                    field.SetValue(clone, value);
-                }
-                catch
-                {
-                    // ignored
-                }
+                field.SetValue(clone, value);
             }
 
             return clone;
@@ -290,14 +342,7 @@ namespace Essentials.Console.Editor
             if (entry == null || s_logEntryModeField == null)
                 return 0;
 
-            try
-            {
-                return Convert.ToInt32(s_logEntryModeField.GetValue(entry), CultureInfo.InvariantCulture);
-            }
-            catch
-            {
-                return 0;
-            }
+            return Convert.ToInt32(s_logEntryModeField.GetValue(entry), CultureInfo.InvariantCulture);
         }
 
     }

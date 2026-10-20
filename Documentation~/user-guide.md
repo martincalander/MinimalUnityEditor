@@ -21,7 +21,14 @@ filter's own helper frames from displayed stacks.
 When active rules exist, the package revisits current Console rows while the
 Editor is open. A newly written matching row can therefore appear briefly
 before it is removed. Invalid regular expressions are reported beside the rule
-and are not applied.
+and are not applied. A regex that exceeds its 50 ms matching limit stops running
+until the settings are saved again; the affected messages remain visible.
+
+If another extension replaces Unity's log handler, Minimal Editor leaves that
+handler in control. Filtering continues through Console rescans. A rescan that
+cannot read every row leaves the Console unchanged. Rescans also pause when
+Console search, severity toggles, or collapsed duplicates conceal rows. Clear
+the search, show all severities, and turn off Collapse to resume them.
 
 If Unity AI Assistant is installed and its Console integration is detected,
 **Hide Assistant Toolbar Button** removes the **Add to Assistant** button. The
@@ -154,8 +161,8 @@ changing unrelated Package Manager pages.
 
 When `com.fmod.fmod-for-unity-2-03` is installed, equivalent FMOD commands are
 registered under **Tools > FMOD** and the original root entries are removed on
-a best-effort basis. Commands whose matching FMOD API is unavailable remain
-disabled or absent.
+a best-effort basis. If a matching FMOD API is unavailable, its original command
+stays in place and the replacement is disabled or absent.
 
 There is no FMOD settings page in Minimal Editor.
 

@@ -134,7 +134,7 @@ namespace Essentials.Tests.Editor.MinimalEditor
                 Assert.That(Property(menuSettings, "Data").GetValue(null), Is.SameAs(menuData));
                 Assert.That(JsonUtility.ToJson(Property(menuSettings, "Data").GetValue(null)), Is.EqualTo(menuSnapshot));
                 AssertCallbackCount(typeof(EditorApplication), "projectChanged", menuHider, "OnProjectChanged", menuCallbackCount);
-                AssertCallbackCount(typeof(EditorApplication), "wantsToQuit", menuHider, "OnWantsToQuit", menuCallbackCount);
+                AssertCallbackCount(typeof(EditorApplication), "wantsToQuit", menuHider, "OnWantsToQuit", 0);
                 AssertCallbackCount(typeof(EditorApplication), "quitting", menuHider, "SuppressMutationForTeardown", menuCallbackCount);
             });
 #endif

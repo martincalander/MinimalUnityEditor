@@ -292,7 +292,9 @@ namespace Essentials.FMOD.Editor
 
             for (var i = 0; i < Commands.Length; i++)
             {
-                TryRemoveRootMenuItem(Commands[i].RootPath);
+                // Keep the original available when this FMOD version has no callable replacement.
+                if (CanInvokeOriginal(Commands[i]))
+                    TryRemoveRootMenuItem(Commands[i].RootPath);
             }
 
             if (s_removalAttemptCount < MaxRemovalAttempts)
@@ -381,8 +383,17 @@ namespace Essentials.FMOD.Editor
 
         static MethodInfo GetOriginalMethod(string typeName, string methodName)
         {
-            var type = ResolveFmodEditorType(typeName);
-            return type?.GetMethod(methodName, StaticMemberFlags, null, Type.EmptyTypes, null);
+            try
+            {
+                var type = ResolveFmodEditorType(typeName);
+                var method = type?.GetMethod(methodName, StaticMemberFlags, null, Type.EmptyTypes, null);
+                return method != null && !method.ContainsGenericParameters ? method : null;
+            }
+            catch
+            {
+                // Leave the original command available when FMOD's reflected API is incompatible.
+                return null;
+            }
         }
 
         static Type ResolveFmodEditorType(string typeName)
