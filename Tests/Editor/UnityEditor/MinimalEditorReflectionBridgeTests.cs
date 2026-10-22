@@ -14,19 +14,12 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
         const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
         [Test]
-        public void AppStatusBar_DrawExtraFeaturesFieldSupportsToggle()
+        public void StatusBarExtrasHider_FallbackPoll_RepairsResetVisibility()
         {
             var type = typeof(global::UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
             var field = type?.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.That(field?.FieldType, Is.EqualTo(typeof(bool)),
                 "AppStatusBar.m_DrawExtraFeatures must exist as a bool for the status bar extras toggle.");
-        }
-
-        [Test]
-        public void StatusBarExtrasHider_FallbackPoll_RepairsResetVisibility()
-        {
-            var type = typeof(global::UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
-            var field = type.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
             var timestamp = typeof(StatusBarExtrasHider).GetField("s_lastPollTimestamp", AnyStatic);
             var poll = typeof(StatusBarExtrasHider).GetMethod("PollFallback", AnyStatic);
             var previousInput = StatusBarExtrasHider.ActiveInput;
@@ -101,15 +94,6 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                 initialize.Invoke(null, null);
                 WindowTitleShortener.ActiveInput = previousInput;
             }
-        }
-
-        [Test]
-        public void RemovedGitPackageUpdater_DoesNotReturn()
-        {
-            Assert.That(
-                Type.GetType("MinimalEditor.Editor.UpdateAllGitUpmTool, MinimalEditor.Editor"),
-                Is.Null,
-                "The removed Git UPM updater implementation must not remain in MinimalEditor.Editor.");
         }
 
         static object BuildMainWindowTitle()

@@ -51,24 +51,19 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
             Assert.That(EditorFeatureToggles.HideStatusBarExtras, Is.True);
         }
 
-        [Test]
-        public void PublicShortWindowTitleToggle_PersistsInEditorPrefs()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void PublicToggle_PersistsBothValuesInEditorPrefs(bool shortTitle)
         {
-            EditorFeatureToggles.ShortWindowTitle = false;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.ShortWindowTitleKey, true), Is.False);
-
-            EditorFeatureToggles.ShortWindowTitle = true;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.ShortWindowTitleKey, false), Is.True);
-        }
-
-        [Test]
-        public void PublicStatusBarExtrasToggle_PersistsInEditorPrefs()
-        {
-            EditorFeatureToggles.HideStatusBarExtras = false;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideStatusBarExtrasKey, true), Is.False);
-
-            EditorFeatureToggles.HideStatusBarExtras = true;
-            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideStatusBarExtrasKey, false), Is.True);
+            string key = shortTitle ? UnityEditorPreferences.ShortWindowTitleKey : UnityEditorPreferences.HideStatusBarExtrasKey;
+            foreach (bool value in new[] { false, true })
+            {
+                if (shortTitle)
+                    EditorFeatureToggles.ShortWindowTitle = value;
+                else
+                    EditorFeatureToggles.HideStatusBarExtras = value;
+                Assert.That(EditorPrefs.GetBool(key, !value), Is.EqualTo(value));
+            }
         }
 
         static (bool HasKey, bool Value) Capture(string key)

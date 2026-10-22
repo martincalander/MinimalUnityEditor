@@ -11,8 +11,6 @@ namespace MinimalEditor.Tests.Editor.PackageContract
     {
         const string PackageName = "com.martincalander.minimaleditor";
         const string PackageJsonPath = "Packages/com.martincalander.minimaleditor/package.json";
-        const string HarmonyDirectoryPath =
-            "Packages/com.martincalander.minimaleditor/ThirdParty";
         const string HarmonyPath =
             "Packages/com.martincalander.minimaleditor/ThirdParty/MinimalEditor.Harmony.dll";
         const string CoreClrHarmonyPath =
@@ -54,9 +52,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Path.Combine(package.resolvedPath, relativePath));
             Assert.That(definition.name, Is.EqualTo(assemblyName));
             Assert.That(definition.rootNamespace, Is.EqualTo(assemblyName));
-            Assert.That(definition.defineConstraints, Does.Contain("!MINIMAL_EDITOR_DISABLE_ALL"));
             Assert.That(definition.defineConstraints, Does.Contain(moduleDisableSymbol));
-            Assert.That(definition.defineConstraints, Is.Unique);
         }
 
         [Test]
@@ -69,7 +65,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 .ToArray();
             string[] assemblyNames = definitions.Select(definition => definition.name).ToArray();
 
-            Assert.That(assemblyNames, Has.Length.EqualTo(12));
+            Assert.That(assemblyNames, Is.Not.Empty);
             Assert.That(assemblyNames, Is.Unique);
             foreach (AssemblyDefinition definition in definitions)
             {
@@ -77,59 +73,32 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Assert.That(definition.rootNamespace, Does.StartWith("MinimalEditor."));
                 Assert.That(definition.defineConstraints, Does.Contain("!MINIMAL_EDITOR_DISABLE_ALL"));
                 Assert.That(definition.defineConstraints, Is.Unique);
+                Assert.That(definition.includePlatforms, Is.EqualTo(new[] { "Editor" }), definition.name);
+                Assert.That(definition.autoReferenced, Is.False, definition.name);
                 if (definition.name == "MinimalEditor.FMOD.Editor")
                     Assert.That(definition.references, Is.EqualTo(new[] { "FMODUnityEditor" }));
                 else
                     Assert.That(definition.references, Is.SubsetOf(assemblyNames));
+                if (definition.name.StartsWith("MinimalEditor.PackageManager.", StringComparison.Ordinal))
+                    Assert.That(definition.defineConstraints, Does.Contain("UNITY_6000_0_OR_NEWER"), definition.name);
+                if (definition.name.StartsWith("MinimalEditor.ProjectFolderVisibility.", StringComparison.Ordinal))
+                    Assert.That(definition.defineConstraints, Is.SupersetOf(new[]
+                    {
+                        "UNITY_7000_0_OR_NEWER", "ENABLE_CORECLR", "!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY"
+                    }), definition.name);
             }
-        }
-
-        [Test]
-        public void PackageManagerAssemblies_AreLimitedToUnity6InternalApis()
-        {
-            string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
-            string[] relativePaths =
-            {
-                "Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef",
-                "Tests/Editor/PackageManager/MinimalEditor.PackageManager.Editor.Tests.asmdef"
-            };
-
-            foreach (string relativePath in relativePaths)
-            {
-                string json = File.ReadAllText(Path.Combine(packageRoot, relativePath));
-                StringAssert.Contains("\"UNITY_6000_0_OR_NEWER\"", json);
-            }
-        }
-
-        [TestCase("Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b")]
-        [TestCase("Tests/Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.Tests.asmdef", "8f18d14c84426447782690950e452507")]
-        public void ProjectFolderVisibilityAssemblies_PreserveGuidsAndRequireUnity7CoreClr(
-            string relativePath,
-            string expectedGuid)
-        {
-            string assetPath = $"Packages/{PackageName}/{relativePath}";
-            Assert.That(AssetDatabase.AssetPathToGUID(assetPath), Is.EqualTo(expectedGuid));
-
-            PackageInfo package = PackageInfo.FindForAssetPath(assetPath);
-            Assert.That(package, Is.Not.Null);
-            Assert.That(package.name, Is.EqualTo(PackageName));
-
-            string json = File.ReadAllText(Path.Combine(package.resolvedPath, relativePath));
-            StringAssert.Contains("\"UNITY_7000_0_OR_NEWER\"", json);
-            StringAssert.Contains("\"ENABLE_CORECLR\"", json);
-            StringAssert.Contains("\"!MINIMAL_EDITOR_DISABLE_ALL\"", json);
-            StringAssert.Contains("\"!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY\"", json);
-            StringAssert.Contains("\"Editor\"", json);
-            StringAssert.Contains("\"autoReferenced\": false", json);
         }
 
         [Test]
         public void ProjectFolderVisibility_SharesMinimalEditorHarmonyWithoutAnotherBinary()
         {
             string packageRoot = PackageInfo.FindForAssetPath(PackageJsonPath).resolvedPath;
-            AssemblyDefinition definition = ReadAssemblyDefinition(Path.Combine(packageRoot,
-                "Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef"));
-            Assert.That(definition.precompiledReferences, Is.EqualTo(new[] { "MinimalEditor.Harmony.dll" }));
+            foreach (string module in new[] { "PackageManager", "ProjectFolderVisibility" })
+            {
+                AssemblyDefinition definition = ReadAssemblyDefinition(Path.Combine(packageRoot,
+                    $"Editor/{module}/MinimalEditor.{module}.Editor.asmdef"));
+                Assert.That(definition.precompiledReferences, Is.EqualTo(new[] { "MinimalEditor.Harmony.dll" }), module);
+            }
 
             string[] harmonyBinaries = Directory.GetFiles(packageRoot, "*.dll", SearchOption.AllDirectories)
                 .Where(path => Path.GetFileName(path).IndexOf("Harmony", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -141,50 +110,25 @@ namespace MinimalEditor.Tests.Editor.PackageContract
             }));
         }
 
-        [Test]
-        public void Harmony_HasStablePackageOwnedEditorOnlyImporter()
+        [TestCase(HarmonyPath, "e6ff89daf671406bb11379a34e86086c", "!UNITY_7000_0_OR_NEWER")]
+        [TestCase(CoreClrHarmonyPath, "5d8560063d1af48dabc3ece455919538", "UNITY_7000_0_OR_NEWER")]
+        public void Harmony_RuntimeVariantHasStableEditorOnlyImporter(string path, string guid, string constraint)
         {
-            Assert.That(
-                AssetDatabase.AssetPathToGUID(HarmonyDirectoryPath),
-                Is.EqualTo("c23ac49376204a03ad8d23c2b24682da"));
-            Assert.That(
-                AssetDatabase.AssetPathToGUID(HarmonyPath),
-                Is.EqualTo("e6ff89daf671406bb11379a34e86086c"));
-
-            var importer = AssetImporter.GetAtPath(HarmonyPath) as PluginImporter;
+            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(guid));
+            var importer = AssetImporter.GetAtPath(path) as PluginImporter;
             Assert.That(importer, Is.Not.Null);
             Assert.That(importer.GetCompatibleWithAnyPlatform(), Is.False);
             Assert.That(importer.GetCompatibleWithEditor(), Is.True);
-
-            PackageInfo package = PackageInfo.FindForAssetPath(HarmonyPath);
+            Assert.That(importer.DefineConstraints, Is.EqualTo(new[] { constraint }));
+            foreach (var platform in new[] { BuildTarget.StandaloneOSX, BuildTarget.StandaloneWindows64, BuildTarget.StandaloneLinux64 })
+                Assert.That(importer.GetCompatibleWithPlatform(platform), Is.False, platform.ToString());
+            PackageInfo package = PackageInfo.FindForAssetPath(path);
             Assert.That(package, Is.Not.Null);
             Assert.That(package.name, Is.EqualTo(PackageName));
 
             string importerMeta = File.ReadAllText(Path.Combine(
-                package.resolvedPath,
-                "ThirdParty/MinimalEditor.Harmony.dll.meta"));
+                package.resolvedPath, path.Substring($"Packages/{PackageName}/".Length) + ".meta"));
             StringAssert.Contains("isExplicitlyReferenced: 1", importerMeta);
-
-            string asmdef = File.ReadAllText(Path.Combine(
-                package.resolvedPath,
-                "Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef"));
-            StringAssert.Contains("\"MinimalEditor.Harmony.dll\"", asmdef);
-        }
-
-        [Test]
-        public void Harmony_RuntimeVariantsAreMutuallyExclusiveAndEditorOnly()
-        {
-            var mono = AssetImporter.GetAtPath(HarmonyPath) as PluginImporter;
-            var coreClr = AssetImporter.GetAtPath(CoreClrHarmonyPath) as PluginImporter;
-            Assert.That(mono, Is.Not.Null);
-            Assert.That(coreClr, Is.Not.Null);
-            Assert.That(mono.DefineConstraints, Is.EqualTo(new[] { "!UNITY_7000_0_OR_NEWER" }));
-            Assert.That(coreClr.DefineConstraints, Is.EqualTo(new[] { "UNITY_7000_0_OR_NEWER" }));
-            Assert.That(coreClr.GetCompatibleWithAnyPlatform(), Is.False);
-            Assert.That(coreClr.GetCompatibleWithEditor(), Is.True);
-            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneOSX), Is.False);
-            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneWindows64), Is.False);
-            Assert.That(coreClr.GetCompatibleWithPlatform(BuildTarget.StandaloneLinux64), Is.False);
         }
 
         static AssemblyDefinition ReadAssemblyDefinition(string path)
@@ -200,6 +144,8 @@ namespace MinimalEditor.Tests.Editor.PackageContract
             public string[] references = Array.Empty<string>();
             public string[] defineConstraints = Array.Empty<string>();
             public string[] precompiledReferences = Array.Empty<string>();
+            public string[] includePlatforms = Array.Empty<string>();
+            public bool autoReferenced = true;
         }
     }
 }

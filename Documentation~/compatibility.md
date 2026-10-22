@@ -23,6 +23,11 @@ Console stack-trace cleanup is available at the declared baseline. Cleanup runs
 when Console entries are rescanned, including newer Editors that store the stack
 trace after the message text.
 
+The local-package action follows the Package Manager toolbar refresh and stays
+inside its native action row, including the separate toolbar in Unity 7. It
+identifies the asset action by its element name, so translated button text does
+not prevent the action from appearing.
+
 ### Play Mode lifecycle
 
 Domain reload can be disabled, with scene reload either on or off. Editor
@@ -49,6 +54,14 @@ FMOD was not installed, so its optional assembly was not compiled. The older
 Editor results below predate these lifecycle changes.
 
 ### Verified Editors
+
+On 2026-10-21, the Unity 7 theme audit passed 188 focused tests in
+`7000.0.0a11` on macOS Apple silicon after a clean Unity compilation. These
+covered Package Manager, Console, menus, Project folder filtering, Editor
+preferences and chrome, and repeated Play sessions without domain reload.
+The toolbar regression uses Unity's actual toolbar hierarchy and checks
+localized action text, placement, repeated refresh, and removal. Older Editors,
+Windows, Linux, and the optional FMOD integration were not rerun for this change.
 
 The 2026-10-20 performance and stability audit passed all 231 Minimal Editor
 tests in Unity `7000.0.0a11` and all 183 applicable tests in Unity `6000.7.0b2`

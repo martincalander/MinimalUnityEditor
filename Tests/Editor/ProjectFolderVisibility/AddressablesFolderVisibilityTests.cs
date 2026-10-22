@@ -10,36 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
 {
-    public sealed class AddressablesFolderPathTests
-    {
-        FolderVisibilityPreferencesSnapshot preferences;
-
-        [SetUp]
-        public void SetUp()
-        {
-            preferences = new FolderVisibilityPreferencesSnapshot();
-            FolderVisibilitySettings.Enabled = true;
-            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
-        }
-
-        [TearDown]
-        public void TearDown() => preferences?.Dispose();
-
-        [TestCase("Assets/AddressableAssetsData", true)]
-        [TestCase("assets/addressableassetsdata/AssetGroups/Example.asset", true)]
-        [TestCase("Assets/AddressableAssetsData/Child", true)]
-        [TestCase("Assets/AddressableAssetsDatabase", false)]
-        [TestCase("Assets/AddressableAssetsData.asset", false)]
-        [TestCase("Assets/Other/AddressableAssetsData", false)]
-        [TestCase("Packages/com.example/AddressableAssetsData", false)]
-        [TestCase("", false)]
-        [TestCase(null, false)]
-        public void MatchesOnlyTheRootFolderAndItsDescendants(string path, bool expected)
-        {
-            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path), Is.EqualTo(expected));
-        }
-    }
-
     public sealed class FolderVisibilitySettingsTests
     {
         const string StreamingAssetsPath = "Assets/StreamingAssets";
@@ -91,22 +61,27 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             Assert.That(FolderVisibilitySettings.Folders.Count, Is.EqualTo(count));
         }
 
-        [Test]
-        public void CustomRulesOnlyHideTheSelectedFolderAndItsDescendants()
+        [TestCase("Assets/AddressableAssetsData")]
+        [TestCase(CustomFolderPath)]
+        public void FolderRulesOnlyHideTheSelectedFolderAndItsDescendants(string path)
         {
-            Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);
-            FolderVisibilitySettings.SetFolderHidden(CustomFolderPath, true);
+            if (!FolderVisibilitySettings.IsBuiltInFolder(path))
+                Assert.That(FolderVisibilitySettings.AddFolder(path), Is.True);
+            FolderVisibilitySettings.SetFolderHidden(path, true);
 
-            Assert.That(FolderVisibilitySettings.IsHiddenPath(CustomFolderPath), Is.True);
-            Assert.That(FolderVisibilitySettings.IsHiddenPath(CustomFolderPath.ToLowerInvariant() + "/Child.asset"), Is.True);
-            Assert.That(FolderVisibilitySettings.IsHiddenPath(CustomFolderPath + "Sibling"), Is.False);
-            Assert.That(FolderVisibilitySettings.IsHiddenPath(CustomFolderPath + ".asset"), Is.False);
-            Assert.That(FolderVisibilitySettings.IsHiddenPath("Assets/Other/FolderVisibilityTestGenerated"), Is.False);
-            Assert.That(FolderVisibilitySettings.IsHiddenPath("Packages/com.example/FolderVisibilityTestGenerated"), Is.False);
+            string name = path.Substring("Assets/".Length);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path), Is.True);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path.ToLowerInvariant() + "/AssetGroups/Child.asset"), Is.True);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path + "/Child"), Is.True);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path + "base"), Is.False);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path + ".asset"), Is.False);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath("Assets/Other/" + name), Is.False);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath("Packages/com.example/" + name), Is.False);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(""), Is.False);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(null), Is.False);
 
-            FolderVisibilitySettings.SetFolderHidden(CustomFolderPath, false);
-
-            Assert.That(FolderVisibilitySettings.IsHiddenPath(CustomFolderPath + "/Child.asset"), Is.False);
+            FolderVisibilitySettings.SetFolderHidden(path, false);
+            Assert.That(AddressablesFolderVisibility.IsHiddenPath(path + "/Child.asset"), Is.False);
         }
 
         [Test]
@@ -299,13 +274,9 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         [Unity.Scripting.LifecycleManagement.NoAutoStaticsCleanup]
         static readonly Type BrowserType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.ProjectBrowser", true);
         readonly List<EditorWindow> ownedWindows = new List<EditorWindow>();
-        readonly List<string> additionalProbes = new List<string>();
-        readonly List<string> additionalRoots = new List<string>();
+        readonly List<string> createdFolders = new List<string>();
         FolderVisibilityPreferencesSnapshot preferences;
-        bool createdRoot;
-        bool createdStreamingAssetsRoot;
         string probePath;
-        string streamingAssetsProbePath;
         Object previousBrowser;
         Object[] previousSelection;
 
@@ -319,14 +290,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             FolderVisibilitySettings.Enabled = true;
             FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, false);
 
-            if (!AssetDatabase.IsValidFolder(AddressablesFolderVisibility.FolderPath))
-            {
-                Assert.That(AssetDatabase.CreateFolder("Assets", "AddressableAssetsData"), Is.Not.Empty);
-                createdRoot = true;
-            }
-            string probeName = "FolderVisibilityTest_" + Guid.NewGuid().ToString("N");
-            probePath = AddressablesFolderVisibility.FolderPath + "/" + probeName;
-            Assert.That(AssetDatabase.CreateFolder(AddressablesFolderVisibility.FolderPath, probeName), Is.Not.Empty);
+            probePath = CreateProbe(AddressablesFolderVisibility.FolderPath);
             AddressablesFolderVisibility.ShowFolder = true;
         }
 
@@ -339,30 +303,12 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
                     if (window != null)
                         Object.DestroyImmediate(window);
                 ownedWindows.Clear();
-                foreach (var path in additionalProbes)
-                    if (AssetDatabase.IsValidFolder(path))
-                        Assert.That(AssetDatabase.DeleteAsset(path), Is.True);
-                additionalProbes.Clear();
-                foreach (var path in additionalRoots)
-                    if (AssetDatabase.IsValidFolder(path))
-                        Assert.That(AssetDatabase.DeleteAsset(path), Is.True);
-                additionalRoots.Clear();
-                if (!string.IsNullOrEmpty(probePath) && AssetDatabase.IsValidFolder(probePath))
-                    Assert.That(AssetDatabase.DeleteAsset(probePath), Is.True);
+                // Children were created after their roots. Remove only owned folders, in reverse order.
+                for (int i = createdFolders.Count - 1; i >= 0; i--)
+                    if (AssetDatabase.IsValidFolder(createdFolders[i]))
+                        Assert.That(AssetDatabase.DeleteAsset(createdFolders[i]), Is.True);
+                createdFolders.Clear();
                 probePath = null;
-                if (createdRoot)
-                {
-                    Assert.That(AssetDatabase.DeleteAsset(AddressablesFolderVisibility.FolderPath), Is.True);
-                    createdRoot = false;
-                }
-                if (!string.IsNullOrEmpty(streamingAssetsProbePath) && AssetDatabase.IsValidFolder(streamingAssetsProbePath))
-                    Assert.That(AssetDatabase.DeleteAsset(streamingAssetsProbePath), Is.True);
-                streamingAssetsProbePath = null;
-                if (createdStreamingAssetsRoot)
-                {
-                    Assert.That(AssetDatabase.DeleteAsset(StreamingAssetsPath), Is.True);
-                    createdStreamingAssetsRoot = false;
-                }
             }
             finally
             {
@@ -384,59 +330,25 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             string folderGuid = AssetDatabase.AssetPathToGUID(AddressablesFolderVisibility.FolderPath);
             string probeGuid = AssetDatabase.AssetPathToGUID(probePath);
 
-            Assert.That(TreePaths(columns, "m_FolderTree"), Does.Contain(AddressablesFolderVisibility.FolderPath));
-            Assert.That(TreePaths(tree, "m_AssetTree"), Does.Contain(AddressablesFolderVisibility.FolderPath));
-            Assert.That(ListPaths(columns), Does.Contain(AddressablesFolderVisibility.FolderPath));
+            AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, true);
 
             AddressablesFolderVisibility.ShowFolder = false;
 
-            Assert.That(TreePaths(columns, "m_FolderTree"), Has.None.EqualTo(AddressablesFolderVisibility.FolderPath));
-            Assert.That(TreePaths(tree, "m_AssetTree"), Has.None.EqualTo(AddressablesFolderVisibility.FolderPath));
-            Assert.That(ListPaths(columns), Has.None.EqualTo(AddressablesFolderVisibility.FolderPath));
-            Assert.That(AssetDatabase.AssetPathToGUID(AddressablesFolderVisibility.FolderPath), Is.EqualTo(folderGuid));
-            Assert.That(AssetDatabase.AssetPathToGUID(probePath), Is.EqualTo(probeGuid));
-            Assert.That(AssetDatabase.LoadMainAssetAtPath(AddressablesFolderVisibility.FolderPath), Is.Not.Null);
-            Assert.That(AssetDatabase.LoadMainAssetAtPath(probePath), Is.Not.Null);
-            Assert.That(AssetDatabase.FindAssets("", new[] { AddressablesFolderVisibility.FolderPath }), Does.Contain(probeGuid));
+            AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, false);
+            AssertAssetsPreserved(AddressablesFolderVisibility.FolderPath, probePath, folderGuid, probeGuid);
 
             AddressablesFolderVisibility.ShowFolder = true;
 
-            Assert.That(TreePaths(columns, "m_FolderTree"), Does.Contain(AddressablesFolderVisibility.FolderPath));
-            Assert.That(TreePaths(tree, "m_AssetTree"), Does.Contain(AddressablesFolderVisibility.FolderPath));
-            Assert.That(ListPaths(columns), Does.Contain(AddressablesFolderVisibility.FolderPath));
-        }
-
-        [Test]
-        public void StreamingAssetsAndAddressablesToggleIndependentlyInBothLayouts()
-        {
-            CreateStreamingAssetsProbe();
-            EditorWindow columns = CreateBrowser("TwoColumns");
-            EditorWindow tree = CreateBrowser("OneColumn");
-            string folderGuid = AssetDatabase.AssetPathToGUID(StreamingAssetsPath);
-            string probeGuid = AssetDatabase.AssetPathToGUID(streamingAssetsProbePath);
-
-            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, true);
-
-            AssertFolderVisibility(columns, tree, StreamingAssetsPath, false);
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, true);
-            Assert.That(AssetDatabase.AssetPathToGUID(StreamingAssetsPath), Is.EqualTo(folderGuid));
-            Assert.That(AssetDatabase.AssetPathToGUID(streamingAssetsProbePath), Is.EqualTo(probeGuid));
-            Assert.That(AssetDatabase.LoadMainAssetAtPath(streamingAssetsProbePath), Is.Not.Null);
-            Assert.That(AssetDatabase.FindAssets("", new[] { StreamingAssetsPath }), Does.Contain(probeGuid));
-
-            FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, false);
-            AddressablesFolderVisibility.ShowFolder = false;
-
-            AssertFolderVisibility(columns, tree, StreamingAssetsPath, true);
-            AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, false);
         }
 
+        [TestCase(StreamingAssetsPath)]
         [TestCase("Assets/Plugins")]
         [TestCase("Assets/Gizmos")]
         [TestCase("Assets/Settings")]
-        public void AdditionalBuiltInFolderTogglesRefreshBothLayoutsAndPreserveAssets(string path)
+        public void BuiltInFolderTogglesAreIndependentAndPreserveAssetsInBothLayouts(string path)
         {
-            string childPath = CreateAdditionalProbe(path);
+            string childPath = CreateProbe(path);
             EditorWindow columns = CreateBrowser("TwoColumns");
             EditorWindow tree = CreateBrowser("OneColumn");
             string folderGuid = AssetDatabase.AssetPathToGUID(path);
@@ -447,17 +359,16 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
 
             AssertFolderVisibility(columns, tree, path, false);
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, true);
-            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(folderGuid));
-            Assert.That(AssetDatabase.AssetPathToGUID(childPath), Is.EqualTo(childGuid));
-            Assert.That(AssetDatabase.LoadMainAssetAtPath(childPath), Is.Not.Null);
-            Assert.That(AssetDatabase.FindAssets("", new[] { path }), Does.Contain(childGuid));
+            AssertAssetsPreserved(path, childPath, folderGuid, childGuid);
 
             FolderVisibilitySettings.Enabled = false;
             AssertFolderVisibility(columns, tree, path, true);
             FolderVisibilitySettings.Enabled = true;
             AssertFolderVisibility(columns, tree, path, false);
             FolderVisibilitySettings.SetFolderHidden(path, false);
+            AddressablesFolderVisibility.ShowFolder = false;
             AssertFolderVisibility(columns, tree, path, true);
+            AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, false);
         }
 
         [TestCase("Assets/StreamingAssets", "OneColumn")]
@@ -469,7 +380,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             if (!FolderVisibilitySettings.IsBuiltInFolder(path))
                 Assert.That(FolderVisibilitySettings.AddFolder(path), Is.True);
             FolderVisibilitySettings.SetFolderHidden(path, false);
-            string childPath = CreateAdditionalProbe(path);
+            string childPath = CreateProbe(path);
             EditorWindow browser = CreateBrowser(layout);
             Invoke(browser, "SetSearch", childPath.Substring(childPath.LastIndexOf('/') + 1));
             Assert.That(ListPaths(browser), Does.Contain(childPath));
@@ -487,7 +398,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         [Test]
         public void MasterToggleRestoresFoldersAndReappliesTheirChoicesInBothLayouts()
         {
-            CreateStreamingAssetsProbe();
+            CreateProbe(StreamingAssetsPath);
             EditorWindow columns = CreateBrowser("TwoColumns");
             EditorWindow tree = CreateBrowser("OneColumn");
             FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
@@ -510,7 +421,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         [TestCase("Assets/StreamingAssets")]
         public void HidingTheCurrentlyBrowsedFolderReturnsTheListToAssets(string path)
         {
-            string childPath = path == AddressablesFolderVisibility.FolderPath ? probePath : CreateAdditionalProbe(path);
+            string childPath = path == AddressablesFolderVisibility.FolderPath ? probePath : CreateProbe(path);
             EditorWindow browser = CreateBrowser("TwoColumns");
             EntityId folderId = AssetDatabase.LoadMainAssetAtPath(path).GetEntityId();
             Invoke(browser, "ShowFolderContents", folderId, false);
@@ -567,30 +478,18 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             }
         }
 
-        string CreateAdditionalProbe(string path)
+        string CreateProbe(string path)
         {
             if (!AssetDatabase.IsValidFolder(path))
             {
                 Assert.That(AssetDatabase.CreateFolder("Assets", path.Substring("Assets/".Length)), Is.Not.Empty);
-                additionalRoots.Add(path);
+                createdFolders.Add(path);
             }
             string probeName = "FolderVisibilityTest_" + Guid.NewGuid().ToString("N");
             string childPath = path + "/" + probeName;
             Assert.That(AssetDatabase.CreateFolder(path, probeName), Is.Not.Empty);
-            additionalProbes.Add(childPath);
+            createdFolders.Add(childPath);
             return childPath;
-        }
-
-        void CreateStreamingAssetsProbe()
-        {
-            if (!AssetDatabase.IsValidFolder(StreamingAssetsPath))
-            {
-                Assert.That(AssetDatabase.CreateFolder("Assets", "StreamingAssets"), Is.Not.Empty);
-                createdStreamingAssetsRoot = true;
-            }
-            string probeName = "FolderVisibilityTest_" + Guid.NewGuid().ToString("N");
-            streamingAssetsProbePath = StreamingAssetsPath + "/" + probeName;
-            Assert.That(AssetDatabase.CreateFolder(StreamingAssetsPath, probeName), Is.Not.Empty);
         }
 
         static void AssertFolderVisibility(EditorWindow columns, EditorWindow tree, string path, bool visible)
@@ -598,6 +497,15 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             Assert.That(TreePaths(columns, "m_FolderTree").Contains(path), Is.EqualTo(visible), path + " in folder tree");
             Assert.That(TreePaths(tree, "m_AssetTree").Contains(path), Is.EqualTo(visible), path + " in asset tree");
             Assert.That(ListPaths(columns).Contains(path), Is.EqualTo(visible), path + " in asset list");
+        }
+
+        static void AssertAssetsPreserved(string path, string childPath, string folderGuid, string childGuid)
+        {
+            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(folderGuid));
+            Assert.That(AssetDatabase.AssetPathToGUID(childPath), Is.EqualTo(childGuid));
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(path), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadMainAssetAtPath(childPath), Is.Not.Null);
+            Assert.That(AssetDatabase.FindAssets("", new[] { path }), Does.Contain(childGuid));
         }
 
         EditorWindow CreateBrowser(string layout)

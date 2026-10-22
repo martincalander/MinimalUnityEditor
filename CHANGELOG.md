@@ -6,6 +6,9 @@ All notable changes to this package are documented in this file.
 
 ### Fixed
 
+- Restore **Go To Local Package** in Unity 7's separate Package Manager toolbar,
+  keeping the button beside the native asset action in the current theme.
+
 - Re-resolve packages even when the project has no package lockfile.
 - Clean helper frames from Console entries that store message and stack text
   together, preserving Unicode message offsets.

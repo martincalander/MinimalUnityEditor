@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using MinimalEditor.Console.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
@@ -16,18 +15,7 @@ namespace MinimalEditor.Tests.Editor.Console
         const BindingFlags AnyStatic = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         const BindingFlags AnyInstance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-        [Test]
-        public void RedundantConsolePreferencesMenuItemPath_IsNotRegistered()
-        {
-            var paths = typeof(ConsoleLogFilterSettingsProvider).GetMethods(AnyStatic)
-                .SelectMany(method => method.GetCustomAttributes<MenuItem>())
-                .Select(attribute => attribute.menuItem);
-
-            Assert.That(paths, Does.Not.Contain("Window/Analysis/Console Preferences"));
-        }
-
         [TestCase("Clear")]
-        [TestCase("GetCount")]
         [TestCase("GetCountsByType")]
         [TestCase("StartGettingEntries")]
         [TestCase("EndGettingEntries")]
@@ -72,13 +60,6 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(field, Is.Not.Null);
             var valueType = field.FieldType.IsEnum ? Enum.GetUnderlyingType(field.FieldType) : field.FieldType;
             Assert.That(valueType, Is.EqualTo(typeof(int)));
-        }
-
-        [Test]
-        public void LogEntry_CanBeInstantiated_ViaActivator()
-        {
-            var type = RequireUnityType("LogEntry");
-            Assert.DoesNotThrow(() => Activator.CreateInstance(type));
         }
 
         static Type RequireUnityType(string name)

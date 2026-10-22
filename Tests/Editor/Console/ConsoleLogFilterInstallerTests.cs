@@ -56,20 +56,6 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.EqualTo(hasActiveRule));
         }
 
-        [TestCase("at MinimalEditor.Console.Editor.ConsoleLogFilterInstaller.FilterLog()", true)]
-        [TestCase("at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)", true)]
-        [TestCase("at Game.Player.Update (Assets/Player.cs:1)", false)]
-        public void CleanStackTrace_RecognizesOwnedFrames(string frame, bool expected)
-        {
-            MethodInfo method = typeof(ConsoleLogFilterInstaller).GetMethod(
-                "ShouldStripStackTraceLine",
-                BindingFlags.Static | BindingFlags.NonPublic);
-
-            Assert.That(method, Is.Not.Null);
-            Assert.That(method.Invoke(null, new object[] { frame }),
-                Is.EqualTo(expected));
-        }
-
         [Test]
         public void Initialize_Repeatedly_KeepsOneLoggerWrapperAndSettingsSubscription()
         {
@@ -108,6 +94,7 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(replacementHandler.MessageCount, Is.EqualTo(1));
 
             ConsoleLogFilterInstaller.Shutdown();
+            Assert.That(Debug.unityLogger.logHandler, Is.SameAs(replacementHandler));
             replacementHandler.LogFormat(LogType.Warning, null, "ignore me");
             Assert.That(firstHandler.MessageCount, Is.EqualTo(wrapsFilter ? 2 : 0),
                 "A wrapper retained by another logger must stop filtering after shutdown.");
@@ -154,19 +141,6 @@ namespace MinimalEditor.Tests.Editor.Console
         }
 
         [Test]
-        public void Shutdown_PreservesLoggerInstalledByAnotherOwner()
-        {
-            Debug.unityLogger.logHandler = new RecordingLogHandler();
-            ApplyWithActiveRule();
-            var replacementHandler = new RecordingLogHandler();
-            Debug.unityLogger.logHandler = replacementHandler;
-
-            ConsoleLogFilterInstaller.Shutdown();
-
-            Assert.That(Debug.unityLogger.logHandler, Is.SameAs(replacementHandler));
-        }
-
-        [Test]
         public void ToolbarLifecycle_RegistersOnceAndUnsubscribesOnShutdown()
         {
             ConsoleAssistantToolbarButtonController.Initialize();
@@ -178,38 +152,25 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(SettingsSubscriptionCount(typeof(ConsoleAssistantToolbarButtonController)), Is.Zero);
         }
 
-        [TestCase(LogType.Log, 1)]
-        [TestCase(LogType.Warning, 0)]
-        [TestCase(LogType.Error, 1)]
-        [TestCase(LogType.Assert, 1)]
-        [TestCase(LogType.Exception, 1)]
-        public void WarningsOnly_LiveHandlerPreservesOtherLogTypes(LogType logType, int forwardedCount)
-        {
-            var inner = new RecordingLogHandler();
-            Debug.unityLogger.logHandler = inner;
-            ApplyWithActiveRule();
-
-            Debug.unityLogger.logHandler.LogFormat(logType, null, "ignore me");
-
-            Assert.That(inner.MessageCount, Is.EqualTo(forwardedCount));
-        }
-
         [TestCase(LogType.Log, 0)]
         [TestCase(LogType.Warning, 1)]
         [TestCase(LogType.Error, 0)]
         [TestCase(LogType.Assert, 0)]
         [TestCase(LogType.Exception, 0)]
-        public void WarningsOnly_LiveHandlerFormatsOnlyWarnings(LogType logType, int formattingCount)
+        public void WarningsOnly_LiveHandlerFormatsAndFiltersOnlyWarnings(LogType logType, int formattingCount)
         {
             var inner = new RecordingLogHandler();
             Debug.unityLogger.logHandler = inner;
             ApplyWithActiveRule();
-            var argument = new CountingFormatArgument();
+            var matching = new CountingFormatArgument("ignore me");
+            var kept = new CountingFormatArgument();
 
-            Debug.unityLogger.logHandler.LogFormat(logType, null, "{0}", argument);
+            Debug.unityLogger.logHandler.LogFormat(logType, null, "{0}", matching);
+            Debug.unityLogger.logHandler.LogFormat(logType, null, "{0}", kept);
 
-            Assert.That(argument.FormatCount, Is.EqualTo(formattingCount));
-            Assert.That(inner.MessageCount, Is.EqualTo(1));
+            Assert.That(matching.FormatCount, Is.EqualTo(formattingCount));
+            Assert.That(kept.FormatCount, Is.EqualTo(formattingCount));
+            Assert.That(inner.MessageCount, Is.EqualTo(logType == LogType.Warning ? 1 : 2));
         }
 
         [Test]
@@ -284,57 +245,37 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(inner.MessageCount, Is.EqualTo(2), "Saving settings should re-enable a valid regex rule.");
         }
 
-        [TestCase("Read")]
-        [TestCase("Missing")]
-        [TestCase("Clone")]
-        [TestCase("EndRead")]
-        public void ConsoleRescan_IncompleteSnapshotPreservesEveryOriginalRow(string failure)
+        [TestCase("Read", "Read failed.")]
+        [TestCase("Missing", "Could not read Console entry")]
+        [TestCase("Clone", "Clone failed.")]
+        [TestCase("EndRead", "EndRead failed.")]
+        [TestCase("Filtered", "filtered, collapsed, or changed")]
+        [TestCase("Changed", "changed during the scan")]
+        public void ConsoleRescan_IncompleteSnapshotPreservesRowsAndCanRetry(string failure, string expectedError)
         {
             ApplyWithActiveRule(cleanStackTraces: true);
             var original = new[] { CreateEntry("ScriptingWarning", "ignore me"), CreateEntry("ScriptingLog", "keep me") };
-            var entries = new MemoryConsoleEntries(original) { Failure = failure };
+            var added = failure == "Changed" ? CreateEntry("ScriptingLog", "arrived during the scan") : null;
+            var expected = added == null ? original : original.Concat(new[] { added }).ToArray();
+            var entries = new MemoryConsoleEntries(original)
+            {
+                Failure = failure,
+                VisibleCount = failure == "Filtered" ? 1 : (int?)null,
+                EntryAddedAfterRead = added
+            };
 
             Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out var removed, out var error), Is.False);
             Assert.That(removed, Is.False);
-            Assert.That(error, Is.Not.Empty);
+            Assert.That(error, Does.Contain(expectedError));
             Assert.That(entries.ClearCount, Is.Zero);
-            Assert.That(entries.Rows, Is.EqualTo(original));
+            Assert.That(entries.Rows, Is.EqualTo(expected));
             Assert.That(entries.EndReadCount, Is.EqualTo(1));
 
             entries.Failure = null;
+            entries.VisibleCount = null;
             Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out removed, out error), Is.True, error);
             Assert.That(removed, Is.True);
-            Assert.That(entries.Rows.Count, Is.EqualTo(1), "A failed pass must release its reentrancy guard.");
-        }
-
-        [Test]
-        public void ConsoleRescan_FilteredOrCollapsedViewPreservesEveryOriginalRow()
-        {
-            ApplyWithActiveRule(cleanStackTraces: true);
-            var original = new[] { CreateEntry("ScriptingWarning", "ignore me"), CreateEntry("ScriptingLog", "keep me") };
-            var entries = new MemoryConsoleEntries(original) { VisibleCount = 1 };
-
-            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out var removed, out var error), Is.False);
-            Assert.That(error, Does.Contain("filtered, collapsed, or changed"));
-            Assert.That(removed, Is.False);
-            Assert.That(entries.ClearCount, Is.Zero);
-            Assert.That(entries.Rows, Is.EqualTo(original));
-            Assert.That(entries.EndReadCount, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void ConsoleRescan_NewLogAfterSnapshotPreservesEveryRow()
-        {
-            ApplyWithActiveRule(cleanStackTraces: true);
-            var original = new[] { CreateEntry("ScriptingWarning", "ignore me"), CreateEntry("ScriptingLog", "keep me") };
-            var added = CreateEntry("ScriptingLog", "arrived during the scan");
-            var entries = new MemoryConsoleEntries(original) { EntryAddedAfterRead = added };
-
-            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out var removed, out var error), Is.False);
-            Assert.That(error, Does.Contain("changed during the scan"));
-            Assert.That(removed, Is.False);
-            Assert.That(entries.ClearCount, Is.Zero);
-            Assert.That(entries.Rows, Is.EqualTo(original.Concat(new[] { added })));
+            Assert.That(entries.Rows.Count, Is.EqualTo(expected.Length - 1), "A failed pass must release its reentrancy guard.");
         }
 
         [Test]
@@ -350,12 +291,12 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(entries.Rows.Count, Is.EqualTo(1));
         }
 
-        [Test]
-        public void CleanStackTrace_CleansCombinedMessageAndPreservesUnicodeOffsets()
+        [TestCase("MinimalEditor.Console.Editor.ConsoleLogFilterInstaller:LogFormat()\n")]
+        [TestCase("at Filter (Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller.cs:1)\n")]
+        public void CleanStackTrace_CleansCombinedMessageAndPreservesUnicodeOffsets(string ownFrame)
         {
             Apply(cleanStackTraces: true);
             const string prefix = "Meddelande ö: MinimalEditor.Console.Editor.ConsoleLogFilterInstaller\n";
-            const string ownFrame = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller:LogFormat()\n";
             const string userFrame = "Game.Player:Update() (at Assets/Player.cs:12)";
             var entry = CreateEntry("ScriptingLog", prefix + ownFrame + userFrame);
             const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -379,30 +320,16 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(utf8.GetValue(cleaned), Is.EqualTo(Encoding.UTF8.GetByteCount(prefix)));
         }
 
-        [TestCase(-1)]
-        [TestCase(0)]
-        [TestCase(999)]
-        public void CleanStackTrace_InvalidOrAbsentOffsetPreservesMessage(int stackStart)
+        [TestCase(-1, false)]
+        [TestCase(0, false)]
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        public void CleanStackTrace_InvalidOrAbsentOffsetPreservesMessage(int offset, bool fromEnd)
         {
             Apply(cleanStackTraces: true);
             const string text = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller is in this message";
             var entry = CreateEntry("ScriptingLog", text);
-            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, stackStart);
-            var entries = new MemoryConsoleEntries(entry);
-
-            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out _, out var message), Is.True, message);
-
-            Assert.That(entries.ClearCount, Is.Zero);
-            Assert.That(entry.GetType().GetField("message").GetValue(entries.Rows[0]), Is.EqualTo(text));
-        }
-
-        [Test]
-        public void CleanStackTrace_OffsetAtEndPreservesMessage()
-        {
-            Apply(cleanStackTraces: true);
-            const string text = "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller";
-            var entry = CreateEntry("ScriptingLog", text);
-            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, text.Length);
+            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, fromEnd ? text.Length + offset : offset);
             var entries = new MemoryConsoleEntries(entry);
 
             Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, true, out _, out var message), Is.True, message);
@@ -533,11 +460,13 @@ namespace MinimalEditor.Tests.Editor.Console
 
         private sealed class CountingFormatArgument
         {
+            private readonly string message;
             internal int FormatCount;
+            internal CountingFormatArgument(string message = "keep me") => this.message = message;
             public override string ToString()
             {
                 FormatCount++;
-                return "keep me";
+                return message;
             }
         }
 

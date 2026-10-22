@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -82,11 +81,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
             AssertServices(assertions);
             for (int cycle = 1; cycle <= 3; cycle++)
             {
-                var timer = Stopwatch.StartNew();
                 yield return new EnterPlayMode(expectDomainReload: false);
-                timer.Stop();
-                TestContext.WriteLine(
-                    $"Play Mode entry {cycle}, scene reload {!disableSceneReload}: {timer.Elapsed.TotalMilliseconds:F1} ms");
 
                 Assert.That(EditorApplication.isPlaying, Is.True);
                 Assert.That(s_domainMarker, Is.SameAs(marker), "Entering Play Mode unexpectedly reloaded code.");
@@ -138,7 +133,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 AssertCallbackCount(typeof(EditorApplication), "quitting", menuHider, "SuppressMutationForTeardown", menuCallbackCount);
             });
 #endif
-#if !MINIMAL_EDITOR_DISABLE_UNITY_EDITOR
+#if !MINIMAL_EDITOR_DISABLE_UNITY_EDITOR && !MINIMAL_EDITOR_DISABLE_MENU_ITEM
             Type title = RequireType("MinimalEditor.Editor.WindowTitleShortener, MinimalEditor.Editor");
             Type statusBar = RequireType("MinimalEditor.Editor.StatusBarExtrasHider, MinimalEditor.Editor");
             m_titleInput = Property(title, "ActiveInput");
@@ -165,7 +160,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
             assertions.Add(() =>
             {
                 AssertSinglePostfix(patch, "GetTargetMethod", "GetPostfixMethod");
-                AssertSinglePostfix(patch, "GetPackageDetailsHeaderRefreshMethod", "GetPackageDetailsHeaderRefreshPostfixMethod");
+                AssertSinglePostfix(patch, "GetPackageToolbarRefreshMethod", "GetPackageToolbarRefreshPostfixMethod");
             });
 #endif
             if (assertions.Count == 0)

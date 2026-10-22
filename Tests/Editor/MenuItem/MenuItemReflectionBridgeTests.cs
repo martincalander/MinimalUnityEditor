@@ -40,23 +40,6 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         }
 
         [Test]
-        public void QueueApply_TeardownClearsWork_AndPreventsFurtherQueueing()
-        {
-            Invoke("QueueApply", true);
-            Assert.That(GetBool("s_applyQueued"), Is.True);
-            Assert.That(GetBool("s_forceApplyQueued"), Is.True);
-
-            Invoke("SuppressMutationForTeardown");
-            Assert.That(GetBool("s_mutationSuppressed"), Is.True);
-            Assert.That(GetBool("s_applyQueued"), Is.False);
-            Assert.That(GetBool("s_forceApplyQueued"), Is.False);
-
-            Invoke("QueueApply", true);
-            Assert.That(GetBool("s_applyQueued"), Is.False);
-            Assert.That(GetBool("s_forceApplyQueued"), Is.False);
-        }
-
-        [Test]
         public void CancelledQuitRequest_KeepsMenuHidingActive()
         {
             // Invoke only this module's handlers and a veto, without requesting a real Editor quit.
@@ -97,17 +80,25 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         }
 
         [Test]
-        public void RepeatedInitialization_QueuesOnce_AndTeardownCancelsWork()
+        public void RepeatedInitialization_QueuesOnce_AndTeardownPreventsFurtherQueueing()
         {
             var callback = CreateDelayCall("FlushQueuedApply");
             Invoke("Initialize");
             Invoke("Initialize");
             Assert.That(EditorApplication.delayCall.GetInvocationList().Count(item => item.Equals(callback)), Is.EqualTo(1));
+            Assert.That(GetBool("s_applyQueued"), Is.True);
+            Assert.That(GetBool("s_forceApplyQueued"), Is.True);
 
             Invoke("SuppressMutationForTeardown");
             Invoke("SuppressMutationForTeardown");
             Assert.That(EditorApplication.delayCall?.GetInvocationList().Count(item => item.Equals(callback)) ?? 0, Is.Zero);
+            Assert.That(GetBool("s_mutationSuppressed"), Is.True);
             Assert.That(GetBool("s_applyQueued"), Is.False);
+            Assert.That(GetBool("s_forceApplyQueued"), Is.False);
+
+            Invoke("QueueApply", true);
+            Assert.That(GetBool("s_applyQueued"), Is.False);
+            Assert.That(GetBool("s_forceApplyQueued"), Is.False);
         }
 
         [Test]

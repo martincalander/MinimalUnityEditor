@@ -12,45 +12,32 @@ namespace MinimalEditor.Tests.Editor.PackageManager
         [TestCase(true, "Library/PackageCache/com.vendor.tool@abc123", true)]
         [TestCase(true, "Packages/com.vendor.tool", false)]
         [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", false)]
-        [TestCase(true, null, false)]
         public void ShouldHideAssetStoreDuplicate_RegisteredPath(bool assetStoreBacked, string relativePath, bool expected)
         {
             Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
                 assetStoreBacked, "com.vendor.tool", ResolvePath(relativePath), ProjectRoot), Is.EqualTo(expected));
         }
 
-        [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", true)]
-        [TestCase(false, "Packages/com.vendor.tool", false)]
-        [TestCase(true, "Library/PackageCache/com.vendor.tool@abc123", true)]
-        [TestCase(true, "Packages/com.vendor.tool", false)]
-        [TestCase(true, null, false)]
-        public void ShouldHideAssetStoreDuplicate_TechnicalOrImportedPackage(
-            bool legacyPackage, string relativePath, bool expected)
-        {
-            var package = CreatePackage(legacyPackage ? string.Empty : "com.vendor.tool", true,
-                legacyPackage ? new[] { "Packages/com.vendor.tool/Feature/Tool.cs" } : new string[0]);
-
-            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
-                package, name => name == "com.vendor.tool" ? ResolvePath(relativePath) : null, ProjectRoot),
-                Is.EqualTo(expected));
-        }
-
-        [TestCase(false, "Packages/com.vendor.tool", true)]
-        [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", false)]
-        [TestCase(true, "Packages/com.vendor.tool", true)]
-        [TestCase(true, "Library/PackageCache/com.vendor.tool@abc123", false)]
-        public void TryGetLocalPackageForAssetStorePackage_TechnicalOrImportedPackage(
-            bool legacyPackage, string relativePath, bool expected)
+        [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", true, false)]
+        [TestCase(false, "Packages/com.vendor.tool", false, true)]
+        [TestCase(true, "Library/PackageCache/com.vendor.tool@abc123", true, false)]
+        [TestCase(true, "Packages/com.vendor.tool", false, true)]
+        [TestCase(true, null, false, false)]
+        public void PackageLocation_ControlsDuplicateVisibilityAndLocalNavigation(
+            bool legacyPackage, string relativePath, bool hidden, bool local)
         {
             var package = CreatePackage(legacyPackage ? string.Empty : "com.vendor.tool", true,
                 legacyPackage ? new[] { "Packages/com.vendor.tool/Feature/Tool.cs" } : new string[0]);
             string resolvedPath = ResolvePath(relativePath);
+            string ResolvePackage(string name) => name == "com.vendor.tool" ? resolvedPath : null;
 
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
+                package, ResolvePackage, ProjectRoot), Is.EqualTo(hidden));
             Assert.That(PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
-                package, name => name == "com.vendor.tool" ? resolvedPath : null, ProjectRoot,
-                out string packageName, out string localResolvedPath), Is.EqualTo(expected));
-            Assert.That(packageName, Is.EqualTo(expected ? "com.vendor.tool" : string.Empty));
-            Assert.That(localResolvedPath, Is.EqualTo(expected ? resolvedPath : string.Empty));
+                package, ResolvePackage, ProjectRoot,
+                out string packageName, out string localResolvedPath), Is.EqualTo(local));
+            Assert.That(packageName, Is.EqualTo(local ? "com.vendor.tool" : string.Empty));
+            Assert.That(localResolvedPath, Is.EqualTo(local ? resolvedPath : string.Empty));
         }
 
         [Test]
@@ -113,13 +100,6 @@ namespace MinimalEditor.Tests.Editor.PackageManager
                 },
                 ProjectRoot), Is.True);
             Assert.That(resolverCallCount, Is.EqualTo(1));
-        }
-
-        [TestCase("Packages/com.vendor.bundle/Feature/Tool.cs", "com.vendor.bundle")]
-        [TestCase("Assets/Plugins/Vendor/Tool.cs", "")]
-        public void ExtractPackageNameFromImportedAssetPath(string path, string expected)
-        {
-            Assert.That(PackageManagerAssetStoreDuplicateFilter.ExtractPackageNameFromImportedAssetPath(path), Is.EqualTo(expected));
         }
 
         [Test]

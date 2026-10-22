@@ -15,21 +15,15 @@ namespace MinimalEditor.Tests.Editor.PackageManager
 
         [TestCase(false)]
         [TestCase(true)]
-        public void HarmonyPatch_TargetMethod_HasExpectedSignature(bool detailHeader)
+        public void HarmonyPatch_TargetAndPostfix_HaveCompatibleSignatures(bool toolbar)
         {
-            var method = detailHeader ? Patch.GetPackageDetailsHeaderRefreshMethod() : Patch.GetTargetMethod();
-            AssertMethodSignature(method, detailHeader ? typeof(void) : typeof(bool), GetUnityType(Patch.PackageInterfaceTypeName));
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public void HarmonyPatch_PostfixMethod_UsesHarmonyArgumentNames(bool detailHeader)
-        {
-            var method = detailHeader ? Patch.GetPackageDetailsHeaderRefreshPostfixMethod() : Patch.GetPostfixMethod();
-            AssertMethodSignature(method, typeof(void), typeof(object), detailHeader ? typeof(object) : typeof(bool).MakeByRefType());
+            var target = toolbar ? Patch.GetPackageToolbarRefreshMethod() : Patch.GetTargetMethod();
+            AssertMethodSignature(target, toolbar ? typeof(void) : typeof(bool), GetUnityType(Patch.PackageInterfaceTypeName));
+            var method = toolbar ? Patch.GetPackageToolbarRefreshPostfixMethod() : Patch.GetPostfixMethod();
+            AssertMethodSignature(method, typeof(void), typeof(object), toolbar ? typeof(object) : typeof(bool).MakeByRefType());
             Assert.That(method.IsStatic, Is.True);
             Assert.That(method.GetParameters().Select(parameter => parameter.Name),
-                Is.EqualTo(detailHeader ? new[] { "__instance", "__0" } : new[] { "__0", "__result" }));
+                Is.EqualTo(toolbar ? new[] { "__instance", "__0" } : new[] { "__0", "__result" }));
         }
 
         [Test]
@@ -41,7 +35,7 @@ namespace MinimalEditor.Tests.Editor.PackageManager
             Assert.That(initialize, Is.Not.Null);
             Assert.That(cleanup, Is.Not.Null);
 
-            var targets = new[] { Patch.GetTargetMethod(), Patch.GetPackageDetailsHeaderRefreshMethod() };
+            var targets = new[] { Patch.GetTargetMethod(), Patch.GetPackageToolbarRefreshMethod() };
             try
             {
                 initialize.Invoke(null, null);
@@ -106,7 +100,6 @@ namespace MinimalEditor.Tests.Editor.PackageManager
         [Test]
         public void PageRebuildHook_ServicesContainer_CanResolvePageManager()
         {
-            GetUnityType(Patch.PageManagerInterfaceName);
             var resolveMethod = Patch.GetServiceResolveMethod(GetUnityType(Patch.ServicesContainerTypeName));
             Assert.That(resolveMethod, Is.Not.Null, "ServicesContainer.Resolve<T>() is required to reach IPageManager.");
             Assert.That(resolveMethod.IsGenericMethodDefinition, Is.True);
@@ -120,7 +113,7 @@ namespace MinimalEditor.Tests.Editor.PackageManager
             Assert.That(baseType.IsAssignableFrom(GetUnityType(typeName)), Is.True);
         }
 
-        [TestCase(LocalButton.DetailHeaderTypeName, LocalButton.DetailHeaderPackageFieldName, Patch.PackageInterfaceTypeName)]
+        [TestCase(LocalButton.ToolbarTypeName, LocalButton.ToolbarPackageFieldName, Patch.PackageInterfaceTypeName)]
         [TestCase(Filter.AssetTypeName, Filter.AssetImportedPathFieldName, "System.String")]
         public void ReflectedField_HasExpectedType(string typeName, string fieldName, string expectedType)
         {

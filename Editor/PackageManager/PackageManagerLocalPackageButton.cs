@@ -10,11 +10,12 @@ namespace MinimalEditor.PackageManager.Editor
     internal static class PackageManagerLocalPackageButton
     {
         internal const string PackageManagerWindowTypeName = "UnityEditor.PackageManager.UI.PackageManagerWindow";
-        internal const string DetailHeaderTypeName = "UnityEditor.PackageManager.UI.Internal.PackageDetailsHeader";
-        internal const string DetailHeaderRefreshMethodName = "Refresh";
-        internal const string DetailHeaderPackageFieldName = "m_Package";
+        internal const string ToolbarRefreshMethodName = "Refresh";
+        internal const string ToolbarPackageFieldName = "m_Package";
         internal const string ToolbarTypeName = "UnityEditor.PackageManager.UI.Internal.PackageToolbar";
         internal const string ToolbarName = "packageToolbar";
+        internal const string BuiltInActionsName = "builtInActions";
+        internal const string LegacyActionName = "legacyFormatDropdownButton";
         internal const string InProjectActionText = "In Project";
         internal const string ButtonName = "minimal-editor-go-to-local-package-button";
         internal const string ButtonText = "Go To Local Package";
@@ -22,13 +23,9 @@ namespace MinimalEditor.PackageManager.Editor
 
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        internal static void Refresh(object detailHeader, object package)
+        internal static void Refresh(object packageToolbar, object package)
         {
-            if (!(detailHeader is VisualElement header))
-                return;
-
-            var toolbar = FindPackageToolbar(header);
-            if (toolbar == null)
+            if (!(packageToolbar is VisualElement toolbar) || !IsPackageToolbar(toolbar))
                 return;
 
             RemoveExistingButton(toolbar);
@@ -58,8 +55,8 @@ namespace MinimalEditor.PackageManager.Editor
                     if (window == null || window.GetType() != packageManagerWindowType)
                         continue;
 
-                    foreach (var header in FindDescendants(window.rootVisualElement, IsDetailHeader))
-                        Refresh(header, GetPackageFromDetailHeader(header));
+                    foreach (var toolbar in FindDescendants(window.rootVisualElement, IsPackageToolbar))
+                        Refresh(toolbar, GetPackageFromToolbar(toolbar));
                 }
             }
             catch
@@ -76,15 +73,19 @@ namespace MinimalEditor.PackageManager.Editor
             if (toolbar == null || button == null || string.IsNullOrEmpty(actionText))
                 return false;
 
-            var anchor = FindDirectToolbarChildContainingText(toolbar, actionText);
+            var actions = toolbar.Q(BuiltInActionsName) ?? toolbar;
+            var nativeAction = actions.Q(LegacyActionName);
+            var anchor = nativeAction != null
+                ? GetDirectChild(actions, nativeAction)
+                : FindDirectToolbarChildContainingText(actions, actionText);
             if (anchor == null)
                 return false;
 
-            int anchorIndex = toolbar.IndexOf(anchor);
+            int anchorIndex = actions.IndexOf(anchor);
             if (anchorIndex < 0)
                 return false;
 
-            toolbar.Insert(anchorIndex + 1, button);
+            actions.Insert(anchorIndex + 1, button);
             return true;
         }
 
@@ -183,33 +184,20 @@ namespace MinimalEditor.PackageManager.Editor
             }
         }
 
-        static VisualElement FindPackageToolbar(VisualElement header)
-        {
-            foreach (var element in FindDescendants(header, IsPackageToolbar))
-                return element;
-
-            return null;
-        }
-
         static bool IsPackageToolbar(VisualElement element)
         {
             return element != null &&
                    (element.name == ToolbarName || element.GetType().FullName == ToolbarTypeName);
         }
 
-        static bool IsDetailHeader(VisualElement element)
-        {
-            return element != null && element.GetType().FullName == DetailHeaderTypeName;
-        }
-
-        static object GetPackageFromDetailHeader(VisualElement header)
+        static object GetPackageFromToolbar(VisualElement toolbar)
         {
             try
             {
-                return header
+                return toolbar
                     ?.GetType()
-                    .GetField(DetailHeaderPackageFieldName, AnyInstance)
-                    ?.GetValue(header);
+                    .GetField(ToolbarPackageFieldName, AnyInstance)
+                    ?.GetValue(toolbar);
             }
             catch
             {

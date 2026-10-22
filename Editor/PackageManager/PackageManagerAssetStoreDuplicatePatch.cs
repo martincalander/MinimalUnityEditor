@@ -61,7 +61,7 @@ namespace MinimalEditor.PackageManager.Editor
                 s_Harmony = Activator.CreateInstance(GetHarmonyType(), new object[] { HarmonyId });
                 bool patchedAnyTarget =
                     PatchPostfix(GetTargetMethod(), GetPostfixMethod()) |
-                    PatchPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
+                    PatchPostfix(GetPackageToolbarRefreshMethod(), GetPackageToolbarRefreshPostfixMethod());
                 if (!patchedAnyTarget)
                 {
                     s_Harmony = null;
@@ -140,25 +140,25 @@ namespace MinimalEditor.PackageManager.Editor
             return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(ShouldIncludePostfix), AnyStatic);
         }
 
-        internal static MethodInfo GetPackageDetailsHeaderRefreshMethod()
+        internal static MethodInfo GetPackageToolbarRefreshMethod()
         {
             var editorAssembly = typeof(UnityEditor.Editor).Assembly;
-            var detailHeaderType = editorAssembly.GetType(PackageManagerLocalPackageButton.DetailHeaderTypeName);
+            var toolbarType = editorAssembly.GetType(PackageManagerLocalPackageButton.ToolbarTypeName);
             var packageType = editorAssembly.GetType(PackageInterfaceTypeName);
-            if (detailHeaderType == null || packageType == null)
+            if (toolbarType == null || packageType == null)
                 return null;
 
-            return detailHeaderType.GetMethod(
-                PackageManagerLocalPackageButton.DetailHeaderRefreshMethodName,
+            return toolbarType.GetMethod(
+                PackageManagerLocalPackageButton.ToolbarRefreshMethodName,
                 AnyInstance,
                 null,
                 new[] { packageType },
                 null);
         }
 
-        internal static MethodInfo GetPackageDetailsHeaderRefreshPostfixMethod()
+        internal static MethodInfo GetPackageToolbarRefreshPostfixMethod()
         {
-            return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(PackageDetailsHeaderRefreshPostfix), AnyStatic);
+            return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(PackageToolbarRefreshPostfix), AnyStatic);
         }
 
         internal static bool IsPatchApplied()
@@ -168,7 +168,7 @@ namespace MinimalEditor.PackageManager.Editor
 
         internal static bool IsLocalPackageButtonPatchApplied()
         {
-            return HasPostfix(GetPackageDetailsHeaderRefreshMethod(), GetPackageDetailsHeaderRefreshPostfixMethod());
+            return HasPostfix(GetPackageToolbarRefreshMethod(), GetPackageToolbarRefreshPostfixMethod());
         }
 
         static bool HasPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
@@ -313,7 +313,7 @@ namespace MinimalEditor.PackageManager.Editor
             }
         }
 
-        static void PackageDetailsHeaderRefreshPostfix(object __instance, object __0)
+        static void PackageToolbarRefreshPostfix(object __instance, object __0)
         {
             try
             {
