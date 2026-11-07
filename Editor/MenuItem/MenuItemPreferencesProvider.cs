@@ -12,7 +12,13 @@ namespace MinimalEditor.MenuItem.Editor
     {
         internal const string SettingsPath = "Project/Minimal Editor/Menu Item";
 
+        const string CustomDefinitionsControlName = "MinimalEditor.MenuItem.CustomDefinitions";
+
         static GUIStyle s_customDefinitionsTextAreaStyle;
+
+        // Partial paths such as "GameObject/UI" would hide whole submenus while typing,
+        // so edits are kept here until the field loses focus or the page closes.
+        static string s_pendingCustomDefinitionsText;
 
         [SettingsProvider]
         static SettingsProvider CreateProvider()
@@ -21,6 +27,7 @@ namespace MinimalEditor.MenuItem.Editor
             {
                 label = "Menu Item",
                 guiHandler = DrawGui,
+                deactivateHandler = () => CommitCustomDefinitions(),
                 keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
                     "menu",
@@ -75,7 +82,8 @@ namespace MinimalEditor.MenuItem.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Apply Now", GUILayout.Width(100f)))
                 {
-                    MenuItemHider.Apply();
+                    if (!CommitCustomDefinitions())
+                        MenuItemHider.Apply();
                 }
             }
 
@@ -172,7 +180,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Detected entries: " + MenuItemModuleSettings.CustomDefinitionEntryCount(),
                     EditorStyles.miniLabel);
 
-                var customDefinitionsText = MenuItemModuleSettings.CustomDefinitionsText;
+                var customDefinitionsText = s_pendingCustomDefinitionsText ?? MenuItemModuleSettings.CustomDefinitionsText;
                 EditorGUI.BeginChangeCheck();
                 var textAreaRect = GUILayoutUtility.GetRect(
                     GUIContent.none,
@@ -181,22 +189,38 @@ namespace MinimalEditor.MenuItem.Editor
                     GUILayout.MinHeight(180f),
                     GUILayout.MaxHeight(260f));
                 textAreaRect.width = Mathf.Min(540f, textAreaRect.width);
+                GUI.SetNextControlName(CustomDefinitionsControlName);
                 customDefinitionsText = EditorGUI.TextArea(
                     textAreaRect,
                     customDefinitionsText,
                     GetCustomDefinitionsTextAreaStyle());
                 if (EditorGUI.EndChangeCheck())
                 {
-                    MenuItemModuleSettings.CustomDefinitionsText = customDefinitionsText;
-                    if (MenuItemModuleSettings.CustomDefinitionsEnabled)
-                    {
-                        MenuItemHider.Apply();
-                    }
+                    s_pendingCustomDefinitionsText = customDefinitionsText;
+                }
+
+                if (s_pendingCustomDefinitionsText != null &&
+                    GUI.GetNameOfFocusedControl() != CustomDefinitionsControlName)
+                {
+                    CommitCustomDefinitions();
                 }
 
                 DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.Unsupported);
                 DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.ErrorProne);
             }
+        }
+
+        static bool CommitCustomDefinitions()
+        {
+            var text = s_pendingCustomDefinitionsText;
+            if (text == null)
+                return false;
+
+            s_pendingCustomDefinitionsText = null;
+            MenuItemModuleSettings.CustomDefinitionsText = text;
+            if (MenuItemModuleSettings.CustomDefinitionsEnabled)
+                MenuItemHider.Apply();
+            return true;
         }
 
         static void DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind kind)

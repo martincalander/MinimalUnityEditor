@@ -14,6 +14,9 @@ initial rule list is empty. A rule can use:
 - **Regex** for a regular expression;
 - **Case Sensitive** when letter case matters.
 
+A pattern takes effect when you press Return or leave the field, so a partly
+typed pattern never removes Console rows.
+
 **Warnings Only** is enabled by default. Turn it off when rules should also
 apply to other Console message types. **Clean Stack Traces** removes the
 filter's own helper frames from displayed stacks.
@@ -65,6 +68,8 @@ Expand **Advanced Settings** to enter custom definitions.
 - Surrounding single or double quotes are ignored.
 - Matching is case-insensitive.
 - A trailing `*` matches everything below a path prefix.
+- Edits apply when you leave the text field, open another settings page, or
+  select **Apply Now**. A partly typed path never removes a parent menu.
 
 For example:
 

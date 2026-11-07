@@ -157,7 +157,7 @@ namespace MinimalEditor.Console.Editor
                     EditorGUI.BeginChangeCheck();
                     rule.matchType = (ConsoleLogFilterMatchType)EditorGUILayout.EnumPopup("Match Type", rule.matchType);
                     rule.caseSensitive = EditorGUILayout.ToggleLeft("Case Sensitive", rule.caseSensitive);
-                    rule.pattern = EditorGUILayout.TextField(PatternContent, rule.pattern);
+                    rule.pattern = EditorGUILayout.DelayedTextField(PatternContent, rule.pattern);
 
                     if (EditorGUI.EndChangeCheck())
                         changed = true;

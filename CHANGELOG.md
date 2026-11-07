@@ -6,6 +6,9 @@ All notable changes to this package are documented in this file.
 
 ### Fixed
 
+- Apply Console rule patterns and custom menu definitions only after editing
+  ends. Partly typed text no longer removes Console rows or whole menus.
+
 - Restore **Go To Local Package** in Unity 7's separate Package Manager toolbar,
   keeping the button beside the native asset action in the current theme.
 
@@ -24,6 +27,8 @@ All notable changes to this package are documented in this file.
   regex matching time, and preserve Console rows when a rescan cannot read them.
 - Avoid logger wrapper cycles when another extension replaces the log handler.
 - Restore hidden status-bar extras after Unity resets or recreates the bar.
+- Leave Unity's status-bar extras setting alone while the hider is off, only
+  restoring extras that Minimal Editor hid earlier in the session.
 - Keep Package Manager entries visible when their package location is unknown.
 - Keep original FMOD commands when their replacement API cannot be called.
 

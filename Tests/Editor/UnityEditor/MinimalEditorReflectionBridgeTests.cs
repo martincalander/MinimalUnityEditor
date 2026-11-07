@@ -45,6 +45,36 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
         }
 
         [Test]
+        public void StatusBarExtrasHider_Inactive_LeavesUnityVisibilityAlone()
+        {
+            var type = typeof(global::UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
+            var field = type?.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(field?.FieldType, Is.EqualTo(typeof(bool)));
+            var previousInput = StatusBarExtrasHider.ActiveInput;
+            var statusBar = UnityEngine.ScriptableObject.CreateInstance(type);
+            try
+            {
+                StatusBarExtrasHider.ActiveInput = () => false;
+                field.SetValue(statusBar, false);
+                StatusBarExtrasHider.Apply();
+                Assert.That(field.GetValue(statusBar), Is.False,
+                    "An inactive hider must not override extras that Unity turned off.");
+
+                StatusBarExtrasHider.ActiveInput = () => true;
+                Assert.That(field.GetValue(statusBar), Is.False);
+
+                StatusBarExtrasHider.ActiveInput = () => false;
+                Assert.That(field.GetValue(statusBar), Is.True,
+                    "Turning the hider off must restore the extras it hid.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(statusBar);
+                StatusBarExtrasHider.ActiveInput = previousInput;
+            }
+        }
+
+        [Test]
         public void WindowTitleShortener_Callback_UsesProductNameWhenEnabled()
         {
             Assert.That(WindowTitleShortener.TryRefreshTitle(), Is.True,

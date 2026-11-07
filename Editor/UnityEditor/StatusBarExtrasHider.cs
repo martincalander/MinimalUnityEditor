@@ -12,6 +12,8 @@ namespace MinimalEditor.Editor
     internal static partial class StatusBarExtrasHider
     {
         const double FallbackPollIntervalSeconds = 15d;
+        // Survives domain reloads, so extras hidden earlier in this Editor session can be restored.
+        const string HiddenSessionKey = "MinimalEditor.StatusBarExtrasHidden";
 
         static Func<bool> s_activeInput;
         static double s_lastPollTimestamp;
@@ -106,12 +108,17 @@ namespace MinimalEditor.Editor
         {
             if (EditorApplication.timeSinceStartup - s_lastPollTimestamp < FallbackPollIntervalSeconds) return;
             s_lastPollTimestamp = EditorApplication.timeSinceStartup;
-            Apply();
+            if (IsActive() || SessionState.GetBool(HiddenSessionKey, false))
+                Apply();
         }
 
         internal static void Apply()
         {
             if (AppStatusBarType == null || DrawExtraFeaturesField == null) return;
+
+            var hide = IsActive();
+            // Leave Unity's own status-bar setting alone unless this package hid the extras.
+            if (!hide && !SessionState.GetBool(HiddenSessionKey, false)) return;
 
             UnityEngine.Object[] statusBars;
             try
@@ -125,7 +132,7 @@ namespace MinimalEditor.Editor
 
             if (statusBars == null) return;
 
-            var hide = IsActive();
+            SessionState.SetBool(HiddenSessionKey, hide);
             foreach (var statusBar in statusBars)
             {
                 if (statusBar == null) continue;
