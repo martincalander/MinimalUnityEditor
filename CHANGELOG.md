@@ -6,6 +6,18 @@ All notable changes to this package are documented in this file.
 
 ### Fixed
 
+- Keep semicolon-separated examples inside menu comment lines inactive, and
+  ignore definitions with incomplete or mismatched surrounding quotes.
+- Resolve differently cased menu commands and submenus under standard roots
+  before calling Unity's case-sensitive removal API.
+- Preserve status-bar extras that Unity had already hidden when the hider is
+  turned off, tracking owned changes separately for each bar across code reloads.
+- Keep Asset Store rows visible when a package location is a relative path.
+- Ignore unknown Console rule types and forward exceptions whose custom
+  formatter throws to the original logger.
+- Preserve Console rows when a change notification invalidates a scan even
+  when the total row count stays the same.
+
 - Apply Console rule patterns and custom menu definitions only after editing
   ends. Partly typed text no longer removes Console rows or whole menus.
 
@@ -49,6 +61,10 @@ All notable changes to this package are documented in this file.
   toggle under **Tools > Minimal Editor > Project Folders**.
 
 ### Changed
+
+- Skip reading and copying unchanged Console rows while filters are active.
+  Unity's log-change notification, row counts, and settings changes invalidate
+  the saved scan; incomplete scans remain eligible for retry.
 
 - Avoid copying unchanged Console entries and formatting logs excluded by the
   active severity setting. Removed the unused clean-stack logger subclass and

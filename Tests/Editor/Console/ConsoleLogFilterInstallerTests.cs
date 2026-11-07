@@ -7,6 +7,8 @@ using UnityEditor;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using UnityEngine.TestTools;
+using System.Collections;
 
 namespace MinimalEditor.Tests.Editor.Console
 {
@@ -224,6 +226,104 @@ namespace MinimalEditor.Tests.Editor.Console
         }
 
         [Test]
+        public void UnknownRuleType_DoesNotSuppressLogs()
+        {
+            var inner = new RecordingLogHandler();
+            Debug.unityLogger.logHandler = inner;
+            Apply(false, new ConsoleLogFilterRuleData
+            {
+                matchType = (ConsoleLogFilterMatchType)123,
+                pattern = ".*"
+            });
+
+            Debug.unityLogger.logHandler.LogFormat(LogType.Warning, null, "keep me");
+
+            Assert.That(inner.MessageCount, Is.EqualTo(1));
+            Assert.That(ConsoleLogFilterInstaller.AutomaticConsoleEntryMaintenanceEnabled, Is.False);
+        }
+
+        [Test]
+        public void ExceptionWithBrokenFormatter_IsForwardedToTheOriginalLogger()
+        {
+            var inner = new RecordingLogHandler();
+            Debug.unityLogger.logHandler = inner;
+            ApplyWithActiveRule();
+            ConsoleLogFilterSettings.Data.warningsOnly = false;
+            ConsoleLogFilterSettings.Save();
+
+            Assert.DoesNotThrow(() => Debug.unityLogger.logHandler.LogException(new ThrowingException(), null));
+            Assert.That(inner.MessageCount, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ConsoleChanges_InvalidateSnapshotsThroughUnityNotification()
+        {
+            var version = typeof(ConsoleLogFilterInstaller).GetField("s_consoleChangeVersion", BindingFlags.Static | BindingFlags.NonPublic);
+            var before = (int)version.GetValue(null);
+            Debug.Log("Minimal Editor Console change notification test");
+            var deadline = EditorApplication.timeSinceStartup + 2d;
+            while ((int)version.GetValue(null) == before && EditorApplication.timeSinceStartup < deadline)
+                yield return null;
+            Assert.That((int)version.GetValue(null), Is.Not.EqualTo(before));
+        }
+
+        [Test]
+        public void ConsoleRescan_UnchangedRowsAreNotReadAgainUntilForcedOrInvalidated()
+        {
+            ApplyWithActiveRule(cleanStackTraces: true);
+            var entries = new MemoryConsoleEntries(CreateEntry("ScriptingLog", "keep me")) { Version = 0 };
+            bool Scan(bool force = false) => ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, force, out _, out _);
+
+            Assert.That(Scan(), Is.True);
+            Assert.That(entries.ReadCount, Is.EqualTo(1));
+            for (var i = 0; i < 100; i++)
+                Assert.That(Scan(), Is.True);
+            Assert.That(entries.ReadCount, Is.EqualTo(1), "Idle polling must not copy or inspect unchanged rows.");
+
+            Assert.That(Scan(true), Is.True);
+            Assert.That(entries.ReadCount, Is.EqualTo(2));
+            entries.Rows[0] = CreateEntry("ScriptingWarning", "ignore me");
+            entries.Version++;
+            Assert.That(Scan(), Is.True);
+            Assert.That(entries.Rows, Is.Empty, "Replacing rows without changing the count must invalidate the snapshot.");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ConsoleRescan_CountChangesAndMissingVersionsCannotReuseSnapshots(bool hasVersion)
+        {
+            ApplyWithActiveRule(cleanStackTraces: true);
+            var entries = new MemoryConsoleEntries(CreateEntry("ScriptingLog", "keep me")) { Version = hasVersion ? 0 : (int?)null };
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, false, out _, out _), Is.True);
+            if (hasVersion)
+                entries.Rows.Add(CreateEntry("ScriptingWarning", "ignore me"));
+            else
+                entries.Rows[0] = CreateEntry("ScriptingWarning", "ignore me");
+
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, false, out var removed, out _), Is.True);
+            Assert.That(removed, Is.True);
+            Assert.That(entries.Rows.Count, Is.EqualTo(hasVersion ? 1 : 0));
+        }
+
+        [Test]
+        public void ConsoleRescan_SameCountReplacementDuringReadPreservesNewRows()
+        {
+            ApplyWithActiveRule(cleanStackTraces: true);
+            var entries = new MemoryConsoleEntries(CreateEntry("ScriptingWarning", "ignore me")) { Version = 0 };
+            var replacement = CreateEntry("ScriptingLog", "arrived during scan");
+            entries.AfterRead = () =>
+            {
+                entries.Rows[0] = replacement;
+                entries.Version++;
+            };
+
+            Assert.That(ConsoleLogFilterInstaller.TryApplyFiltersToConsoleEntries(entries, false, out var removed, out _), Is.False);
+            Assert.That(removed, Is.False);
+            Assert.That(entries.ClearCount, Is.Zero);
+            Assert.That(entries.Rows, Is.EqualTo(new[] { replacement }));
+        }
+
+        [Test]
         public void RegexTimeout_PreservesLogAndDisablesRuleUntilSettingsAreSaved()
         {
             var inner = new RecordingLogHandler();
@@ -374,12 +474,17 @@ namespace MinimalEditor.Tests.Editor.Console
             internal int AddCount;
             internal int? VisibleCount;
             internal object EntryAddedAfterRead;
+            internal Action AfterRead;
+            internal int ReadCount;
+            internal int? Version;
 
             internal MemoryConsoleEntries(params object[] rows) => Rows = new List<object>(rows);
+            internal override int? GetChangeVersion() => Version;
             internal override int GetTotalCount() => Rows.Count;
             internal override int BeginRead() => VisibleCount ?? Rows.Count;
             internal override object Read(int index)
             {
+                ReadCount++;
                 if (index == 1 && Failure == "Read")
                     throw new InvalidOperationException("Read failed.");
                 return index == 1 && Failure == "Missing" ? null : Rows[index];
@@ -395,6 +500,7 @@ namespace MinimalEditor.Tests.Editor.Console
             internal override void EndRead()
             {
                 EndReadCount++;
+                AfterRead?.Invoke();
                 if (EntryAddedAfterRead != null)
                 {
                     Rows.Add(EntryAddedAfterRead);
@@ -478,6 +584,11 @@ namespace MinimalEditor.Tests.Editor.Console
                 FormatCount++;
                 return "keep me";
             }
+        }
+
+        private sealed class ThrowingException : Exception
+        {
+            public override string ToString() => throw new InvalidOperationException("Broken exception formatter.");
         }
 
         private static void Apply(bool cleanStackTraces, params ConsoleLogFilterRuleData[] rules)

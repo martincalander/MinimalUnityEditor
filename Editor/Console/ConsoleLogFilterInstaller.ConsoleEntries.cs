@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading;
 
 namespace MinimalEditor.Console.Editor
 {
@@ -9,6 +10,20 @@ namespace MinimalEditor.Console.Editor
     {
         internal abstract class ConsoleEntryAccess
         {
+            private int? m_scannedVersion;
+            private int m_scannedCount;
+
+            // A count alone cannot detect a clear followed by equally many new rows.
+            internal virtual int? GetChangeVersion() => null;
+            internal bool IsUnchanged(int? version, int count) =>
+                version.HasValue && m_scannedVersion == version && m_scannedCount == count;
+            internal void RememberSnapshot(int? version, int count)
+            {
+                m_scannedVersion = version;
+                m_scannedCount = count;
+            }
+            internal void Invalidate() => m_scannedVersion = null;
+
             internal abstract int GetTotalCount();
             internal abstract int BeginRead();
             // Each read returns an independent snapshot that survives EndRead.
@@ -24,6 +39,8 @@ namespace MinimalEditor.Console.Editor
             private readonly object[] m_countArguments = { 0, 0, 0 };
             private readonly object[] m_readArguments = new object[2];
             private readonly object[] m_addArguments = new object[1];
+
+            internal override int? GetChangeVersion() => Volatile.Read(ref s_consoleChangeVersion);
 
             internal override int GetTotalCount()
             {
@@ -124,10 +141,15 @@ namespace MinimalEditor.Console.Editor
             var started = false;
             var snapshotComplete = false;
             var snapshotCount = 0;
+            int? snapshotVersion = null;
 
             try
             {
+                snapshotVersion = entries.GetChangeVersion();
                 var totalCount = entries.GetTotalCount();
+                if (!force && entries.IsUnchanged(snapshotVersion, totalCount))
+                    return true;
+                entries.Invalidate();
                 var entryCount = entries.BeginRead();
                 started = true;
                 if (entryCount != totalCount)
@@ -186,6 +208,7 @@ namespace MinimalEditor.Console.Editor
 
             if (removedCount <= 0 && cleanedStackTraceCount <= 0)
             {
+                entries.RememberSnapshot(snapshotVersion, snapshotCount);
                 if (force)
                     message = "No currently shown logs matched active rules.";
                 return true;
@@ -195,7 +218,7 @@ namespace MinimalEditor.Console.Editor
             {
                 // Background logging can add rows while the snapshot is processed.
                 // Keep the original Console if its contents grew after the read session.
-                if (entries.GetTotalCount() != snapshotCount)
+                if (entries.GetTotalCount() != snapshotCount || entries.GetChangeVersion() != snapshotVersion)
                 {
                     message = "Console entries changed during the scan. Current logs were preserved.";
                     return false;

@@ -200,7 +200,7 @@ namespace MinimalEditor.MenuItem.Editor
                 return entries;
             }
 
-            var lines = text.Split(new[] { '\r', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries);
+            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             for (var i = 0; i < lines.Length; i++)
             {
                 var line = lines[i]?.Trim();
@@ -211,19 +211,25 @@ namespace MinimalEditor.MenuItem.Editor
                     continue;
                 }
 
-                if (line.Length >= 2)
+                // Comments cover the whole line, including any semicolon examples.
+                foreach (var definition in line.Split(';'))
                 {
-                    var startsWithQuote = line[0] == '"' || line[0] == '\'';
-                    var endsWithQuote = line[line.Length - 1] == '"' || line[line.Length - 1] == '\'';
-                    if (startsWithQuote && endsWithQuote)
-                    {
-                        line = line.Substring(1, line.Length - 2).Trim();
-                    }
-                }
+                    var entry = definition.Trim();
+                    if (string.IsNullOrEmpty(entry) || entry.StartsWith("#", StringComparison.Ordinal) ||
+                        entry.StartsWith("//", StringComparison.Ordinal))
+                        continue;
 
-                if (!string.IsNullOrEmpty(line))
-                {
-                    entries.Add(line);
+                    var startsWithQuote = entry[0] == '"' || entry[0] == '\'';
+                    var endsWithQuote = entry[entry.Length - 1] == '"' || entry[entry.Length - 1] == '\'';
+                    if (startsWithQuote || endsWithQuote)
+                    {
+                        if (entry.Length < 2 || !startsWithQuote || entry[0] != entry[entry.Length - 1])
+                            continue;
+                        entry = entry.Substring(1, entry.Length - 2).Trim();
+                    }
+
+                    if (!string.IsNullOrEmpty(entry))
+                        entries.Add(entry);
                 }
             }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
@@ -54,6 +55,7 @@ namespace MinimalEditor.Console.Editor
         // A replacement logger may retain our wrapper. Rewrapping it with the same
         // instance would create a cycle, so only reclaim a wrapper we still own.
         private static bool s_hasInstalledLogHandler;
+        private static int s_consoleChangeVersion;
 
         internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
             s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
@@ -69,6 +71,8 @@ namespace MinimalEditor.Console.Editor
             ConsoleLogFilterSettings.SettingsChanged += ApplySettings;
             EditorApplication.update -= OnEditorUpdate;
             EditorApplication.update += OnEditorUpdate;
+            ConsoleWindowUtility.consoleLogsChanged -= OnConsoleLogsChanged;
+            ConsoleWindowUtility.consoleLogsChanged += OnConsoleLogsChanged;
 #if !UNITY_6000_5_OR_NEWER
             AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
             AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
@@ -85,6 +89,8 @@ namespace MinimalEditor.Console.Editor
         {
             ConsoleLogFilterSettings.SettingsChanged -= ApplySettings;
             EditorApplication.update -= OnEditorUpdate;
+            ConsoleWindowUtility.consoleLogsChanged -= OnConsoleLogsChanged;
+            s_consoleEntryAccess.Invalidate();
 #if !UNITY_6000_5_OR_NEWER
             AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
@@ -164,8 +170,14 @@ namespace MinimalEditor.Console.Editor
             TryApplyFiltersToCurrentConsoleEntriesIfNeeded();
         }
 
+        private static void OnConsoleLogsChanged()
+        {
+            Interlocked.Increment(ref s_consoleChangeVersion);
+        }
+
         private static void ApplySettings()
         {
+            s_consoleEntryAccess.Invalidate();
             var snapshot = ConsoleLogFilterSettings.Snapshot;
             var compiledRules = BuildCompiledRules(snapshot.rules);
             s_cleanStackTracesEnabled = snapshot.cleanStackTraces;
@@ -194,7 +206,8 @@ namespace MinimalEditor.Console.Editor
                     continue;
                 }
 
-                if (TryCreateRegex(rule.pattern, rule.caseSensitive, out var regex, out _))
+                if (rule.matchType == ConsoleLogFilterMatchType.Regex &&
+                    TryCreateRegex(rule.pattern, rule.caseSensitive, out var regex, out _))
                     compiledRules.Add(CompiledRule.ForRegex(regex));
             }
 

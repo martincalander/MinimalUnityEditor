@@ -352,6 +352,8 @@ namespace MinimalEditor.PackageManager.Editor
         {
             try
             {
+                if (!Path.IsPathRooted(path))
+                    return string.Empty;
                 if (child != null)
                     path = Path.Combine(path, child);
                 return Path.GetFullPath(path)

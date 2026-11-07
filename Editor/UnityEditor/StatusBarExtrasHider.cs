@@ -132,20 +132,44 @@ namespace MinimalEditor.Editor
 
             if (statusBars == null) return;
 
-            SessionState.SetBool(HiddenSessionKey, hide);
+            var ownershipVersionKey = HiddenSessionKey + ".PerBarOwnership";
+            var restoreLegacyOwnership = SessionState.GetBool(HiddenSessionKey, false) &&
+                                         !SessionState.GetBool(ownershipVersionKey, false);
+            var ownsHiddenBar = false;
             foreach (var statusBar in statusBars)
             {
                 if (statusBar == null) continue;
+#if UNITY_7000_0_OR_NEWER
+                var key = HiddenSessionKey + "." + statusBar.GetEntityId();
+#else
+                var key = HiddenSessionKey + "." + statusBar.GetInstanceID();
+#endif
+                if (restoreLegacyOwnership)
+                    SessionState.SetBool(key, true);
                 try
                 {
-                    if ((bool)DrawExtraFeaturesField.GetValue(statusBar) != !hide)
-                        DrawExtraFeaturesField.SetValue(statusBar, !hide);
+                    if (hide)
+                    {
+                        if ((bool)DrawExtraFeaturesField.GetValue(statusBar))
+                        {
+                            DrawExtraFeaturesField.SetValue(statusBar, false);
+                            SessionState.SetBool(key, true);
+                        }
+                    }
+                    else if (SessionState.GetBool(key, false))
+                    {
+                        DrawExtraFeaturesField.SetValue(statusBar, true);
+                        SessionState.EraseBool(key);
+                    }
                 }
                 catch
                 {
                     // Fail silently for editor-internal layout/runtime changes.
                 }
+                ownsHiddenBar |= SessionState.GetBool(key, false);
             }
+            SessionState.SetBool(ownershipVersionKey, true);
+            SessionState.SetBool(HiddenSessionKey, ownsHiddenBar);
         }
 
         static bool IsActive()

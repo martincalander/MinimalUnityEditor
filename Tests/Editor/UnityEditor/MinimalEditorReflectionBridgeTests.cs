@@ -64,12 +64,51 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                 Assert.That(field.GetValue(statusBar), Is.False);
 
                 StatusBarExtrasHider.ActiveInput = () => false;
-                Assert.That(field.GetValue(statusBar), Is.True,
-                    "Turning the hider off must restore the extras it hid.");
+                Assert.That(field.GetValue(statusBar), Is.False,
+                    "Turning the hider off must preserve extras that Unity had already hidden.");
+
+                field.SetValue(statusBar, true);
+                StatusBarExtrasHider.ActiveInput = () => true;
+                Assert.That(field.GetValue(statusBar), Is.False);
+                StatusBarExtrasHider.ActiveInput = () => false;
+                Assert.That(field.GetValue(statusBar), Is.True, "Restore extras that this hider actually changed.");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(statusBar);
+                StatusBarExtrasHider.ActiveInput = previousInput;
+            }
+        }
+
+        [Test]
+        public void StatusBarExtrasHider_ReinitializationPreservesOwnershipForEachBar()
+        {
+            var type = typeof(global::UnityEditor.Editor).Assembly.GetType("UnityEditor.AppStatusBar");
+            var field = type?.GetField("m_DrawExtraFeatures", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(field?.FieldType, Is.EqualTo(typeof(bool)));
+            var previousInput = StatusBarExtrasHider.ActiveInput;
+            var visibleBar = UnityEngine.ScriptableObject.CreateInstance(type);
+            var hiddenBar = UnityEngine.ScriptableObject.CreateInstance(type);
+            try
+            {
+                StatusBarExtrasHider.ActiveInput = () => false;
+                field.SetValue(visibleBar, true);
+                field.SetValue(hiddenBar, false);
+                StatusBarExtrasHider.ActiveInput = () => true;
+                Assert.That(field.GetValue(visibleBar), Is.False);
+                Assert.That(field.GetValue(hiddenBar), Is.False);
+
+                typeof(StatusBarExtrasHider).GetMethod("Shutdown", AnyStatic).Invoke(null, null);
+                typeof(StatusBarExtrasHider).GetMethod("Initialize", AnyStatic).Invoke(null, null);
+                StatusBarExtrasHider.ActiveInput = () => false;
+
+                Assert.That(field.GetValue(visibleBar), Is.True);
+                Assert.That(field.GetValue(hiddenBar), Is.False);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(visibleBar);
+                UnityEngine.Object.DestroyImmediate(hiddenBar);
                 StatusBarExtrasHider.ActiveInput = previousInput;
             }
         }

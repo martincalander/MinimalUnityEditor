@@ -55,6 +55,19 @@ Editor results below predate these lifecycle changes.
 
 ### Verified Editors
 
+On 2026-11-08, all 219 Minimal Editor tests passed in Unity `7000.0.0a16`
+on macOS Apple silicon, with no failures or skips, after a clean Unity
+compilation. The full suite passed in both the shared workspace and an isolated
+project. The isolated project contained a copy of this package and used its
+bundled Harmony `2.4.2`, without another package supplying Harmony.
+Coverage includes Console snapshot invalidation and idle-scan reuse, native
+menu removal with different casing, commented and malformed menu definitions,
+status-bar ownership, invalid package paths, Project folder filtering, and six
+Play sessions without domain reload, with scene reload both enabled and disabled.
+The Console notification check allows Unity's asynchronous delivery to complete.
+Unity 2021.3, 2022.3, Unity 6, Windows, Linux, and optional FMOD and Assistant
+integrations were not rerun for this change. Only `7000.0.0a16` was installed.
+
 On 2026-10-21, the Unity 7 theme audit passed 188 focused tests in
 `7000.0.0a11` on macOS Apple silicon after a clean Unity compilation. These
 covered Package Manager, Console, menus, Project folder filtering, Editor

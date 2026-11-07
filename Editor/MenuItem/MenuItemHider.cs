@@ -42,6 +42,9 @@ namespace MinimalEditor.MenuItem.Editor
                 null,
                 new[] { typeof(string) },
                 null);
+        static readonly MethodInfo MenuItemExistsMethod = typeof(Menu).GetMethod(
+            "MenuItemExists", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+            null, new[] { typeof(string) }, null);
         static readonly MethodInfo GetMenuItemsMethod =
             typeof(Menu).GetMethod(
                 "GetMenuItems",
@@ -282,6 +285,7 @@ namespace MinimalEditor.MenuItem.Editor
 
                 var menuRootsToScan = BuildMenuRootSet(items);
                 var allMenuPaths = EnumerateAllMenuPaths(menuRootsToScan);
+                var exactRulePaths = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
                 for (var i = 0; i < items.Count; i++)
                 {
@@ -309,7 +313,7 @@ namespace MinimalEditor.MenuItem.Editor
                     }
 
                     if (!CanRemoveDirectPath(path)) continue;
-                    TryRemoveMenuItem(path);
+                    RemoveExactMenuItem(path, exactRulePaths);
                 }
             }
             catch (Exception exception)
@@ -384,6 +388,7 @@ namespace MinimalEditor.MenuItem.Editor
         static void AddEnumeratedMenuPaths(string menuRoot, HashSet<string> allMenuPaths)
         {
             if (IsMutationSuppressed() || string.IsNullOrWhiteSpace(menuRoot) || allMenuPaths == null) return;
+            menuRoot = CanonicalMenuRoot(menuRoot);
 
             try
             {
@@ -431,6 +436,51 @@ namespace MinimalEditor.MenuItem.Editor
             {
                 // Ignore menu-item enumeration failures for Unity internals.
             }
+        }
+
+        static string CanonicalMenuRoot(string root)
+        {
+            foreach (var knownRoot in MenuRoots)
+                if (string.Equals(root, knownRoot, StringComparison.OrdinalIgnoreCase))
+                    return knownRoot;
+            return root;
+        }
+
+        static void RemoveExactMenuItem(string path, Dictionary<string, HashSet<string>> pathsByRoot)
+        {
+            path = NormalizeMenuPath(path);
+            // Correctly cased commands take the direct path. Resolve spelling only on a miss.
+            try
+            {
+                if (MenuItemExistsMethod?.Invoke(null, new object[] { path }) is bool exists && exists)
+                {
+                    TryRemoveMenuItem(path);
+                    return;
+                }
+            }
+            catch
+            {
+                // Enumeration still works when the optional existence check is unavailable.
+            }
+
+            var root = CanonicalMenuRoot(path.Substring(0, path.IndexOf('/')));
+            if (!pathsByRoot.TryGetValue(root, out var candidates))
+            {
+                candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                AddEnumeratedMenuPaths(root, candidates);
+                pathsByRoot.Add(root, candidates);
+            }
+            var childPrefix = path + "/";
+            foreach (var candidate in candidates)
+            {
+                if (string.Equals(candidate, path, StringComparison.OrdinalIgnoreCase) ||
+                    candidate.StartsWith(childPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    TryRemoveMenuItem(candidate.Substring(0, path.Length));
+                    return;
+                }
+            }
+            TryRemoveMenuItem(path);
         }
 
         static void AddPaths(string[] paths, HashSet<string> allMenuPaths)

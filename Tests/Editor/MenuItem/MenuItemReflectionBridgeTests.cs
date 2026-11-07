@@ -114,6 +114,47 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         }
 
         [Test]
+        public void NativeMenuRules_MatchCaseInsensitivelyWithoutRemovingUnrelatedCommands()
+        {
+            var add = RequireMethod(typeof(Menu), "AddMenuItem", typeof(string), typeof(string), typeof(bool),
+                typeof(int), typeof(Action), typeof(Func<bool>));
+            var exists = RequireMethod(typeof(Menu), "MenuItemExists", typeof(string));
+            var remove = RequireMethod(typeof(Menu), "RemoveMenuItem", typeof(string));
+            var prefix = "Tools/MinimalEditorCaseTest" + Guid.NewGuid().ToString("N");
+            var target = prefix + "/Command";
+            var unrelated = prefix + "Sibling/Keep";
+            var activeInput = RequireField("s_activeInput").GetValue(null);
+            var pathsInput = RequireField("s_menuItemsInput").GetValue(null);
+            try
+            {
+                RequireField("s_activeInput").SetValue(null, new Func<bool>(() => true));
+                RequireField("s_menuItemsInput").SetValue(null, null);
+                add.Invoke(null, new object[] { unrelated, "", false, 9999, (Action)(() => { }), (Func<bool>)(() => true) });
+                foreach (var rule in new[] { target, target.ToLowerInvariant(), prefix.ToLowerInvariant(), prefix.ToLowerInvariant() + "/*" })
+                {
+                    add.Invoke(null, new object[] { target, "", false, 9999, (Action)(() => { }), (Func<bool>)(() => true) });
+                    Assert.That(exists.Invoke(null, new object[] { target }), Is.True);
+                    WithManualRules(_ =>
+                    {
+                        SetMenuItems(new[] { rule });
+                        SetBool("s_mutationSuppressed", false);
+                        Invoke("ApplyCore", true);
+                        Invoke("SuppressMutationForTeardown");
+                    });
+                    Assert.That(exists.Invoke(null, new object[] { target }), Is.False, rule);
+                    Assert.That(exists.Invoke(null, new object[] { unrelated }), Is.True, rule);
+                }
+            }
+            finally
+            {
+                remove.Invoke(null, new object[] { prefix });
+                remove.Invoke(null, new object[] { prefix + "Sibling" });
+                RequireField("s_activeInput").SetValue(null, activeInput);
+                RequireField("s_menuItemsInput").SetValue(null, pathsInput);
+            }
+        }
+
+        [Test]
         public void MenuRootScan_ExactRules_DoNotEnumerateMenus()
         {
             Assert.That(MenuRoots("Assets/Create/Material", "Custom/Command", "Jobs"), Is.Empty);
@@ -170,6 +211,32 @@ namespace MinimalEditor.Tests.Editor.MenuItem
                 Assert.That(list, Is.EqualTo(new[] { "Tools/Keep" }));
                 Assert.That(GetBool("s_useManualMenuItems"), Is.False);
             });
+        }
+
+        [Test]
+        public void CustomDefinitions_CommentsCannotActivateSemicolonSeparatedExamples()
+        {
+            Assert.That(ParseDefinitions("  # Examples; Tools/*; Jobs/*\r\n // Disabled; Window/*\nTools/Keep; 'Window/Analysis/*'"),
+                Is.EqualTo(new[] { "Tools/Keep", "Window/Analysis/*" }));
+        }
+
+        [TestCase("'Tools/*\"")]
+        [TestCase("\"Tools/*'")]
+        [TestCase("'Tools/*")]
+        [TestCase("Tools/*\"")]
+        [TestCase("'")]
+        [TestCase("\"\"")]
+        public void CustomDefinitions_IncompleteOrMismatchedQuotesDoNotHideMenus(string definition)
+        {
+            Assert.That(ParseDefinitions(definition + "\nTools/Keep"), Is.EqualTo(new[] { "Tools/Keep" }));
+        }
+
+        static IEnumerable<string> ParseDefinitions(string text)
+        {
+            var settings = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemModuleSettings, MinimalEditor.MenuItem.Editor", true);
+            return (IEnumerable<string>)RequireMethod(settings, "ParseDefinitionEntries", typeof(string))
+                .Invoke(null, new object[] { text });
         }
 
         [Test]

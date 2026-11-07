@@ -113,6 +113,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Assert.That(JsonUtility.ToJson(Property(consoleSettings, "Snapshot").GetValue(null)), Is.EqualTo(consoleSnapshot));
                 Assert.That(Field(installer, "s_activeFilteringLogHandler").GetValue(null), Is.SameAs(logHandler));
                 AssertCallbackCount(typeof(EditorApplication), "update", installer, "OnEditorUpdate", 1);
+                AssertCallbackCount(typeof(ConsoleWindowUtility), "consoleLogsChanged", installer, "OnConsoleLogsChanged", 1);
                 AssertCallbackCount(consoleSettings, "SettingsChanged", installer, "ApplySettings", 1);
                 AssertCallbackCount(consoleSettings, "SettingsChanged", toolbar, "ApplySettings", 1);
                 AssertCallbackCount(typeof(EditorGUI), "hyperLinkClicked", hyperlinks, "OnHyperlinkClicked", 1);

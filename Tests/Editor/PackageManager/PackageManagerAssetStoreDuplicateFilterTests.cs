@@ -53,10 +53,12 @@ namespace MinimalEditor.Tests.Editor.PackageManager
         [TestCase(true, "")]
         [TestCase(true, " ")]
         [TestCase(true, "invalid\0root")]
+        [TestCase(true, "relative/project")]
         [TestCase(false, null)]
         [TestCase(false, "")]
         [TestCase(false, " ")]
         [TestCase(false, "invalid\0package")]
+        [TestCase(false, "relative/package")]
         public void UnknownPackageLocation_KeepsPackageVisible_AndDoesNotOfferLocalNavigation(
             bool invalidProjectRoot, string invalidPath)
         {

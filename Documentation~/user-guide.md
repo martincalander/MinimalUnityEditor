@@ -21,9 +21,9 @@ typed pattern never removes Console rows.
 apply to other Console message types. **Clean Stack Traces** removes the
 filter's own helper frames from displayed stacks.
 
-When active rules exist, the package revisits current Console rows while the
-Editor is open. A newly written matching row can therefore appear briefly
-before it is removed. Invalid regular expressions are reported beside the rule
+When active rules exist, the package revisits changed Console rows while the
+Editor is open, skipping unchanged snapshots. A newly written matching row can
+therefore appear briefly before it is removed. Invalid regular expressions are reported beside the rule
 and are not applied. A regex that exceeds its 50 ms matching limit stops running
 until the settings are saved again; the affected messages remain visible.
 
@@ -64,9 +64,13 @@ return after a normal domain reload or Editor reopen.
 Expand **Advanced Settings** to enter custom definitions.
 
 - Put one path on each line, or separate paths with `;`.
-- Prefix a full line with `#` or `//` to make it a comment.
-- Surrounding single or double quotes are ignored.
-- Matching is case-insensitive.
+- Prefix a full line with `#` or `//` to make it a comment, including any
+  semicolon-separated examples on that line.
+- Matching surrounding single or double quotes are ignored. Incomplete or
+  mismatched surrounding quotes leave that definition inactive.
+- Matching is case-insensitive under standard roots such as `Tools` and
+  `Window`. For a custom root menu, preserve the root's registered spelling so
+  Unity can enumerate its commands; matching within that root is case-insensitive.
 - A trailing `*` matches everything below a path prefix.
 - Edits apply when you leave the text field, open another settings page, or
   select **Apply Now**. A partly typed path never removes a parent menu.
@@ -107,6 +111,8 @@ Open **Preferences > Minimal Editor > Unity Editor**.
 Both options start enabled when no earlier preference exists. Their user-global
 `EditorPrefs` values carry across Unity projects. If a Unity release changes
 the internal status-bar contract, that refinement does not apply.
+Turning off **Hide Status Bar Extras** restores only bars changed by Minimal
+Editor, preserving extras that Unity had already hidden.
 
 ## Project Folders
 

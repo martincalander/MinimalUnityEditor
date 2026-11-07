@@ -106,9 +106,18 @@ namespace MinimalEditor.Console.Editor
                     return;
 
                 var configuration = m_configuration;
-                if (configuration.Enabled && !configuration.WarningsOnly &&
-                    MatchesRules(configuration.Rules, exception?.ToString()))
-                    return;
+                if (configuration.Enabled && !configuration.WarningsOnly)
+                {
+                    try
+                    {
+                        if (MatchesRules(configuration.Rules, exception?.ToString()))
+                            return;
+                    }
+                    catch
+                    {
+                        // A custom exception formatter must not prevent delivery to the logger.
+                    }
+                }
 
                 inner.LogException(exception, context);
             }
