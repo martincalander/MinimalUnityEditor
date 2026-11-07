@@ -97,7 +97,7 @@ namespace MinimalEditor.PackageManager.Editor
             if (TrySelectPackageManagerPackage(packageName))
                 return true;
 
-            return TryPingPackageJson(resolvedPath);
+            return TryPingPackageJson(packageName, resolvedPath);
         }
 
         static Button CreateButton(string packageName, string resolvedPath)
@@ -150,28 +150,18 @@ namespace MinimalEditor.PackageManager.Editor
             }
         }
 
-        static bool TryPingPackageJson(string resolvedPath)
+        // The AssetDatabase addresses package files by package name, not by the folder that holds them.
+        internal static bool TryPingPackageJson(string packageName, string resolvedPath)
         {
-            if (string.IsNullOrEmpty(resolvedPath))
+            if (string.IsNullOrEmpty(packageName) || string.IsNullOrEmpty(resolvedPath))
                 return false;
 
             try
             {
-                string packageJsonPath = Path.Combine(resolvedPath, "package.json");
-                if (!File.Exists(packageJsonPath))
+                if (!File.Exists(Path.Combine(resolvedPath, "package.json")))
                     return false;
 
-                string projectRoot = GetProjectRoot();
-                if (string.IsNullOrEmpty(projectRoot))
-                    return false;
-
-                string fullPackageJsonPath = Path.GetFullPath(packageJsonPath).Replace('\\', '/');
-                string fullProjectRoot = Path.GetFullPath(projectRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Replace('\\', '/');
-                if (!fullPackageJsonPath.StartsWith(fullProjectRoot + "/", PathComparison))
-                    return false;
-
-                string assetPath = fullPackageJsonPath.Substring(fullProjectRoot.Length + 1);
-                var packageJson = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+                var packageJson = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Packages/" + packageName + "/package.json");
                 if (packageJson == null)
                     return false;
 
@@ -255,30 +245,6 @@ namespace MinimalEditor.PackageManager.Editor
 
                 for (int i = element.childCount - 1; i >= 0; i--)
                     stack.Push(element[i]);
-            }
-        }
-
-        static string GetProjectRoot()
-        {
-            try
-            {
-                return Directory.GetParent(Application.dataPath)?.FullName ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        static StringComparison PathComparison
-        {
-            get
-            {
-#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX
-                return StringComparison.OrdinalIgnoreCase;
-#else
-                return StringComparison.Ordinal;
-#endif
             }
         }
     }

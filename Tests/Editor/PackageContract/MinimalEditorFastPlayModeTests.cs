@@ -129,7 +129,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Assert.That(Property(menuSettings, "Data").GetValue(null), Is.SameAs(menuData));
                 Assert.That(JsonUtility.ToJson(Property(menuSettings, "Data").GetValue(null)), Is.EqualTo(menuSnapshot));
                 AssertCallbackCount(typeof(EditorApplication), "projectChanged", menuHider, "OnProjectChanged", menuCallbackCount);
-                AssertCallbackCount(typeof(EditorApplication), "wantsToQuit", menuHider, "OnWantsToQuit", 0);
+                AssertCallbackCount(typeof(EditorApplication), "wantsToQuit", menuHider, null, 0);
                 AssertCallbackCount(typeof(EditorApplication), "quitting", menuHider, "SuppressMutationForTeardown", menuCallbackCount);
             });
 #endif
@@ -174,11 +174,24 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 assertion();
         }
 
+        // A null method name counts every callback the subscriber declares, including compiler-generated lambdas.
         static void AssertCallbackCount(Type publisher, string eventName, Type subscriber, string methodName, int expected)
         {
-            int count = EventCallbacks(publisher, eventName).Count(
-                handler => handler.Method.DeclaringType == subscriber && handler.Method.Name == methodName);
-            Assert.That(count, Is.EqualTo(expected), $"{subscriber.Name}.{methodName} registrations on {publisher.Name}.{eventName}");
+            int count = EventCallbacks(publisher, eventName).Count(handler => methodName == null
+                ? IsDeclaredBy(handler.Method.DeclaringType, subscriber)
+                : handler.Method.DeclaringType == subscriber && handler.Method.Name == methodName);
+            Assert.That(count, Is.EqualTo(expected), $"{subscriber.Name}.{methodName ?? "*"} registrations on {publisher.Name}.{eventName}");
+        }
+
+        static bool IsDeclaredBy(Type type, Type subscriber)
+        {
+            for (; type != null; type = type.DeclaringType)
+            {
+                if (type == subscriber)
+                    return true;
+            }
+
+            return false;
         }
 
         static IEnumerable<Delegate> EventCallbacks(Type publisher, string eventName)

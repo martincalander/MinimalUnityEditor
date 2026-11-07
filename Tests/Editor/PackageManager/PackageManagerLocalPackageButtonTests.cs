@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using MinimalEditor.PackageManager.Editor;
@@ -111,6 +112,29 @@ namespace MinimalEditor.Tests.Editor.PackageManager
 
             Assert.That(toolbar.Contains(button), Is.False);
             Assert.That(toolbar.childCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TryPingPackageJson_FolderNameDiffersFromPackageName_UsesPackageAssetPath()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "MinimalEditorLocalPackage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            try
+            {
+                File.WriteAllText(Path.Combine(folder, "package.json"), "{}");
+
+                Assert.That(PackageManagerLocalPackageButton.TryPingPackageJson(
+                    "com.martincalander.minimaleditor", folder), Is.True,
+                    "The AssetDatabase path must come from the package name, not the folder name.");
+                Assert.That(PackageManagerLocalPackageButton.TryPingPackageJson(
+                    "com.martincalander.minimaleditor", Path.Combine(folder, "missing")), Is.False);
+                Assert.That(PackageManagerLocalPackageButton.TryPingPackageJson(
+                    "com.example.notinstalled", folder), Is.False);
+            }
+            finally
+            {
+                Directory.Delete(folder, true);
+            }
         }
     }
 }

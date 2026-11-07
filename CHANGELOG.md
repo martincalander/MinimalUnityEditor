@@ -11,6 +11,8 @@ All notable changes to this package are documented in this file.
 
 - Restore **Go To Local Package** in Unity 7's separate Package Manager toolbar,
   keeping the button beside the native asset action in the current theme.
+- Let **Go To Local Package** find a local package whose folder name differs
+  from its package name when Package Manager cannot select it.
 
 - Re-resolve packages even when the project has no package lockfile.
 - Clean helper frames from Console entries that store message and stack text
@@ -83,8 +85,8 @@ All notable changes to this package are documented in this file.
   supporting their legacy rebuild entry point.
 - Restored short window titles on Unity 2021.3 and 2022.3 by binding their
   internal title callback without referencing its inaccessible descriptor type.
-- Guarded the Console call-stack hiding attribute for Unity 2022.2 and newer,
-  retaining the existing stack-trace cleanup on Unity 2021.3.
+- Restored Unity 2021.3 compilation by no longer using the Console call-stack
+  hiding attribute, which Unity added in 2022.2.
 - Saved both Harmony importers in the older plugin format so Unity 2021.3 and
   2022.3 can read the Editor-only platform settings.
 - Moved the repository to Martin Calander's personal GitHub account and adopted
