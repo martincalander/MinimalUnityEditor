@@ -105,6 +105,11 @@ namespace MinimalEditor.Tests.Editor.PackageContract
             Type installer = RequireType("MinimalEditor.Console.Editor.ConsoleLogFilterInstaller, MinimalEditor.Console.Editor");
             object logHandler = Field(installer, "s_activeFilteringLogHandler").GetValue(null);
             Assert.That(logHandler, Is.Not.Null);
+            var accessors = installer.GetNestedType("LogEntryAccessors", BindingFlags.NonPublic);
+            Assert.That(accessors, Is.Not.Null);
+            var accessorFields = accessors.GetFields(AnyStatic);
+            var accessorValues = accessorFields.Select(field => field.GetValue(null)).ToArray();
+            Assert.That(accessorValues, Has.All.Not.Null);
             Type toolbar = RequireType("MinimalEditor.Console.Editor.ConsoleAssistantToolbarButtonController, MinimalEditor.Console.Editor");
             Type hyperlinks = RequireType("MinimalEditor.Console.Editor.ConsoleHyperlinks, MinimalEditor.Console.Editor");
             assertions.Add(() =>
@@ -112,6 +117,8 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Assert.That(Property(consoleSettings, "Data").GetValue(null), Is.SameAs(consoleData));
                 Assert.That(JsonUtility.ToJson(Property(consoleSettings, "Snapshot").GetValue(null)), Is.EqualTo(consoleSnapshot));
                 Assert.That(Field(installer, "s_activeFilteringLogHandler").GetValue(null), Is.SameAs(logHandler));
+                for (var i = 0; i < accessorFields.Length; i++)
+                    Assert.That(accessorFields[i].GetValue(null), Is.SameAs(accessorValues[i]), accessorFields[i].Name);
                 AssertCallbackCount(typeof(EditorApplication), "update", installer, "OnEditorUpdate", 1);
                 AssertCallbackCount(typeof(ConsoleWindowUtility), "consoleLogsChanged", installer, "OnConsoleLogsChanged", 1);
                 AssertCallbackCount(consoleSettings, "SettingsChanged", installer, "ApplySettings", 1);

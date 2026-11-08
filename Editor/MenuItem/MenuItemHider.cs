@@ -661,9 +661,9 @@ namespace MinimalEditor.MenuItem.Editor
             var trimmed = pattern.Trim();
             if (trimmed.EndsWith("*", StringComparison.Ordinal))
             {
-                var prefix = trimmed.Substring(0, trimmed.Length - 1);
-                return !string.IsNullOrEmpty(prefix) &&
-                       input.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+                var prefixLength = trimmed.Length - 1;
+                return prefixLength > 0 && input.Length >= prefixLength &&
+                       string.Compare(input, 0, trimmed, 0, prefixLength, StringComparison.OrdinalIgnoreCase) == 0;
             }
 
             return string.Equals(input, trimmed, StringComparison.OrdinalIgnoreCase);

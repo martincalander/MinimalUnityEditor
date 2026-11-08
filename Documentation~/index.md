@@ -8,6 +8,7 @@ dashboard or any runtime code.
 - [Installation](../README.md#installation)
 - [User guide](user-guide.md)
 - [Compatibility and scripting](compatibility.md)
+- [Performance audit and benchmarks](performance.md)
 - [Troubleshooting](troubleshooting.md)
 - [Changelog](../CHANGELOG.md)
 - [Third-party notices](../Third%20Party%20Notices.md)

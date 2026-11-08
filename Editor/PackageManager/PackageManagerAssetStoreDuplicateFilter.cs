@@ -227,9 +227,23 @@ namespace MinimalEditor.PackageManager.Editor
             if (!string.IsNullOrEmpty(packageName) && visitedPackageNames.Add(packageName))
                 yield return packageName;
 
+            var previousPackageName = packageName;
             foreach (string importedAssetPath in GetImportedAssetPaths(package))
             {
-                string importedPackageName = ExtractPackageNameFromImportedAssetPath(importedAssetPath);
+                var normalizedPath = importedAssetPath.Replace('\\', '/');
+                const string prefix = "Packages/";
+                // Imported assets commonly share a package. Reuse its name instead
+                // of allocating the same substring for every file in the package.
+                if (!string.IsNullOrEmpty(previousPackageName) &&
+                    normalizedPath.StartsWith(prefix, StringComparison.Ordinal) &&
+                    normalizedPath.Length > prefix.Length + previousPackageName.Length &&
+                    normalizedPath[prefix.Length + previousPackageName.Length] == '/' &&
+                    string.Compare(normalizedPath, prefix.Length, previousPackageName, 0,
+                        previousPackageName.Length, StringComparison.Ordinal) == 0)
+                    continue;
+
+                string importedPackageName = ExtractPackageNameFromImportedAssetPath(normalizedPath);
+                previousPackageName = importedPackageName;
                 if (!string.IsNullOrEmpty(importedPackageName) && visitedPackageNames.Add(importedPackageName))
                     yield return importedPackageName;
             }

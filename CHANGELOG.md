@@ -62,6 +62,13 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Reduce Console scan allocations with cached field accessors, shallow snapshot
+  copies, and stack cleanup that avoids temporary lines and substrings. Preserve
+  metadata, Unicode offsets, and reflection fallbacks.
+- Reuse repeated imported package names during Asset Store duplicate filtering
+  and avoid allocating menu wildcard prefixes.
+- Add reproducible performance benchmarks and a [measured audit](Documentation~/performance.md).
+
 - Skip reading and copying unchanged Console rows while filters are active.
   Unity's log-change notification, row counts, and settings changes invalidate
   the saved scan; incomplete scans remain eligible for retry.

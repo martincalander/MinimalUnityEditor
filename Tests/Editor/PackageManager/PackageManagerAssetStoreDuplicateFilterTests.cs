@@ -105,6 +105,26 @@ namespace MinimalEditor.Tests.Editor.PackageManager
         }
 
         [Test]
+        public void DuplicateCandidates_PreservePackageBoundariesAndNonAdjacentNames()
+        {
+            var package = CreatePackage("com.vendor.tool", true,
+                "Packages/com.vendor.tool/One.cs", "Packages\\com.vendor.tool\\Two.cs",
+                "Packages/com.vendor.tool.extra/Three.cs", "Assets/com.vendor.tool/Four.cs",
+                "Packages/com.vendor.other/Five.cs", "Packages/com.vendor.tool/Six.cs");
+            var resolved = new System.Collections.Generic.List<string>();
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(package, name =>
+            {
+                resolved.Add(name);
+                return ResolvePath("Library/PackageCache/" + name);
+            }, ProjectRoot), Is.True);
+            Assert.That(resolved, Is.EqualTo(new[] { "com.vendor.tool", "com.vendor.tool.extra", "com.vendor.other" }));
+
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(package,
+                name => ResolvePath((name == "com.vendor.tool.extra" ? "Packages/" : "Library/PackageCache/") + name),
+                ProjectRoot), Is.False, "A similarly named embedded package must still keep the Asset Store row visible.");
+        }
+
+        [Test]
         public void IsPathInsideProjectPackages_SiblingPackagesPrefix_ReturnsFalse()
         {
             Assert.That(PackageManagerAssetStoreDuplicateFilter.IsPathInsideProjectPackages(

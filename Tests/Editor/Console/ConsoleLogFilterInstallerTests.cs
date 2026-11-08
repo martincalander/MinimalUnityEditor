@@ -452,6 +452,87 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That(cleaned, Is.False);
         }
 
+        [Test]
+        public void CleanStackTrace_PreservesLineEndingAndBlankLineSemantics()
+        {
+            var method = typeof(ConsoleLogFilterInstaller).GetMethod("CleanStackTraceAfterOffset",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            var clean = (Func<string, int, string>)Delegate.CreateDelegate(typeof(Func<string, int, string>), method);
+            var random = new System.Random(2749);
+            var lines = new[]
+            {
+                "", "Game.Player:Update()", "ö Unicode 😀 frame", "trailing carriage return\r",
+                "MinimalEditor.Console.Editor.ConsoleLogFilterInstaller:LogFormat()",
+                "at Filter (PACKAGES/COM.MARTINCALANDER.MINIMALEDITOR/EDITOR/CONSOLE/CONSOLELOGFILTERINSTALLER.cs:1)",
+                "UnityEngine.DebugLogHandler:LogFormat()"
+            };
+            foreach (var prefix in new[] { "", "Message ö😀\n", "\nMinimalEditor.Console.Editor.ConsoleLogFilterInstaller\r\n" })
+            {
+                for (var example = 0; example < 200; example++)
+                {
+                    var stack = new StringBuilder();
+                    for (var line = 0; line < random.Next(1, 20); line++)
+                    {
+                        if (line > 0) stack.Append(random.Next(2) == 0 ? "\n" : "\r\n");
+                        stack.Append(lines[random.Next(lines.Length)]);
+                    }
+                    var original = stack.ToString();
+                    bool Strip(string text) =>
+                        text.IndexOf("MinimalEditor.Console.Editor.ConsoleLogFilterInstaller", StringComparison.Ordinal) >= 0 ||
+                        text.IndexOf("Packages/com.martincalander.minimaleditor/Editor/Console/ConsoleLogFilterInstaller", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        text.IndexOf("UnityEngine.DebugLogHandler:LogFormat", StringComparison.Ordinal) >= 0;
+                    var expected = Strip(original)
+                        ? string.Join("\n", original.Replace("\r\n", "\n").Split('\n').Where(line => !Strip(line))).Trim('\n')
+                        : original;
+                    Assert.That(clean(prefix + original, prefix.Length), Is.EqualTo(prefix + expected),
+                        "Example " + example + " must preserve the message prefix and retained frames.");
+                }
+            }
+        }
+
+        [Test]
+        public void CleanStackTrace_CopiesEveryMetadataFieldWithoutChangingOriginal()
+        {
+            Apply(cleanStackTraces: true);
+            const string prefix = "warning ö😀\n";
+            var entry = CreateEntry("ScriptingWarning", prefix + "UnityEngine.DebugLogHandler:LogFormat()\nGame:Update()");
+            var fields = entry.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            foreach (var field in fields)
+                if (field.FieldType == typeof(int) && field.Name != "mode") field.SetValue(entry, 123);
+            entry.GetType().GetField("callstackTextStartUTF16").SetValue(entry, prefix.Length);
+            var originalValues = fields.Select(field => field.GetValue(entry)).ToArray();
+            var copy = new MemoryConsoleEntries().Clone(entry, out var cleaned);
+
+            Assert.That(cleaned, Is.True);
+            Assert.That(copy, Is.Not.SameAs(entry));
+            for (var i = 0; i < fields.Length; i++)
+            {
+                Assert.That(fields[i].GetValue(entry), Is.EqualTo(originalValues[i]), fields[i].Name);
+                var expected = fields[i].Name == "message" ? prefix + "Game:Update()" : originalValues[i];
+                if (fields[i].Name == "file" || fields[i].Name == "condition") expected ??= string.Empty;
+                Assert.That(fields[i].GetValue(copy), Is.EqualTo(expected), fields[i].Name);
+            }
+        }
+
+        [Test]
+        public void ConsoleAccessors_ReflectionFallbackCopiesMetadataAndReadsEnumModes()
+        {
+            var accessors = typeof(ConsoleLogFilterInstaller).GetNestedType("LogEntryAccessors", BindingFlags.NonPublic);
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+            var entry = CreateEntry("ScriptingWarning", "keep this");
+            var copied = accessors.GetMethod("CopyFields", flags).Invoke(null, new[] { entry });
+            Assert.That(copied, Is.Not.SameAs(entry));
+            foreach (var field in entry.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                Assert.That(field.GetValue(copied), Is.EqualTo(field.GetValue(entry)), field.Name);
+
+            var fixture = new EnumModeFixture { Mode = LogType.Warning };
+            var reader = (Func<object, int>)accessors.GetMethod("CreateIntReader", flags)
+                .Invoke(null, new object[] { typeof(EnumModeFixture).GetField("Mode") });
+            Assert.That(reader(fixture), Is.EqualTo((int)LogType.Warning));
+        }
+
+        private sealed class EnumModeFixture { public LogType Mode; }
+
         private static object CreateEntry(string mode, string message)
         {
             var assembly = typeof(EditorWindow).Assembly;

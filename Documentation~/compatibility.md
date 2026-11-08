@@ -55,6 +55,13 @@ Editor results below predate these lifecycle changes.
 
 ### Verified Editors
 
+The 2026-11-08 performance audit passed all 229 tests in an isolated visible
+Unity `7000.0.0a16` Editor on macOS Apple silicon after successful compilation.
+The package was embedded and used its bundled Harmony. This includes the new
+Console accessor and snapshot regressions and six Play sessions without domain
+reload. See the [performance report](performance.md) for measurements, the
+earlier fixture failures, and untested versions and integrations.
+
 On 2026-11-08, all 219 Minimal Editor tests passed in Unity `7000.0.0a16`
 on macOS Apple silicon, with no failures or skips, after a clean Unity
 compilation. The full suite passed in both the shared workspace and an isolated

@@ -28,6 +28,18 @@ namespace MinimalEditor.Tests.Editor.MenuItem
             SetBool("s_forceApplyQueued", false);
         }
 
+        [TestCase("Tools/Vendor", "Tools/*", true)]
+        [TestCase("TOOLS/Vendor", " Tools/* ", true)]
+        [TestCase("Tool", "Tools/*", false)]
+        [TestCase("Tools", "*", false)]
+        [TestCase("Tools/Ö😀", "tools/ö*", true)]
+        [TestCase("Tools/Vendor", "Tools", false)]
+        public void MenuPatterns_PreserveOrdinalPrefixAndLengthRules(string input, string pattern, bool expected)
+        {
+            var type = Type.GetType("MinimalEditor.MenuItem.Editor.MenuItemPatternMatcher, MinimalEditor.MenuItem.Editor", true);
+            Assert.That(type.GetMethod("IsMatch", AnyStatic).Invoke(null, new object[] { input, pattern }), Is.EqualTo(expected));
+        }
+
         [Test]
         public void MenuItemSettingsProvider_IsProjectScoped()
         {
