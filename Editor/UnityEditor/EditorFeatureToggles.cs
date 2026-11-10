@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using MinimalEditor.MenuItem.Editor;
 
 namespace MinimalEditor.Editor
 {
@@ -18,22 +16,6 @@ namespace MinimalEditor.Editor
             set => StatusBarExtrasHider.Active = value;
         }
 
-        public static bool HideMenuItems
-        {
-            get => MenuItemFeatureToggles.HideMenuItems;
-            set => MenuItemFeatureToggles.HideMenuItems = value;
-        }
-
-        public static void SetMenuItemPaths(IEnumerable<string> paths)
-        {
-            MenuItemFeatureToggles.SetMenuItemPaths(paths);
-        }
-
-        public static void SetMenuItemPathsInput(Func<IEnumerable<string>> input)
-        {
-            MenuItemFeatureToggles.SetMenuItemPathsInput(input);
-        }
-
         public static void SetShortWindowTitleInput(Func<bool> input)
         {
             WindowTitleShortener.ActiveInput = input;
@@ -43,11 +25,5 @@ namespace MinimalEditor.Editor
         {
             StatusBarExtrasHider.ActiveInput = input;
         }
-
-        public static void SetMenuItemsInput(Func<bool> input)
-        {
-            MenuItemFeatureToggles.SetHideInput(input);
-        }
-
     }
 }

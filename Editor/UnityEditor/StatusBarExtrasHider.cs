@@ -80,13 +80,6 @@ namespace MinimalEditor.Editor
             Apply();
         }
 
-        internal static void ClearActiveInput()
-        {
-            if (s_activeInput == null) return;
-            s_activeInput = null;
-            Apply();
-        }
-
 #if UNITY_6000_5_OR_NEWER
         [UnityEngine.OnEnteringPlayMode]
         [UnityEditor.Scripting.LifecycleManagement.OnEnteringEditMode]

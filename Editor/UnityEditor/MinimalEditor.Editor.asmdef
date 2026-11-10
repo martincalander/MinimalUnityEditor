@@ -1,9 +1,7 @@
 {
   "name": "MinimalEditor.Editor",
   "rootNamespace": "MinimalEditor.Editor",
-  "references": [
-    "MinimalEditor.MenuItem.Editor"
-  ],
+  "references": [],
   "includePlatforms": [
     "Editor"
   ],
@@ -14,8 +12,7 @@
   "autoReferenced": false,
   "defineConstraints": [
     "!MINIMAL_EDITOR_DISABLE_ALL",
-    "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR",
-    "!MINIMAL_EDITOR_DISABLE_MENU_ITEM"
+    "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR"
   ],
   "versionDefines": [],
   "noEngineReferences": false

@@ -141,7 +141,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 AssertCallbackCount(typeof(EditorApplication), "quitting", menuHider, "SuppressMutationForTeardown", menuCallbackCount);
             });
 #endif
-#if !MINIMAL_EDITOR_DISABLE_UNITY_EDITOR && !MINIMAL_EDITOR_DISABLE_MENU_ITEM
+#if !MINIMAL_EDITOR_DISABLE_UNITY_EDITOR
             Type title = RequireType("MinimalEditor.Editor.WindowTitleShortener, MinimalEditor.Editor");
             Type statusBar = RequireType("MinimalEditor.Editor.StatusBarExtrasHider, MinimalEditor.Editor");
             m_titleInput = Property(title, "ActiveInput");
@@ -165,6 +165,8 @@ namespace MinimalEditor.Tests.Editor.PackageContract
 #endif
 #if UNITY_6000_0_OR_NEWER && !MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER
             Type patch = RequireType("MinimalEditor.PackageManager.Editor.PackageManagerAssetStoreDuplicatePatch, MinimalEditor.PackageManager.Editor");
+            // Code loads defer the patch until Package Manager opens. Apply it as an open window would.
+            Method(patch, "TryPatch").Invoke(null, null);
             assertions.Add(() =>
             {
                 AssertSinglePostfix(patch, "GetTargetMethod", "GetPostfixMethod");

@@ -62,6 +62,26 @@ All notable changes to this package are documented in this file.
 
 ### Changed
 
+- Skip Project Folders filtering while no hidden folder exists in the project,
+  including the default Addressables rule, and remember results already found
+  outside hidden folders until settings or project contents change. Unity runs
+  this filter on every Project window GUI event; a 1,000-result pass fell from
+  about 0.95 ms and 525 KB of allocation to under 0.03 ms with none.
+- Add the Project Folders filter hooks only once a hidden rule points at an
+  existing folder. The Project window toolbar control is still installed at
+  every code load.
+- Read every menu root that hiding rules need once, before removing any command.
+  A repeated apply after a project change fell from 6.7 ms to 1.7 ms in the
+  measured project. The same menu items are removed.
+- Space out Console rescans by their cost. A rescan now waits at least 20 times
+  as long as the previous one took. In the measured 10,000-row stack-cleanup
+  case, rescanning a changing Console uses about 5 percent of main-thread time
+  instead of about 37 percent.
+- Skip the full Console scan at code load when no filter rule is active.
+- Apply the Package Manager patches when a Package Manager window is open
+  instead of at every code load. See the
+  [2026-11-10 follow-up](Documentation~/performance.md#2026-11-10-follow-up)
+  for measured load costs.
 - Reduce Console scan allocations with cached field accessors, shallow snapshot
   copies, and stack cleanup that avoids temporary lines and substrings. Preserve
   metadata, Unicode offsets, and reflection fallbacks.
@@ -122,6 +142,19 @@ All notable changes to this package are documented in this file.
 - Added focused user, compatibility, and troubleshooting guides, including the
   default menu behavior, menu-restoration caveat, and exact Unity 6 Package
   Manager duplicate rules.
+
+### Removed
+
+- **Breaking:** Removed the duplicate menu API from
+  `MinimalEditor.Editor.EditorFeatureToggles` (`HideMenuItems`,
+  `SetMenuItemPaths`, `SetMenuItemPathsInput`, and `SetMenuItemsInput`) and the
+  `MenuItemFeatureToggles.HideMenuItems` alias. Use
+  `MenuItemFeatureToggles.ModuleEnabled`, `SetMenuItemPaths`,
+  `SetMenuItemPathsInput`, and `SetHideInput` instead.
+- `MinimalEditor.Editor` no longer references `MinimalEditor.MenuItem.Editor`.
+  `MINIMAL_EDITOR_DISABLE_MENU_ITEM` therefore no longer disables the short
+  title and status-bar features.
+- Removed unused internal helpers and test-only overloads.
 
 ## [0.1.0] - 2026-08-22
 

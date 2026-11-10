@@ -55,7 +55,8 @@ blocked until the project opens in a newer Editor.
 
 The Package Manager assembly exists only on Unity 6 or newer. Its patches also
 require exact internal types and methods; an affected feature remains inactive
-when Unity changes that contract.
+when Unity changes that contract. The patches are applied when a Package Manager
+window is open after a code load, or when one first opens or gains focus.
 
 The duplicate filter hides an Asset Store-backed row only when the matching
 registered package is read-only and resolves outside the project `Packages/`
@@ -99,9 +100,6 @@ Check the project's scripting define symbols. The package-wide
 `MINIMAL_EDITOR_DISABLE_ALL` symbol removes
 every module. Module-specific symbols are listed in
 [Compatibility and scripting](compatibility.md).
-
-Remember that `MINIMAL_EDITOR_DISABLE_MENU_ITEM` also removes the dependent Editor
-chrome assembly.
 
 ## A Preference Appeared in Another Project
 

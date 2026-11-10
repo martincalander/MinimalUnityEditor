@@ -115,13 +115,6 @@ namespace MinimalEditor.Editor
             TryRefreshTitle();
         }
 
-        internal static void ClearActiveInput()
-        {
-            if (s_activeInput == null) return;
-            s_activeInput = null;
-            TryRefreshTitle();
-        }
-
         internal static bool TryRefreshTitle()
         {
             if (UpdateTitleMethod == null) return false;

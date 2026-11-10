@@ -38,26 +38,48 @@ namespace MinimalEditor.Tests.Editor.PackageManager
             var targets = new[] { Patch.GetTargetMethod(), Patch.GetPackageToolbarRefreshMethod() };
             try
             {
+                cleanup.Invoke(null, null);
                 initialize.Invoke(null, null);
                 initialize.Invoke(null, null);
+                // Without an open Package Manager window, loading code only waits for one.
+                var windowOpen = Patch.IsPackageManagerWindowOpen();
+                foreach (var target in targets)
+                    Assert.That(CountOwnedPostfixes(target), Is.EqualTo(windowOpen ? 1 : 0));
+                Assert.That(FocusCallbackCount(), Is.EqualTo(windowOpen ? 0 : 1));
+
+                // A Package Manager window gaining focus patches once.
+                Patch.TryPatch();
+                Patch.TryPatch();
                 foreach (var target in targets)
                     Assert.That(CountOwnedPostfixes(target), Is.EqualTo(1));
-                Assert.That(Patch.IsPatchApplied(), Is.True, Patch.LastPatchError);
-                Assert.That(Patch.IsLocalPackageButtonPatchApplied(), Is.True, Patch.LastPatchError);
+                Assert.That(HasOwnedPostfix(Patch.GetTargetMethod(), Patch.GetPostfixMethod()), Is.True, Patch.LastPatchError);
+                Assert.That(HasOwnedPostfix(Patch.GetPackageToolbarRefreshMethod(), Patch.GetPackageToolbarRefreshPostfixMethod()),
+                    Is.True, Patch.LastPatchError);
 
                 cleanup.Invoke(null, null);
                 cleanup.Invoke(null, null);
                 foreach (var target in targets)
                     Assert.That(CountOwnedPostfixes(target), Is.Zero);
+                Assert.That(FocusCallbackCount(), Is.Zero);
 
-                initialize.Invoke(null, null);
+                Patch.TryPatch();
                 foreach (var target in targets)
                     Assert.That(CountOwnedPostfixes(target), Is.EqualTo(1));
             }
             finally
             {
+                cleanup.Invoke(null, null);
                 initialize.Invoke(null, null);
             }
+        }
+
+        static int FocusCallbackCount()
+        {
+            var field = typeof(UnityEditor.EditorWindow).GetField("windowFocusChanged",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            return (field.GetValue(null) as Delegate)?.GetInvocationList()
+                .Count(callback => callback.Method.DeclaringType == typeof(Patch)) ?? 0;
         }
 
         [Test]
@@ -168,6 +190,22 @@ namespace MinimalEditor.Tests.Editor.PackageManager
             Assert.That(method, Is.Not.Null, "The required Package Manager method was not found.");
             Assert.That(method.ReturnType, Is.EqualTo(returnType), method.Name);
             Assert.That(method.GetParameters().Select(parameter => parameter.ParameterType), Is.EqualTo(parameterTypes), method.Name);
+        }
+
+        static bool HasOwnedPostfix(MethodInfo target, MethodInfo postfixMethod)
+        {
+            Assert.That(target, Is.Not.Null);
+            Assert.That(postfixMethod, Is.Not.Null);
+            var harmony = Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
+            var patchInfo = harmony.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
+                .Invoke(null, new object[] { target });
+            if (patchInfo == null)
+                return false;
+
+            var postfixes = (IEnumerable)patchInfo.GetType().GetField("Postfixes").GetValue(patchInfo);
+            return postfixes.Cast<object>().Any(postfix =>
+                (string)postfix.GetType().GetField("owner").GetValue(postfix) == Patch.HarmonyId &&
+                Equals(postfix.GetType().GetProperty("PatchMethod").GetValue(postfix), postfixMethod));
         }
 
         static int CountOwnedPostfixes(MethodInfo target)

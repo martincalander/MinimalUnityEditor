@@ -11,12 +11,6 @@ namespace MinimalEditor.MenuItem.Editor
             set => MenuItemHider.Active = value;
         }
 
-        public static bool HideMenuItems
-        {
-            get => MenuItemHider.Active;
-            set => MenuItemHider.Active = value;
-        }
-
         public static bool CustomDefinitionsEnabled
         {
             get => MenuItemModuleSettings.CustomDefinitionsEnabled;

@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
@@ -128,6 +129,29 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         }
 
         [Test]
+        public void HiddenRulesOnlyRequireFilteringOnceTheirFolderExists()
+        {
+            Assert.That(AssetDatabase.IsValidFolder(CustomFolderPath), Is.False);
+            Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);
+            Assert.That(FolderVisibilitySettings.HasHiddenFolders, Is.True);
+            Assert.That(FolderVisibilitySettings.HasExistingHiddenFolder, Is.False);
+            try
+            {
+                Assert.That(AssetDatabase.CreateFolder("Assets", CustomFolderPath.Substring("Assets/".Length)), Is.Not.Empty);
+                Assert.That(FolderVisibilitySettings.HasExistingHiddenFolder, Is.True);
+                FolderVisibilitySettings.Enabled = false;
+                Assert.That(FolderVisibilitySettings.HasExistingHiddenFolder, Is.False);
+                FolderVisibilitySettings.Enabled = true;
+                FolderVisibilitySettings.SetFolderHidden(CustomFolderPath, false);
+                Assert.That(FolderVisibilitySettings.HasExistingHiddenFolder, Is.False);
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(CustomFolderPath);
+            }
+        }
+
+        [Test]
         public void RemovingACustomRuleRestoresVisibilityAndProtectsBuiltInRules()
         {
             Assert.That(FolderVisibilitySettings.AddFolder(CustomFolderPath), Is.True);
@@ -169,18 +193,18 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         }
 
         [Test]
-        public void LegacyAddressablesToggleDoesNotChangeStreamingAssetsOrMasterChoice()
+        public void AddressablesRuleDoesNotChangeStreamingAssetsOrMasterChoice()
         {
             FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, true);
             FolderVisibilitySettings.Enabled = false;
 
-            AddressablesFolderVisibility.ShowFolder = false;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
 
             Assert.That(FolderVisibilitySettings.IsFolderHidden(AddressablesFolderVisibility.FolderPath), Is.True);
             Assert.That(FolderVisibilitySettings.IsFolderHidden(StreamingAssetsPath), Is.True);
             Assert.That(FolderVisibilitySettings.Enabled, Is.False);
 
-            AddressablesFolderVisibility.ShowFolder = true;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, false);
 
             Assert.That(FolderVisibilitySettings.IsFolderHidden(AddressablesFolderVisibility.FolderPath), Is.False);
             Assert.That(FolderVisibilitySettings.IsFolderHidden(StreamingAssetsPath), Is.True);
@@ -291,7 +315,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             FolderVisibilitySettings.SetFolderHidden(StreamingAssetsPath, false);
 
             probePath = CreateProbe(AddressablesFolderVisibility.FolderPath);
-            AddressablesFolderVisibility.ShowFolder = true;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, false);
         }
 
         [TearDown]
@@ -332,12 +356,12 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
 
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, true);
 
-            AddressablesFolderVisibility.ShowFolder = false;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
 
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, false);
             AssertAssetsPreserved(AddressablesFolderVisibility.FolderPath, probePath, folderGuid, probeGuid);
 
-            AddressablesFolderVisibility.ShowFolder = true;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, false);
 
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, true);
         }
@@ -366,7 +390,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             FolderVisibilitySettings.Enabled = true;
             AssertFolderVisibility(columns, tree, path, false);
             FolderVisibilitySettings.SetFolderHidden(path, false);
-            AddressablesFolderVisibility.ShowFolder = false;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
             AssertFolderVisibility(columns, tree, path, true);
             AssertFolderVisibility(columns, tree, AddressablesFolderVisibility.FolderPath, false);
         }
@@ -393,6 +417,107 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             Assert.That(ListPaths(browser), Has.None.EqualTo(childPath));
             FolderVisibilitySettings.SetFolderHidden(path, false);
             Assert.That(ListPaths(browser), Does.Contain(childPath));
+        }
+
+        [UnityTest]
+        public IEnumerator FilterHooksWaitForAHiddenFolderAndStartWhenItIsCreated()
+        {
+            // SetUp left every existing folder visible. Reload the hooks from that state.
+            ReinstallHooks();
+            MethodInfo updateAssets = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.ObjectListArea", true)
+                .GetNestedType("LocalGroup", BindingFlags.NonPublic | BindingFlags.Public)
+                .GetMethod("UpdateAssets", InstanceFlags, null, Type.EmptyTypes, null);
+            Assert.That(AddressablesFolderVisibility.IsPatched, Is.True, AddressablesFolderVisibility.PatchError);
+            Assert.That(AddressablesFolderVisibility.FiltersPatched, Is.False);
+            Assert.That(OwnedPatchCount(updateAssets), Is.Zero);
+
+            const string path = "Assets/FolderVisibilityTestGenerated";
+            Assert.That(FolderVisibilitySettings.AddFolder(path), Is.True);
+            Assert.That(AddressablesFolderVisibility.FiltersPatched, Is.False, "A rule for a missing folder needs no hooks.");
+            EditorWindow columns = CreateBrowser("TwoColumns");
+            EditorWindow tree = CreateBrowser("OneColumn");
+            string childPath = CreateProbe(path);
+
+            double deadline = EditorApplication.timeSinceStartup + 5d;
+            while (!AddressablesFolderVisibility.FiltersPatched && EditorApplication.timeSinceStartup < deadline)
+                yield return null;
+            Assert.That(AddressablesFolderVisibility.FiltersPatched, Is.True, "Creating the hidden folder must add the hooks.");
+            Assert.That(OwnedPatchCount(updateAssets), Is.EqualTo(1));
+            Assert.That(TreePaths(columns, "m_FolderTree"), Has.None.EqualTo(path));
+            Assert.That(TreePaths(tree, "m_AssetTree"), Has.None.EqualTo(path));
+            Invoke(columns, "SetSearch", childPath.Substring(childPath.LastIndexOf('/') + 1));
+            Assert.That(ListPaths(columns), Has.None.EqualTo(childPath));
+        }
+
+        [UnityTest]
+        public IEnumerator AssetMovedIntoAHiddenFolderIsFilteredAfterTheProjectChange()
+        {
+            // SetUp created this folder for its probe.
+            string hiddenFolder = AddressablesFolderVisibility.FolderPath;
+            FolderVisibilitySettings.SetFolderHidden(hiddenFolder, true);
+            string name = "FolderVisibilityTest_" + Guid.NewGuid().ToString("N");
+            string visiblePath = "Assets/" + name;
+            Assert.That(AssetDatabase.CreateFolder("Assets", name), Is.Not.Empty);
+            createdFolders.Add(visiblePath);
+            EditorWindow browser = CreateBrowser("TwoColumns");
+            Invoke(browser, "SetSearch", name);
+            Assert.That(ListPaths(browser), Does.Contain(visiblePath));
+
+            string movedPath = hiddenFolder + "/" + name;
+            Assert.That(AssetDatabase.MoveAsset(visiblePath, movedPath), Is.Empty);
+            double deadline = EditorApplication.timeSinceStartup + 5d;
+            List<string> paths;
+            do
+            {
+                yield return null;
+                Invoke(browser, "SetSearch", name);
+                paths = ListPaths(browser);
+            } while (paths.Contains(movedPath) && EditorApplication.timeSinceStartup < deadline);
+            Assert.That(paths, Has.None.EqualTo(movedPath), "A result remembered as visible must be checked again after it moves.");
+        }
+
+        [Test]
+        public void RepeatedListPassesOverAnUnchangedListingStayWithinAnAllocationBudget()
+        {
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
+            EditorWindow browser = CreateBrowser("TwoColumns");
+            object group = Member(Member(browser, "m_ListArea"), "m_LocalAssets");
+            object hierarchy = Member(group, "m_FilteredHierarchy");
+            FieldInfo resultsField = hierarchy.GetType().GetField("m_Results", InstanceFlags);
+            FieldInfo visibleField = hierarchy.GetType().GetField("m_VisibleItems", InstanceFlags);
+            Type resultType = resultsField.FieldType.GetElementType();
+            FieldInfo guidField = resultType.GetField("assetGUID", InstanceFlags);
+            string[] guids = AssetDatabase.FindAssets(string.Empty, new[] { "Packages/com.martincalander.minimaleditor" });
+            Assert.That(guids, Is.Not.Empty);
+            Array results = Array.CreateInstance(resultType, 500);
+            for (int i = 0; i < results.Length; i++)
+            {
+                object result = Activator.CreateInstance(resultType, true);
+                guidField.SetValue(result, new GUID(guids[i % guids.Length]));
+                results.SetValue(result, i);
+            }
+            resultsField.SetValue(hierarchy, results);
+            visibleField.SetValue(hierarchy, results);
+            var filterList = (Action<object>)Delegate.CreateDelegate(typeof(Action<object>),
+                typeof(AddressablesFolderVisibility).GetMethod("FilterList", StaticFlags));
+            filterList(group);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 100; i++)
+                filterList(group);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(resultsField.GetValue(hierarchy), Is.SameAs(results), "No result is inside the hidden folder.");
+            Assert.That(allocated, Is.LessThanOrEqualTo(1024),
+                "Unity filters the list on every GUI event, so 50,000 result checks must not allocate per result.");
+        }
+
+        [Test]
+        public void ProjectBrowserResultsExposeTheAssetGuidStruct()
+        {
+            Type resultType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.FilteredHierarchy+FilterResult", true);
+            Assert.That(resultType.GetField("assetGUID", InstanceFlags)?.FieldType, Is.EqualTo(typeof(GUID)),
+                "Project Folders reads FilterResult.assetGUID without allocating the guid string.");
         }
 
         [Test]
@@ -445,7 +570,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             CollectionAssert.AreEqual(new[] { probePath }, (string[])Member(Member(browser, "m_SearchFilter"), "folders"));
             Assert.That(TreePaths(browser, "m_AssetTree"), Does.Contain(probePath));
 
-            AddressablesFolderVisibility.ShowFolder = false;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
 
             CollectionAssert.AreEqual(new[] { "Assets" }, (string[])Member(Member(browser, "m_SearchFilter"), "folders"));
             Assert.That(TreePaths(browser, "m_AssetTree"), Has.None.EqualTo(probePath));
@@ -457,7 +582,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
         [Test]
         public void ListsOwnedByOtherEditorWindowsRemainUnfiltered()
         {
-            AddressablesFolderVisibility.ShowFolder = false;
+            FolderVisibilitySettings.SetFolderHidden(AddressablesFolderVisibility.FolderPath, true);
             var owner = ScriptableObject.CreateInstance<FolderVisibilityTestWindow>();
             ownedWindows.Add(owner);
             var assembly = typeof(UnityEditor.Editor).Assembly;
@@ -476,6 +601,27 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor.Tests
             {
                 Invoke(area, "OnDestroy");
             }
+        }
+
+        static void ReinstallHooks()
+        {
+            typeof(AddressablesFolderVisibility).GetMethod("Uninstall", StaticFlags).Invoke(null, null);
+            AddressablesFolderVisibility.Initialize();
+            typeof(AddressablesFolderVisibility).GetMethod("Install", StaticFlags).Invoke(null, null);
+        }
+
+        static int OwnedPatchCount(MethodInfo target)
+        {
+            Type harmony = Type.GetType("HarmonyLib.Harmony, 0Harmony", true);
+            object info = harmony.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) }).Invoke(null, new object[] { target });
+            if (info == null)
+                return 0;
+            int count = 0;
+            foreach (string kind in new[] { "Prefixes", "Postfixes" })
+                foreach (object patch in (IEnumerable)info.GetType().GetField(kind).GetValue(info))
+                    if ((string)patch.GetType().GetField("owner").GetValue(patch) == "com.martincalander.minimaleditor.projectfoldervisibility")
+                        count++;
+            return count;
         }
 
         string CreateProbe(string path)

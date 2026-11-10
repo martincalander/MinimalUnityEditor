@@ -1,7 +1,7 @@
 using System;
-using System.Collections;
 using System.Reflection;
 using UnityEditor;
+using UnityEngine;
 
 namespace MinimalEditor.PackageManager.Editor
 {
@@ -32,6 +32,8 @@ namespace MinimalEditor.PackageManager.Editor
         const BindingFlags AnyStatic = BindingFlags.Static | BindingFlags.NonPublic;
         const BindingFlags AnyInstance = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
+        static readonly Type s_PackageManagerWindowType =
+            typeof(UnityEditor.Editor).Assembly.GetType(PackageManagerLocalPackageButton.PackageManagerWindowTypeName);
         static object s_Harmony;
         static bool s_Patched;
         internal static string LastPatchError { get; private set; }
@@ -43,11 +45,29 @@ namespace MinimalEditor.PackageManager.Editor
 #endif
         static void Initialize()
         {
-            TryPatch();
+            // Patching takes tens of milliseconds, so code loads skip it until Package Manager is open.
+            EditorWindow.windowFocusChanged -= OnWindowFocusChanged;
+            if (IsPackageManagerWindowOpen())
+                TryPatch();
+            else
+                EditorWindow.windowFocusChanged += OnWindowFocusChanged;
 #if !UNITY_6000_5_OR_NEWER
             AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 #endif
+        }
+
+        internal static bool IsPackageManagerWindowOpen() =>
+            s_PackageManagerWindowType != null && Resources.FindObjectsOfTypeAll(s_PackageManagerWindowType).Length > 0;
+
+        // Opening Package Manager focuses its window. The check costs microseconds and stops once patched.
+        static void OnWindowFocusChanged()
+        {
+            if (!IsPackageManagerWindowOpen())
+                return;
+
+            EditorWindow.windowFocusChanged -= OnWindowFocusChanged;
+            TryPatch();
         }
 
         internal static void TryPatch()
@@ -159,51 +179,6 @@ namespace MinimalEditor.PackageManager.Editor
         internal static MethodInfo GetPackageToolbarRefreshPostfixMethod()
         {
             return typeof(PackageManagerAssetStoreDuplicatePatch).GetMethod(nameof(PackageToolbarRefreshPostfix), AnyStatic);
-        }
-
-        internal static bool IsPatchApplied()
-        {
-            return HasPostfix(GetTargetMethod(), GetPostfixMethod());
-        }
-
-        internal static bool IsLocalPackageButtonPatchApplied()
-        {
-            return HasPostfix(GetPackageToolbarRefreshMethod(), GetPackageToolbarRefreshPostfixMethod());
-        }
-
-        static bool HasPostfix(MethodInfo targetMethod, MethodInfo postfixMethod)
-        {
-            try
-            {
-                if (targetMethod == null || postfixMethod == null)
-                    return false;
-
-                var harmonyType = GetHarmonyType();
-                var getPatchInfo = harmonyType.GetMethod("GetPatchInfo", new[] { typeof(MethodBase) })
-                    ?? throw new MissingMethodException(harmonyType.FullName, "GetPatchInfo");
-                var patchInfo = getPatchInfo.Invoke(null, new object[] { targetMethod });
-                if (patchInfo == null)
-                    return false;
-
-                var postfixes = patchInfo.GetType().GetField("Postfixes")?.GetValue(patchInfo) as IEnumerable;
-                if (postfixes == null)
-                    return false;
-
-                foreach (var postfix in postfixes)
-                {
-                    var patchType = postfix.GetType();
-                    var owner = patchType.GetField("owner")?.GetValue(postfix) as string;
-                    var method = patchType.GetProperty("PatchMethod")?.GetValue(postfix) as MethodInfo;
-                    if (owner == HarmonyId && method == postfixMethod)
-                        return true;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-
-            return false;
         }
 
         static void RefreshPackageManagerWindow()
@@ -330,6 +305,7 @@ namespace MinimalEditor.PackageManager.Editor
 #endif
         static void OnBeforeAssemblyReload()
         {
+            EditorWindow.windowFocusChanged -= OnWindowFocusChanged;
             EditorApplication.delayCall -= RefreshPackageManagerWindow;
 #if !UNITY_6000_5_OR_NEWER
             AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;

@@ -148,6 +148,17 @@ namespace MinimalEditor.Tests.Editor.Console
             }
             var guid = AssetDatabase.AssetPathToGUID("Assets");
             Measure(report, "folders/native-guid-to-path", () => sink = AssetDatabase.GUIDToAssetPath(guid));
+            Measure(report, "folders/native-is-valid-folder", () => sink = AssetDatabase.IsValidFolder("Assets/MinimalEditorBenchmarkMissing"));
+            var folderFilter = Find("MinimalEditor.ProjectFolderVisibility.Editor.AddressablesFolderVisibility");
+            if (folder != null && folderFilter != null)
+                BenchmarkProjectListPasses(report, folder, folderFilter);
+            var hider = Find("MinimalEditor.MenuItem.Editor.MenuItemHider");
+            if (hider != null)
+            {
+                var applyCore = (Action<bool>)Delegate.CreateDelegate(typeof(Action<bool>), hider.GetMethod("ApplyCore", Static));
+                // Applies the project's current menu settings. After the first pass every exact rule misses.
+                Measure(report, "menus/apply/current-settings", () => applyCore(true), 1);
+            }
             var status = Find("MinimalEditor.Editor.StatusBarExtrasHider");
             if (status != null) Measure(report, "status-bar/active-apply", Bind<Action>(status, "Apply"));
 #if UNITY_2023_2_OR_NEWER
@@ -180,6 +191,99 @@ namespace MinimalEditor.Tests.Editor.Console
 #endif
             sink = null;
             return SaveReport(report, outputPath);
+        }
+
+        // Measures the Project window list prefix on 1,000 results, as Unity calls it on every GUI event.
+        static void BenchmarkProjectListPasses(Report report, Type settingsType, Type visibilityType)
+        {
+            if (!(bool)visibilityType.GetProperty("IsPatched", Static).GetValue(null))
+                return;
+            var filterList = (Action<object>)Delegate.CreateDelegate(typeof(Action<object>), visibilityType.GetMethod("FilterList", Static));
+            var browserType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.ProjectBrowser", true);
+            var settingsField = settingsType.GetField("s_Settings", Static);
+            var ruleType = settingsType.Assembly.GetType("MinimalEditor.ProjectFolderVisibility.Editor.FolderVisibilityRule");
+            var original = settingsField.GetValue(null);
+            const string existingFolder = "Assets/MinimalEditorBenchmarkHidden";
+            var createdFolder = !AssetDatabase.IsValidFolder(existingFolder) &&
+                !string.IsNullOrEmpty(AssetDatabase.CreateFolder("Assets", "MinimalEditorBenchmarkHidden"));
+            EditorWindow browser = null;
+            void UseRule(string path, bool hidden)
+            {
+                var settings = Activator.CreateInstance(settingsField.FieldType, true);
+                settingsField.FieldType.GetField("enabled", Instance).SetValue(settings, true);
+                var folders = (IList)settingsField.FieldType.GetField("folders", Instance).GetValue(settings);
+                folders.Add(Activator.CreateInstance(ruleType, Instance, null, new object[] { path, hidden }, null));
+                settingsField.SetValue(null, settings);
+            }
+            try
+            {
+                // The filter hooks are added once a hidden rule points at an existing folder. Add them before
+                // creating the benchmark browser, because the refresh rebuilds every Project browser's views.
+                UseRule(existingFolder, true);
+                visibilityType.GetMethod("RefreshProjectWindows", Static).Invoke(null, null);
+                if (!(bool)visibilityType.GetProperty("FiltersPatched", Static).GetValue(null))
+                    throw new InvalidOperationException("The Project Folders filter hooks were not added.");
+                browser = (EditorWindow)ScriptableObject.CreateInstance(browserType);
+                browser.position = new Rect(100, 100, 640, 480);
+                Call(browser, "Init");
+                Call(browser, "InitViewMode", Enum.Parse(browserType.GetNestedType("ViewMode", BindingFlags.NonPublic), "TwoColumns"));
+                var group = Member(Member(browser, "m_ListArea"), "m_LocalAssets");
+                var hierarchy = Member(group, "m_FilteredHierarchy");
+                var resultsField = hierarchy.GetType().GetField("m_Results", Instance);
+                var visibleField = hierarchy.GetType().GetField("m_VisibleItems", Instance);
+                var resultType = resultsField.FieldType.GetElementType();
+                var guidField = resultType.GetField("assetGUID", Instance);
+                var guids = AssetDatabase.GetAllAssetPaths()
+                    .Where(path => path.StartsWith("Packages/", StringComparison.Ordinal))
+                    .Select(AssetDatabase.AssetPathToGUID).Where(value => !string.IsNullOrEmpty(value)).ToArray();
+                var results = Array.CreateInstance(resultType, 1000);
+                for (var i = 0; i < results.Length; i++)
+                {
+                    var result = Activator.CreateInstance(resultType, true);
+                    guidField.SetValue(result, new GUID(guids[i % guids.Length]));
+                    results.SetValue(result, i);
+                }
+                resultsField.SetValue(hierarchy, results);
+                visibleField.SetValue(hierarchy, results);
+                UseRule(existingFolder, false);
+                Measure(report, "folders/list-pass/1000/no-hidden-rules", () => filterList(group));
+                UseRule("Assets/MinimalEditorBenchmarkMissing", true);
+                Measure(report, "folders/list-pass/1000/missing-hidden-folder", () => filterList(group));
+                UseRule(existingFolder, true);
+                Measure(report, "folders/list-pass/1000/existing-hidden-folder", () => filterList(group));
+                if (resultsField.GetValue(hierarchy) != results)
+                    throw new InvalidOperationException("No benchmark result is inside the hidden folder.");
+            }
+            finally
+            {
+                settingsField.SetValue(null, original);
+                if (browser != null)
+                    UnityEngine.Object.DestroyImmediate(browser);
+                if (createdFolder)
+                    AssetDatabase.DeleteAsset(existingFolder);
+            }
+        }
+
+        static object Member(object instance, string name)
+        {
+            for (var type = instance.GetType(); type != null; type = type.BaseType)
+            {
+                var field = type.GetField(name, Instance | BindingFlags.DeclaredOnly);
+                if (field != null)
+                    return field.GetValue(instance);
+            }
+            throw new MissingFieldException(instance.GetType().FullName, name);
+        }
+
+        static void Call(object instance, string name, params object[] arguments)
+        {
+            foreach (var method in instance.GetType().GetMethods(Instance))
+                if (method.Name == name && method.GetParameters().Length == arguments.Length)
+                {
+                    method.Invoke(instance, arguments);
+                    return;
+                }
+            throw new MissingMethodException(instance.GetType().FullName, name);
         }
 
         static Report NewReport() => new Report

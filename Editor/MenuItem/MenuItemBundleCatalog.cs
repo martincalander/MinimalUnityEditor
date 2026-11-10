@@ -40,12 +40,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Assets/Create/TextMeshPro"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "text_mesh_pro",
-                "TextMeshPro",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("text_mesh_pro", "TextMeshPro"));
 #endif
 
             bundles.Add(new MenuItemBundleDefinition(
@@ -133,12 +128,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Component/Rendering/Terrain"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "terrain",
-                "Terrain",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("terrain", "Terrain"));
 #endif
 
 #if HAS_INPUT_SYSTEM
@@ -152,12 +142,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Component/XR"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "xr_options",
-                "XR Options",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("xr_options", "XR Options"));
 #endif
 
 #if HAS_GLTFAST
@@ -174,12 +159,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Component/Scripts/GLTFast.Documentation.Examples/*"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "gltf_importer",
-                "glTF Importer",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("gltf_importer", "glTF Importer"));
 #endif
 
             bundles.Add(new MenuItemBundleDefinition(
@@ -221,12 +201,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Window/AI"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "ai_assistant",
-                "AI Assistant",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("ai_assistant", "AI Assistant"));
 #endif
 
 #if HAS_PLATFORM_TOOLKIT
@@ -240,12 +215,7 @@ namespace MinimalEditor.MenuItem.Editor
                     "Assets/Create/Platform Toolkit"
                 }));
 #else
-            bundles.Add(new MenuItemBundleDefinition(
-                "platform_toolkit",
-                "Platform Toolkit",
-                false,
-                false,
-                Array.Empty<string>()));
+            bundles.Add(Unavailable("platform_toolkit", "Platform Toolkit"));
 #endif
 
             bundles.Add(new MenuItemBundleDefinition(
@@ -279,6 +249,10 @@ namespace MinimalEditor.MenuItem.Editor
 
             return bundles;
         }
+
+        // Bundles whose package is not installed stay listed but cannot be enabled.
+        static MenuItemBundleDefinition Unavailable(string id, string displayName) =>
+            new MenuItemBundleDefinition(id, displayName, false, false, Array.Empty<string>());
 
         internal static MenuItemBundleDefinition Find(string bundleId)
         {

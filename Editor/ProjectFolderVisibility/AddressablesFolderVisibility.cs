@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEditor;
@@ -21,21 +22,24 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
 
         static object s_Harmony;
         static BrowserMembers s_Members;
+        // List results already found outside hidden folders. Unity filters the list on every GUI event,
+        // so known results skip the path lookup until settings or project contents change.
+        static readonly HashSet<GUID> s_VisibleResults = new HashSet<GUID>();
 
+        // The toolbar hook is installed at every code load. The three filter hooks are added only once
+        // a hidden rule points at an existing folder: each patch adds load time, and until then the
+        // filters have nothing to remove.
         internal static bool IsPatched { get; private set; }
+        internal static bool FiltersPatched { get; private set; }
         internal static string PatchError { get; private set; }
-
-        internal static bool ShowFolder
-        {
-            get => !FolderVisibilitySettings.IsFolderHidden(FolderPath);
-            set => FolderVisibilitySettings.SetFolderHidden(FolderPath, !value);
-        }
 
         [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
         internal static void Initialize()
         {
             FolderVisibilitySettings.Changed -= OnSettingsChanged;
             FolderVisibilitySettings.Changed += OnSettingsChanged;
+            EditorApplication.projectChanged -= OnProjectChanged;
+            EditorApplication.projectChanged += OnProjectChanged;
             EditorApplication.delayCall -= Install;
             EditorApplication.delayCall += Install;
             EditorApplication.quitting -= Uninstall;
@@ -62,9 +66,6 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
                 // The shared CoreCLR Harmony build targets .NET 10; Editor scripts target .NET Standard.
                 var harmonyType = Type.GetType("HarmonyLib.Harmony, 0Harmony", throwOnError: true);
                 s_Harmony = Activator.CreateInstance(harmonyType, new object[] { HarmonyId });
-                Patch(s_Members.FolderFetch, typeof(AddressablesFolderVisibility), postfix: nameof(FilterTree));
-                Patch(s_Members.AssetFetch, typeof(AddressablesFolderVisibility), postfix: nameof(FilterTree));
-                Patch(s_Members.UpdateAssets, typeof(AddressablesFolderVisibility), prefix: nameof(FilterList));
                 FolderVisibilityControls.Install(s_Members.BrowserType);
                 IsPatched = true;
                 PatchError = null;
@@ -74,6 +75,16 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             {
                 DisableAfterFailure(exception);
             }
+        }
+
+        static void PatchFiltersIfNeeded()
+        {
+            if (FiltersPatched || !IsPatched || !FolderVisibilitySettings.HasExistingHiddenFolder)
+                return;
+            Patch(s_Members.FolderFetch, typeof(AddressablesFolderVisibility), postfix: nameof(FilterTree));
+            Patch(s_Members.AssetFetch, typeof(AddressablesFolderVisibility), postfix: nameof(FilterTree));
+            Patch(s_Members.UpdateAssets, typeof(AddressablesFolderVisibility), prefix: nameof(FilterList));
+            FiltersPatched = true;
         }
 
         internal static void Patch(MethodInfo target, Type patchType, string prefix = null, string postfix = null)
@@ -105,9 +116,12 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             EditorApplication.delayCall -= RefreshProjectWindows;
             EditorApplication.quitting -= Uninstall;
             FolderVisibilitySettings.Changed -= OnSettingsChanged;
+            EditorApplication.projectChanged -= OnProjectChanged;
             IsPatched = false;
+            FiltersPatched = false;
             RemovePatches();
             s_Members = null;
+            ForgetVisibleResults();
         }
 
         static void RemovePatches()
@@ -137,14 +151,28 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
                 return;
             PatchError = exception.GetBaseException().Message;
             IsPatched = false;
+            FiltersPatched = false;
             RemovePatches();
             Debug.LogWarning("Project Folder Visibility could not filter this Unity version. " +
                              "Folders will remain visible. " + PatchError);
             EditorApplication.delayCall += RefreshProjectWindows;
         }
 
+        static void ForgetVisibleResults() => s_VisibleResults.Clear();
+
+        static void OnProjectChanged()
+        {
+            ForgetVisibleResults();
+            // A created, moved or renamed folder can make a hidden rule apply for the first time.
+            if (FiltersPatched || !IsPatched || !FolderVisibilitySettings.HasExistingHiddenFolder)
+                return;
+            EditorApplication.delayCall -= RefreshProjectWindows;
+            EditorApplication.delayCall += RefreshProjectWindows;
+        }
+
         static void OnSettingsChanged()
         {
+            ForgetVisibleResults();
             Menu.SetChecked(MenuPath, FolderVisibilitySettings.Enabled);
             EditorApplication.delayCall -= RefreshProjectWindows;
             if (Event.current != null)
@@ -155,7 +183,8 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
 
         internal static bool IsHiddenPath(string path) => FolderVisibilitySettings.IsHiddenPath(path);
 
-        static bool ShouldFilter => IsPatched && FolderVisibilitySettings.HasHiddenFolders;
+        // Rules for folders that do not exist cannot match any asset, including the default Addressables rule.
+        static bool ShouldFilter => FiltersPatched && FolderVisibilitySettings.HasExistingHiddenFolder;
 
         // These data sources also serve other Editor windows. Only alter a Project browser's data.
         static void FilterTree(object __instance)
@@ -214,8 +243,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             for (var i = 0; i < results.Length; i++)
             {
                 var result = results.GetValue(i);
-                var guid = (string)s_Members.ResultGuid.GetValue(result);
-                if (IsHiddenPath(AssetDatabase.GUIDToAssetPath(guid)))
+                if (IsHiddenResult(result))
                 {
                     if (kept != null)
                         continue;
@@ -236,12 +264,26 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             field.SetValue(hierarchy, filtered);
         }
 
+        // Only "not hidden" is remembered. A stale entry shows a row until the next settings or project
+        // change, while a remembered "hidden" result could remove a row until Unity rebuilt the list.
+        static bool IsHiddenResult(object result)
+        {
+            var guid = s_Members.ReadResultGuid(result);
+            if (s_VisibleResults.Contains(guid))
+                return false;
+            if (IsHiddenPath(AssetDatabase.GUIDToAssetPath(guid)))
+                return true;
+            s_VisibleResults.Add(guid);
+            return false;
+        }
+
         internal static void RefreshProjectWindows()
         {
             if (s_Members == null)
                 return;
             try
             {
+                PatchFiltersIfNeeded();
                 foreach (var window in Resources.FindObjectsOfTypeAll(s_Members.BrowserType))
                 {
                     var browser = (EditorWindow)window;
@@ -281,7 +323,8 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             internal readonly MethodInfo FolderFetch, AssetFetch, UpdateAssets, ResetViews, Initialized, SelectAssets, InitListArea;
             internal readonly FieldInfo FolderRows, AssetRows, GroupOwner, ListOwner, GroupHierarchy, Results, VisibleResults;
             internal readonly FieldInfo SearchFilter;
-            internal readonly PropertyInfo SearchFolders, ResultGuid;
+            internal readonly PropertyInfo SearchFolders;
+            internal readonly Func<object, GUID> ReadResultGuid;
             readonly FieldInfo m_Browsers, m_FolderTree, m_AssetTree;
             readonly PropertyInfo m_TreeData;
 
@@ -308,7 +351,7 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
                 GroupHierarchy = RequireField(group, "m_FilteredHierarchy");
                 Results = RequireField(hierarchy, "m_Results");
                 VisibleResults = RequireField(hierarchy, "m_VisibleItems");
-                ResultGuid = RequireProperty(Results.FieldType.GetElementType(), "guid");
+                ReadResultGuid = CreateGuidReader(Results.FieldType.GetElementType());
                 m_Browsers = RequireField(BrowserType, "s_ProjectBrowsers");
                 m_FolderTree = RequireField(BrowserType, "m_FolderTree");
                 m_AssetTree = RequireField(BrowserType, "m_AssetTree");
@@ -331,6 +374,27 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             }
 
             internal bool HasFolderTree(object browser) => m_FolderTree.GetValue(browser) != null;
+
+            // Reading the GUID struct directly avoids the string that the guid property allocates.
+            static Func<object, GUID> CreateGuidReader(Type resultType)
+            {
+                var field = resultType.GetField("assetGUID", InstanceFlags);
+                if (field != null && field.FieldType == typeof(GUID))
+                {
+                    try
+                    {
+                        var parameter = Expression.Parameter(typeof(object));
+                        return Expression.Lambda<Func<object, GUID>>(
+                            Expression.Field(Expression.Convert(parameter, resultType), field), parameter).Compile();
+                    }
+                    catch
+                    {
+                        return result => (GUID)field.GetValue(result);
+                    }
+                }
+                var guid = RequireProperty(resultType, "guid");
+                return result => GUID.TryParse((string)guid.GetValue(result), out var value) ? value : default;
+            }
 
             static FieldInfo RequireField(Type type, string name)
             {

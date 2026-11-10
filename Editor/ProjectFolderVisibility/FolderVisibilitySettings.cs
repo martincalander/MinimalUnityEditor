@@ -73,6 +73,20 @@ namespace MinimalEditor.ProjectFolderVisibility.Editor
             }
         }
 
+        // A hidden rule can only match assets once its folder exists in the project.
+        internal static bool HasExistingHiddenFolder
+        {
+            get
+            {
+                if (!Enabled)
+                    return false;
+                foreach (var rule in s_Settings.folders)
+                    if (rule.Hidden && AssetDatabase.IsValidFolder(rule.Path))
+                        return true;
+                return false;
+            }
+        }
+
         internal static bool IsBuiltInFolder(string path) =>
             string.Equals(path, AddressablesPath, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(path, StreamingAssetsPath, StringComparison.OrdinalIgnoreCase) ||

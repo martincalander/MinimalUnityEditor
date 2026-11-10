@@ -109,8 +109,6 @@ namespace MinimalEditor.MenuItem.Editor
             set => SetActiveInput(value);
         }
 
-        internal static IReadOnlyList<string> MenuItemsToHide => s_manualMenuItemsToHide;
-
         internal static Func<IEnumerable<string>> MenuItemsInput
         {
             get => s_menuItemsInput;
@@ -140,14 +138,6 @@ namespace MinimalEditor.MenuItem.Editor
             Apply();
         }
 
-        internal static void ClearActiveInput()
-        {
-            if (s_activeInput == null) return;
-
-            s_activeInput = null;
-            Apply();
-        }
-
         internal static void SetMenuItems(IEnumerable<string> menuItems)
         {
             if (menuItems == null)
@@ -170,14 +160,6 @@ namespace MinimalEditor.MenuItem.Editor
         internal static void SetMenuItemsInput(Func<IEnumerable<string>> menuItemsInput)
         {
             s_menuItemsInput = menuItemsInput;
-            Apply();
-        }
-
-        internal static void ClearMenuItemsInput()
-        {
-            if (s_menuItemsInput == null) return;
-
-            s_menuItemsInput = null;
             Apply();
         }
 
@@ -208,11 +190,6 @@ namespace MinimalEditor.MenuItem.Editor
 #endif
         }
 
-        static bool IsMutationSuppressed()
-        {
-            return s_mutationSuppressed;
-        }
-
         static void QueueApply(bool force)
         {
             if (!MenuItemModuleSettings.IsSupportedInCurrentEditor)
@@ -221,7 +198,7 @@ namespace MinimalEditor.MenuItem.Editor
                 return;
             }
 
-            if (IsMutationSuppressed())
+            if (s_mutationSuppressed)
             {
                 return;
             }
@@ -252,7 +229,7 @@ namespace MinimalEditor.MenuItem.Editor
                 return;
             }
 
-            if (IsMutationSuppressed())
+            if (s_mutationSuppressed)
             {
                 return;
             }
@@ -268,7 +245,7 @@ namespace MinimalEditor.MenuItem.Editor
 
         static void ApplyCore(bool force)
         {
-            if (s_isApplying || s_failSafeMode || IsMutationSuppressed()) return;
+            if (s_isApplying || s_failSafeMode || s_mutationSuppressed) return;
 
             var isActive = ResolveActiveState();
             if (!isActive && !force) return;
@@ -283,9 +260,25 @@ namespace MinimalEditor.MenuItem.Editor
 
                 if (items == null || items.Count == 0) return;
 
-                var menuRootsToScan = BuildMenuRootSet(items);
-                var allMenuPaths = EnumerateAllMenuPaths(menuRootsToScan);
-                var exactRulePaths = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                // Reading menus between removals is much slower, so read everything the rules need first.
+                // Wildcard and exact rules share one enumeration per root. After the first apply,
+                // exact rules no longer find their commands and look them up there.
+                var wildcardRoots = BuildMenuRootSet(items);
+                var pathsByRoot = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var root in wildcardRoots)
+                    GetMenuPaths(root, pathsByRoot);
+                var exactPathExists = new bool[items.Count];
+                for (var i = 0; i < items.Count; i++)
+                {
+                    var path = items[i]?.Trim();
+                    if (string.IsNullOrEmpty(path) || path.EndsWith("*", StringComparison.Ordinal) ||
+                        !CanRemoveDirectPath(path)) continue;
+
+                    path = NormalizeMenuPath(path);
+                    exactPathExists[i] = MenuItemExists(path);
+                    if (!exactPathExists[i])
+                        GetMenuPaths(MenuRootOf(path), pathsByRoot);
+                }
 
                 for (var i = 0; i < items.Count; i++)
                 {
@@ -302,18 +295,26 @@ namespace MinimalEditor.MenuItem.Editor
                             TryRemoveMenuItem(wildcardMenuPath + "/");
                         }
 
-                        foreach (var candidate in allMenuPaths)
+                        foreach (var root in wildcardRoots)
                         {
-                            if (!MenuItemPatternMatcher.IsMatch(candidate, path)) continue;
-                            if (!CanRemoveDirectPath(candidate)) continue;
-                            TryRemoveMenuItem(candidate);
+                            if (!WildcardCoversRoot(path, root)) continue;
+                            foreach (var candidate in GetMenuPaths(root, pathsByRoot))
+                            {
+                                if (!MenuItemPatternMatcher.IsMatch(candidate, path)) continue;
+                                if (!CanRemoveDirectPath(candidate)) continue;
+                                TryRemoveMenuItem(candidate);
+                            }
                         }
 
                         continue;
                     }
 
                     if (!CanRemoveDirectPath(path)) continue;
-                    RemoveExactMenuItem(path, exactRulePaths);
+                    path = NormalizeMenuPath(path);
+                    if (exactPathExists[i])
+                        TryRemoveMenuItem(path);
+                    else
+                        RemoveMissingExactMenuItem(path, GetMenuPaths(MenuRootOf(path), pathsByRoot));
                 }
             }
             catch (Exception exception)
@@ -372,22 +373,34 @@ namespace MinimalEditor.MenuItem.Editor
             return roots;
         }
 
-        static HashSet<string> EnumerateAllMenuPaths(HashSet<string> menuRoots)
+        // A wildcard such as "Window/Analysis/*" only matches commands under its own root, and
+        // a root prefix such as "Tool*" only matches roots that start with that prefix.
+        static bool WildcardCoversRoot(string wildcard, string root)
         {
-            var allMenuPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (menuRoots == null || menuRoots.Count == 0) return allMenuPaths;
+            var separatorIndex = wildcard.IndexOf('/');
+            if (separatorIndex >= 0)
+                return string.Equals(wildcard.Substring(0, separatorIndex).Trim(), root, StringComparison.OrdinalIgnoreCase);
 
-            foreach (var menuRoot in menuRoots)
+            var prefix = wildcard.Substring(0, wildcard.Length - 1);
+            return prefix.Length > 0 && root.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static HashSet<string> GetMenuPaths(string root, Dictionary<string, HashSet<string>> pathsByRoot)
+        {
+            root = CanonicalMenuRoot(root);
+            if (!pathsByRoot.TryGetValue(root, out var paths))
             {
-                AddEnumeratedMenuPaths(menuRoot, allMenuPaths);
+                paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                AddEnumeratedMenuPaths(root, paths);
+                pathsByRoot.Add(root, paths);
             }
 
-            return allMenuPaths;
+            return paths;
         }
 
         static void AddEnumeratedMenuPaths(string menuRoot, HashSet<string> allMenuPaths)
         {
-            if (IsMutationSuppressed() || string.IsNullOrWhiteSpace(menuRoot) || allMenuPaths == null) return;
+            if (s_mutationSuppressed || string.IsNullOrWhiteSpace(menuRoot) || allMenuPaths == null) return;
             menuRoot = CanonicalMenuRoot(menuRoot);
 
             try
@@ -446,30 +459,24 @@ namespace MinimalEditor.MenuItem.Editor
             return root;
         }
 
-        static void RemoveExactMenuItem(string path, Dictionary<string, HashSet<string>> pathsByRoot)
+        static string MenuRootOf(string path) => path.Substring(0, path.IndexOf('/'));
+
+        static bool MenuItemExists(string path)
         {
-            path = NormalizeMenuPath(path);
-            // Correctly cased commands take the direct path. Resolve spelling only on a miss.
             try
             {
-                if (MenuItemExistsMethod?.Invoke(null, new object[] { path }) is bool exists && exists)
-                {
-                    TryRemoveMenuItem(path);
-                    return;
-                }
+                return MenuItemExistsMethod?.Invoke(null, new object[] { path }) is bool exists && exists;
             }
             catch
             {
                 // Enumeration still works when the optional existence check is unavailable.
+                return false;
             }
+        }
 
-            var root = CanonicalMenuRoot(path.Substring(0, path.IndexOf('/')));
-            if (!pathsByRoot.TryGetValue(root, out var candidates))
-            {
-                candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                AddEnumeratedMenuPaths(root, candidates);
-                pathsByRoot.Add(root, candidates);
-            }
+        // Correctly cased commands are removed directly. Resolve spelling only on a miss.
+        static void RemoveMissingExactMenuItem(string path, HashSet<string> candidates)
+        {
             var childPrefix = path + "/";
             foreach (var candidate in candidates)
             {
@@ -573,7 +580,7 @@ namespace MinimalEditor.MenuItem.Editor
 
         static void TryRemoveMenuItem(string path)
         {
-            if (IsMutationSuppressed() || string.IsNullOrWhiteSpace(path)) return;
+            if (s_mutationSuppressed || string.IsNullOrWhiteSpace(path)) return;
 
             try
             {

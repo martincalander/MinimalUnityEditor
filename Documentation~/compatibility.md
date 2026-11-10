@@ -163,8 +163,9 @@ for Console hyperlink `href` values.
 `MinimalEditor.MenuItem.Editor.MenuItemFeatureToggles` controls the menu module,
 bundle states, custom definitions, and programmatic path inputs.
 
-`MinimalEditor.Editor.EditorFeatureToggles` controls the short title, status-bar
-extras, and the linked Menu Item behavior.
+`MinimalEditor.Editor.EditorFeatureToggles` controls the short title and
+status-bar extras. Menu hiding is controlled only through
+`MenuItemFeatureToggles`.
 
 Persisted properties write the settings described below. Delegate and manual
 path inputs are session-only and need to be registered again after a domain
@@ -177,15 +178,15 @@ when upgrading from an earlier package identity.
 | --- | --- |
 | `MINIMAL_EDITOR_DISABLE_ALL` | Disables every package feature and test asmdef |
 | `MINIMAL_EDITOR_DISABLE_CONSOLE` | Disables Console features |
-| `MINIMAL_EDITOR_DISABLE_MENU_ITEM` | Disables Menu Item and the dependent Editor chrome assembly |
+| `MINIMAL_EDITOR_DISABLE_MENU_ITEM` | Disables Menu Item |
 | `MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
 | `MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
 | `MINIMAL_EDITOR_DISABLE_FMOD` | Disables FMOD menu relocation |
 | `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
 
-`MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` leaves Menu Item available.
-`MINIMAL_EDITOR_DISABLE_MENU_ITEM` is broader because `MinimalEditor.Editor` directly
-references `MinimalEditor.MenuItem.Editor`.
+Module symbols are independent. `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` leaves
+Menu Item available, and `MINIMAL_EDITOR_DISABLE_MENU_ITEM` leaves the short
+title and status-bar features available.
 
 ## Persisted Settings
 

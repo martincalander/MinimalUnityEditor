@@ -1,0 +1,181 @@
+{
+    "utc": "2026-11-10T21:06:29.5686920Z",
+    "unity": "7000.0.0a16",
+    "runtime": ".NET 10.0.10-dev",
+    "os": "Mac OS X 27.2.1",
+    "cpu": "Apple M5 Pro",
+    "batchmode": false,
+    "measurements": [
+        {
+            "name": "native-console/100/changed-no-match",
+            "iterations": 1,
+            "medianMicroseconds": 22.9,
+            "minMicroseconds": 22.8,
+            "maxMicroseconds": 63.0,
+            "bytesPerOperation": 19352.0,
+            "samplesMicroseconds": [
+                63.0,
+                24.1,
+                23.2,
+                22.8,
+                22.9,
+                22.9,
+                22.8,
+                22.8,
+                23.2
+            ]
+        },
+        {
+            "name": "native-console/100/stack-cleanup",
+            "iterations": 1,
+            "medianMicroseconds": 765.0,
+            "minMicroseconds": 729.6,
+            "maxMicroseconds": 1883.2,
+            "bytesPerOperation": 2249960.0,
+            "samplesMicroseconds": [
+                755.1999999999999,
+                1883.2,
+                1756.6,
+                870.5,
+                729.6,
+                765.0,
+                747.0,
+                737.3,
+                1375.2
+            ]
+        },
+        {
+            "name": "native-console/100/all-hidden",
+            "iterations": 1,
+            "medianMicroseconds": 24.0,
+            "minMicroseconds": 23.7,
+            "maxMicroseconds": 24.299999999999997,
+            "bytesPerOperation": 19488.0,
+            "samplesMicroseconds": [
+                24.0,
+                23.900000000000002,
+                23.7,
+                24.1,
+                24.2,
+                24.2,
+                23.7,
+                23.8,
+                24.299999999999997
+            ]
+        },
+        {
+            "name": "native-console/1000/changed-no-match",
+            "iterations": 1,
+            "medianMicroseconds": 239.0,
+            "minMicroseconds": 225.0,
+            "maxMicroseconds": 262.7,
+            "bytesPerOperation": 192152.0,
+            "samplesMicroseconds": [
+                230.6,
+                230.3,
+                225.0,
+                243.5,
+                237.2,
+                246.2,
+                248.1,
+                262.7,
+                239.0
+            ]
+        },
+        {
+            "name": "native-console/1000/stack-cleanup",
+            "iterations": 1,
+            "medianMicroseconds": 8977.0,
+            "minMicroseconds": 8079.499999999999,
+            "maxMicroseconds": 9498.699999999999,
+            "bytesPerOperation": 22496360.0,
+            "samplesMicroseconds": [
+                8649.5,
+                8947.4,
+                8977.0,
+                9278.1,
+                8794.7,
+                8079.499999999999,
+                9384.0,
+                9498.699999999999,
+                9263.7
+            ]
+        },
+        {
+            "name": "native-console/1000/all-hidden",
+            "iterations": 1,
+            "medianMicroseconds": 252.5,
+            "minMicroseconds": 231.0,
+            "maxMicroseconds": 256.6,
+            "bytesPerOperation": 192296.0,
+            "samplesMicroseconds": [
+                231.0,
+                255.30000000000004,
+                252.5,
+                254.7,
+                256.6,
+                240.79999999999998,
+                247.70000000000002,
+                247.5,
+                255.0
+            ]
+        },
+        {
+            "name": "native-console/10000/changed-no-match",
+            "iterations": 1,
+            "medianMicroseconds": 2389.3,
+            "minMicroseconds": 2282.7000000000003,
+            "maxMicroseconds": 3984.7000000000003,
+            "bytesPerOperation": 1920152.0,
+            "samplesMicroseconds": [
+                3016.7999999999997,
+                2282.7000000000003,
+                2330.0,
+                2389.3,
+                3660.8,
+                2398.4,
+                2370.8,
+                2386.4,
+                3984.7000000000003
+            ]
+        },
+        {
+            "name": "native-console/10000/stack-cleanup",
+            "iterations": 1,
+            "medianMicroseconds": 92287.59999999999,
+            "minMicroseconds": 87401.5,
+            "maxMicroseconds": 325566.7,
+            "bytesPerOperation": 224960368.0,
+            "samplesMicroseconds": [
+                97872.9,
+                325566.7,
+                304717.69999999995,
+                87401.5,
+                90554.1,
+                319311.69999999995,
+                92287.59999999999,
+                88879.7,
+                87703.5
+            ]
+        },
+        {
+            "name": "native-console/10000/all-hidden",
+            "iterations": 1,
+            "medianMicroseconds": 2381.9,
+            "minMicroseconds": 2261.2000000000003,
+            "maxMicroseconds": 3655.4,
+            "bytesPerOperation": 1920296.0,
+            "samplesMicroseconds": [
+                2423.7000000000003,
+                2381.9,
+                2404.4,
+                3655.4,
+                2261.2000000000003,
+                2317.8,
+                2285.8,
+                3491.7,
+                2342.4
+            ]
+        }
+    ]
+}

@@ -95,9 +95,7 @@ version and package requirements are met.
 
 Use `MINIMAL_EDITOR_DISABLE_ALL` to disable every feature and test
 asmdef without removing the package files. Module symbols provide
-narrower control, with one important dependency:
-`MINIMAL_EDITOR_DISABLE_MENU_ITEM` also disables the Editor chrome assembly because
-that assembly references the Menu Item module.
+narrower control, and each one disables only its own module.
 
 Assembly names, namespaces, and public editor APIs use `MinimalEditor.*`.
 Update consuming code, assembly references, and scripting symbols when upgrading

@@ -1,11 +1,135 @@
-# Performance audit: 2026-11-08
+# Performance audits
+
+Two audits are recorded here. The 2026-11-10 follow-up comes first. The
+2026-11-08 audit follows with its original numbers, which describe the code at
+that time.
+
+## 2026-11-10 follow-up
+
+This review looked for work that repeats far more often than needed and for
+paths the first audit did not measure. Four changes were measured before and
+after with the same harness in one isolated Editor.
+
+### Results
+
+| Workload | Before | After | Allocations before / after |
+| --- | ---: | ---: | ---: |
+| Project list pass, 1,000 results, hidden folder missing | 953.181 µs | 0.597 µs | 525,344 / 0 B |
+| Project list pass, 1,000 results, hidden folder present | 942.239 µs | 20.388 µs | 525,344 / 0 B |
+| Menu apply after a project change | 6,729.350 µs | 1,731.288 µs | 231,728 / 140,976 B |
+| Package Manager patching at each code load | 66 to 174 ms, median 74 ms | under 0.1 ms | not measured |
+| Project Folders and Package Manager patching at each code load | median about 87 ms | median about 63 ms | not measured |
+
+**Project list.** Unity calls the list filter on every GUI event of the Project
+window, not only when its contents change. A temporary call counter confirmed two
+calls per repaint in Unity `7000.0.0a16`. Each call read the GUID string and
+asset path of every result, for both the result list and the visible items. The
+default Addressables rule kept this active even in projects without that folder.
+Now the filter skips the pass while no hidden rule points at an existing folder.
+That check uses `AssetDatabase.IsValidFolder`, measured at 0.6 µs, so it is not
+cached. Results already found outside hidden folders are remembered by their
+GUID struct until settings or project contents change. Hidden results are always
+checked again. The folder tree filter is unchanged apart from the existence check.
+
+**Menu apply.** The measured case repeats an apply with the project's current
+settings, as happens after every project change. After the first apply, exact
+rules no longer find their commands and enumerate their menu roots. The old code
+enumerated those roots a second time, separately from the wildcard roots, and
+matched every wildcard against every enumerated root. A first version that
+shared one enumeration per root but read roots between removals measured
+8.640 ms, slower than before. Reading wildcard roots first measured 4.7 ms, and
+reading every needed root before any removal measured 1.7 ms. Old and new code
+left the same 362 menu items in the fixture.
+
+**Code load.** These numbers come from a temporary stopwatch around each module's
+patch step over five warm domain reloads, removed before commit. Package Manager
+patching now waits until a Package Manager window is open or gains focus.
+However, the first Harmony patch in each code load costs roughly 60 ms whichever
+module applies it, and each further patch costs a few milliseconds. With Project
+Folders active on Unity 7, its install step grew from 9 to 21 ms (median 13 ms)
+to 64 to 89 ms (median 72 ms) once it paid that first-patch cost.
+
+Project Folders then stopped adding its three filter hooks at load. Only the
+Project window toolbar control, itself a Harmony patch, is installed at every
+code load. The filter hooks are added once a hidden rule points at an existing
+folder: on a settings change, or on the next project change after such a folder
+is created or moved. In the fixture, which has no hidden folder, the install
+step measured 53.9 to 62.9 ms with one outlier of 139.4 ms (median 62.7 ms).
+The total for both modules fell from a median of about 87 ms to about 63 ms per
+reload. Deferring the toolbar control as well would remove most of the
+remaining cost, but the control would then be missing until a hidden folder
+exists. Editors without Project Folders, such as Unity 6 or projects that
+disable it, should avoid the whole Package Manager cost until the window opens.
+That case was not measured.
+
+**Console rescans.** Scan cost is unchanged; the schedule changed. A rescan now
+waits at least 20 times as long as the previous scan took, and at least 0.25 s
+as before. The table uses this audit's native Console measurements and assumes
+the Console changes before every rescan:
+
+| Native Console case | Scan | Next rescan after | Main-thread share before / after |
+| --- | ---: | ---: | ---: |
+| 10,000 long stacks, cleanup | 92.288 ms | 1.85 s | 37% / 5% |
+| 1,000 long stacks, cleanup | 8.977 ms | 0.25 s | 3.6% / 3.6% |
+| 10,000 rows, no match | 2.389 ms | 0.25 s | 1.0% / 1.0% |
+
+At code load the Console is now read in full only when a filter rule is active.
+With the default settings, clean stacks on and no rules, nothing can match, so
+the skipped work equals one "no match" scan of the current Console, about 2.4 ms
+at 10,000 rows. It was not measured separately.
+
+### Notes
+
+- Single-file classes with `OnCodeInitializing` or `OnCodeUnloading` methods
+  stay `partial`. Unity 6.5 and newer reject those methods outside partial types
+  (error `UAC0031`), so the modifier is required, not unused.
+- The idle Console update measured 0.019 µs after the change, with 0 B.
+- This audit ran on different hardware from the 2026-11-08 audit. Compare
+  numbers only within one audit.
+
+### Method
+
+- Unity `7000.0.0a16` (`0745a91df592`), CoreCLR `.NET 10.0.10-dev`, macOS
+  `27.2.1`, Apple M5 Pro. Unity CLI `1.0.0-beta.17`, Pipeline `0.10.0-exp.1`.
+- One isolated visible Editor ran in the background with Minimal Editor, Project
+  Icon, Pipeline, and the Test Framework. Measurements referenced the working
+  packages by local path; final tests used embedded copies.
+- Baseline product files came from commit `5ebd08a`. The new benchmark cases
+  (`folders/list-pass/*`, `folders/native-is-valid-folder`, and
+  `menus/apply/current-settings`) were added to `RunAdditional` and measured
+  against those files before any product change.
+- The list-pass cases bind the private filter method and run it on a Project
+  browser's list with 1,000 results, using GUIDs of package assets. The menu
+  case binds the private apply method. Harness settings match the 2026-11-08
+  method below.
+
+### Verification
+
+- With both packages embedded in the isolated project, all 238 Minimal Editor
+  tests and all 72 Project Icon tests passed after a clean Unity compilation.
+  Project Icon's native suite also passed.
+- New tests cover the existence check, deferred filter hooks that start when a
+  hidden folder is created, an asset moved into a hidden folder, an allocation
+  budget for repeated list passes, the `FilterResult.assetGUID` member, the
+  rescan delay rule, and deferred Package Manager patching.
+- Unity 2021.3, 2022.3, Unity 6, Intel Macs, Windows, Linux, and the FMOD and
+  Assistant integrations were not tested.
+
+### Raw data
+
+- [Additional paths before](Benchmarks/2026-11-10/additional-before.json)
+- [Additional paths after](Benchmarks/2026-11-10/additional-after.json)
+- [Managed cases after](Benchmarks/2026-11-10/managed-after.json)
+- [Native Console after](Benchmarks/2026-11-10/native-after.json)
+
+## 2026-11-08 audit
 
 Minimal Editor had measurable room for improvement. The changes in this audit
 reduce Console processing and temporary allocations while preserving snapshot
 validation, metadata, logger ownership, and Play Mode lifecycle behavior.
 They do not establish an absolute optimum across every workload or platform.
 
-## Results
+### Results
 
 The table uses medians from nine timed samples per case. Managed scan fixtures
 exclude Unity's native row reading and restoration; native cases include them.
@@ -31,7 +155,7 @@ versus 3.200 ms for short-stack cleanup. Small nanosecond-scale differences in
 unchanged functions are not treated as improvements. Raw samples, including
 outliers, are retained alongside the report.
 
-## Changes kept
+### Changes kept
 
 - Cache the string-field classification for Console rows and compile integer
   readers once, avoiding per-row boxing. Reflection remains the fallback when
@@ -48,7 +172,7 @@ outliers, are retained alongside the report.
   visibility. The measured 1,000-asset case falls from roughly 57 KB to 1 KB.
 - Match wildcard menu prefixes directly without allocating a substring.
 
-## Alternatives and remaining work
+### Alternatives and remaining work
 
 | Area | Evidence and decision |
 | --- | --- |
@@ -68,7 +192,7 @@ outliers, are retained alongside the report.
 | FMOD and optional integrations | FMOD was not installed. The optional Console toolbar lookup's cached path is measured, but real optional integration performance is not established. |
 | Startup, native memory, and rendering | Cold startup, peak memory, native allocation, GPU rendering, and whole-Editor frame rate are not measured by this harness. No claims are made for them. |
 
-## Method
+### Method
 
 - Unity `7000.0.0a16` (`0745a91df592`), CoreCLR `.NET 10.0.10-dev`.
 - macOS `27.2`, Apple M2 Max; Unity CLI `1.0.0-beta.17`, Pipeline `0.10.0-exp.1`.
@@ -93,7 +217,7 @@ outliers, are retained alongside the report.
   optimized source and assembly definitions. These are local results, not a
   cross-platform release certification or a statistical confidence interval.
 
-## Verification
+### Verification
 
 The final isolated embedded-package run passed **229/229 tests**, with no failures,
 skips, or inconclusive results, after successful Unity compilation. Every C# file
@@ -130,7 +254,7 @@ and diff whitespace checks. The compile log contains no C# compiler errors and
 ends with Unity's successful batch-exit marker. Task-owned Editors were stopped,
 and the disposable fixture and its generated warning logs were removed.
 
-## Reproduce
+### Reproduce
 
 Enable this package's tests in an isolated project and discover its installed
 Pipeline command schemas. With the tested CLI/Pipeline version, run from that
@@ -157,7 +281,7 @@ It does not run during normal EditMode test execution. The additional native-men
 case uses the existing Menu Item test fixture and skips it when that module is
 unavailable. Recreate the same module configuration for comparisons.
 
-## Complete managed measurements
+### Complete managed measurements
 
 Times are microseconds per operation; allocation columns are bytes per operation.
 The no-op harness and candidate cases are controls, not product end-to-end costs.
@@ -219,7 +343,7 @@ The no-op harness and candidate cases are controls, not product end-to-end costs
 | `menus/wildcard-match` | 0.036 | 0.012 | 40 | 0 |
 | `console/optional-toolbar-cached` | 0.009 | 0.007 | 0 | 0 |
 
-## Complete native Console measurements
+### Complete native Console measurements
 
 | Case | Before µs | After µs | Before B | After B |
 | --- | ---: | ---: | ---: | ---: |
@@ -233,7 +357,7 @@ The no-op harness and candidate cases are controls, not product end-to-end costs
 | `native-console/10000/stack-cleanup` | 332552.500 | 152422.300 | 568,880,896 | 243,920,368 |
 | `native-console/10000/all-hidden` | 4244.200 | 3783.300 | 2,240,352 | 1,920,296 |
 
-## Additional unchanged paths
+### Additional unchanged paths
 
 These are measurements of the final code, not claimed before/after improvements.
 
@@ -250,7 +374,7 @@ These are measurements of the final code, not claimed before/after improvements.
 | `title/update-callback` | 1.112 | 176 |
 | `menus/native-12-roots` | 1.027 | 576 |
 
-## Raw data
+### Raw data
 
 - [Managed baseline](Benchmarks/2026-11-08/baseline.json)
 - [Managed optimized](Benchmarks/2026-11-08/optimized.json)

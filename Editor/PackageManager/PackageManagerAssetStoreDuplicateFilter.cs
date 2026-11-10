@@ -87,24 +87,6 @@ namespace MinimalEditor.PackageManager.Editor
             return foundReadOnlyRegisteredPackage;
         }
 
-        internal static bool ShouldHideAssetStoreDuplicate(
-            bool isAssetStoreBacked,
-            string packageName,
-            string resolvedPath,
-            string projectRoot)
-        {
-            if (!isAssetStoreBacked ||
-                string.IsNullOrEmpty(packageName) ||
-                string.IsNullOrEmpty(resolvedPath) ||
-                string.IsNullOrEmpty(projectRoot))
-            {
-                return false;
-            }
-
-            return TryGetPackageLocation(resolvedPath, projectRoot, out bool insideProjectPackages) &&
-                   !insideProjectPackages;
-        }
-
         internal static string ExtractPackageNameFromImportedAssetPath(string importedAssetPath)
         {
             if (string.IsNullOrEmpty(importedAssetPath))
@@ -223,7 +205,7 @@ namespace MinimalEditor.PackageManager.Editor
         static IEnumerable<string> GetCandidatePackageNames(object package)
         {
             var visitedPackageNames = new HashSet<string>(StringComparer.Ordinal);
-            string packageName = GetStringProperty(package, PackageNamePropertyName);
+            string packageName = GetStringMember(package, PackageNamePropertyName);
             if (!string.IsNullOrEmpty(packageName) && visitedPackageNames.Add(packageName))
                 yield return packageName;
 
@@ -292,11 +274,6 @@ namespace MinimalEditor.PackageManager.Editor
         static bool IsAssetStoreBacked(object package)
         {
             return GetMemberValue(package, PackageProductPropertyName) != null;
-        }
-
-        static string GetStringProperty(object instance, string propertyName)
-        {
-            return GetStringMember(instance, propertyName);
         }
 
         static string GetStringMember(object instance, string memberName)

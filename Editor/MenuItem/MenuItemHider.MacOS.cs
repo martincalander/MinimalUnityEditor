@@ -24,7 +24,7 @@ namespace MinimalEditor.MenuItem.Editor
         static void ConfigureNativeRootVisibility(IReadOnlyList<string> patterns)
         {
 #if UNITY_EDITOR_OSX
-            if (IsMutationSuppressed() || s_nativeMenuVisibilityFailed) return;
+            if (s_mutationSuppressed || s_nativeMenuVisibilityFailed) return;
             s_nativeMenuVisibility = s_nativeMenuVisibility ?? new MacOSMenuVisibility();
             s_nativeMenuVisibility.Configure(patterns);
             EditorApplication.update -= UpdateNativeRootVisibility;
@@ -47,7 +47,7 @@ namespace MinimalEditor.MenuItem.Editor
 #if UNITY_EDITOR_OSX
         static void UpdateNativeRootVisibility()
         {
-            if (IsMutationSuppressed() || s_nativeMenuVisibilityFailed) return;
+            if (s_mutationSuppressed || s_nativeMenuVisibilityFailed) return;
             var now = EditorApplication.timeSinceStartup;
             if (now < s_nextNativeMenuUpdate) return;
             s_nextNativeMenuUpdate = now + NativeMenuUpdateInterval;

@@ -1,0 +1,295 @@
+{
+    "utc": "2026-11-10T20:49:47.3713810Z",
+    "unity": "7000.0.0a16",
+    "runtime": ".NET 10.0.10-dev",
+    "os": "Mac OS X 27.2.1",
+    "cpu": "Apple M5 Pro",
+    "batchmode": false,
+    "measurements": [
+        {
+            "name": "folders/5-rules/miss",
+            "iterations": 262144,
+            "medianMicroseconds": 0.016989898681640626,
+            "minMicroseconds": 0.01565208435058594,
+            "maxMicroseconds": 0.01728363037109375,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.016989898681640626,
+                0.01728363037109375,
+                0.017031478881835937,
+                0.017176818847656247,
+                0.016751861572265624,
+                0.01565208435058594,
+                0.016411590576171874,
+                0.016533279418945314,
+                0.017183685302734376
+            ]
+        },
+        {
+            "name": "folders/5-rules/last-hit",
+            "iterations": 262144,
+            "medianMicroseconds": 0.02022209167480469,
+            "minMicroseconds": 0.020073699951171874,
+            "maxMicroseconds": 0.02067108154296875,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.020111083984375,
+                0.02067108154296875,
+                0.02022209167480469,
+                0.020529937744140626,
+                0.020073699951171874,
+                0.02026634216308594,
+                0.020085525512695313,
+                0.02012214660644531,
+                0.02052268981933594
+            ]
+        },
+        {
+            "name": "folders/50-rules/miss",
+            "iterations": 131072,
+            "medianMicroseconds": 0.14340744018554688,
+            "minMicroseconds": 0.14289321899414062,
+            "maxMicroseconds": 0.1443328857421875,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.14361953735351563,
+                0.14345855712890626,
+                0.1429901123046875,
+                0.1443328857421875,
+                0.1429229736328125,
+                0.14340744018554688,
+                0.143597412109375,
+                0.14289321899414062,
+                0.14290084838867187
+            ]
+        },
+        {
+            "name": "folders/50-rules/last-hit",
+            "iterations": 65536,
+            "medianMicroseconds": 0.1952117919921875,
+            "minMicroseconds": 0.1907073974609375,
+            "maxMicroseconds": 0.1986328125,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.1939422607421875,
+                0.19816436767578124,
+                0.19674987792968748,
+                0.19324188232421877,
+                0.1907073974609375,
+                0.19763336181640626,
+                0.1986328125,
+                0.19223175048828126,
+                0.1952117919921875
+            ]
+        },
+        {
+            "name": "folders/500-rules/miss",
+            "iterations": 16384,
+            "medianMicroseconds": 0.9742675781250001,
+            "minMicroseconds": 0.958697509765625,
+            "maxMicroseconds": 0.9939453125000001,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.974908447265625,
+                0.970904541015625,
+                0.981707763671875,
+                0.961865234375,
+                0.958697509765625,
+                0.97962646484375,
+                0.961712646484375,
+                0.9742675781250001,
+                0.9939453125000001
+            ]
+        },
+        {
+            "name": "folders/500-rules/last-hit",
+            "iterations": 8192,
+            "medianMicroseconds": 1.9871215820312502,
+            "minMicroseconds": 1.94541015625,
+            "maxMicroseconds": 2.0144287109374996,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                1.94541015625,
+                1.9756591796875,
+                1.99755859375,
+                2.0144287109374996,
+                2.00496826171875,
+                2.01395263671875,
+                1.9783935546875,
+                1.97860107421875,
+                1.9871215820312502
+            ]
+        },
+        {
+            "name": "folders/native-guid-to-path",
+            "iterations": 65536,
+            "medianMicroseconds": 0.2643707275390625,
+            "minMicroseconds": 0.25857391357421877,
+            "maxMicroseconds": 0.2832275390625,
+            "bytesPerOperation": 40.0,
+            "samplesMicroseconds": [
+                0.25857391357421877,
+                0.25980682373046876,
+                0.2810028076171875,
+                0.2643707275390625,
+                0.2589080810546875,
+                0.2832275390625,
+                0.26595306396484375,
+                0.2594100952148437,
+                0.2768142700195313
+            ]
+        },
+        {
+            "name": "folders/native-is-valid-folder",
+            "iterations": 32768,
+            "medianMicroseconds": 0.583233642578125,
+            "minMicroseconds": 0.5755889892578125,
+            "maxMicroseconds": 0.5978790283203125,
+            "bytesPerOperation": 24.0,
+            "samplesMicroseconds": [
+                0.583233642578125,
+                0.5804229736328126,
+                0.5755889892578125,
+                0.5764373779296875,
+                0.58199462890625,
+                0.5875213623046874,
+                0.5978790283203125,
+                0.591131591796875,
+                0.5929809570312501
+            ]
+        },
+        {
+            "name": "folders/list-pass/1000/no-hidden-rules",
+            "iterations": 262144,
+            "medianMicroseconds": 0.0039997100830078125,
+            "minMicroseconds": 0.003975296020507813,
+            "maxMicroseconds": 0.004254531860351562,
+            "bytesPerOperation": 0.0,
+            "samplesMicroseconds": [
+                0.004207611083984375,
+                0.004254531860351562,
+                0.004204559326171875,
+                0.004237747192382813,
+                0.0039764404296875,
+                0.003983306884765625,
+                0.003975296020507813,
+                0.0039997100830078125,
+                0.0039768218994140625
+            ]
+        },
+        {
+            "name": "folders/list-pass/1000/missing-hidden-folder",
+            "iterations": 64,
+            "medianMicroseconds": 953.18125,
+            "minMicroseconds": 926.0234375,
+            "maxMicroseconds": 1360.0859375,
+            "bytesPerOperation": 525344.0,
+            "samplesMicroseconds": [
+                997.2546875,
+                987.5125,
+                942.0875,
+                953.18125,
+                945.0421875000001,
+                930.15,
+                926.0234375,
+                1360.0859375,
+                1184.8359375
+            ]
+        },
+        {
+            "name": "folders/list-pass/1000/existing-hidden-folder",
+            "iterations": 64,
+            "medianMicroseconds": 942.2390625,
+            "minMicroseconds": 937.1,
+            "maxMicroseconds": 946.5109375000001,
+            "bytesPerOperation": 525344.0,
+            "samplesMicroseconds": [
+                942.2390625,
+                946.5109375000001,
+                937.1,
+                941.4578125,
+                940.496875,
+                942.9640625,
+                942.034375,
+                943.2437500000001,
+                945.671875
+            ]
+        },
+        {
+            "name": "menus/apply/current-settings",
+            "iterations": 2,
+            "medianMicroseconds": 6729.35,
+            "minMicroseconds": 6670.200000000001,
+            "maxMicroseconds": 6792.3499999999995,
+            "bytesPerOperation": 231728.0,
+            "samplesMicroseconds": [
+                6729.35,
+                6686.9,
+                6792.3499999999995,
+                6777.35,
+                6748.65,
+                6704.049999999999,
+                6768.65,
+                6670.200000000001,
+                6680.4
+            ]
+        },
+        {
+            "name": "status-bar/active-apply",
+            "iterations": 1024,
+            "medianMicroseconds": 18.16572265625,
+            "minMicroseconds": 17.85302734375,
+            "maxMicroseconds": 19.219921875,
+            "bytesPerOperation": 264.0,
+            "samplesMicroseconds": [
+                17.99775390625,
+                19.219921875,
+                18.11298828125,
+                17.85302734375,
+                18.29248046875,
+                17.955859375,
+                18.16572265625,
+                18.309765624999997,
+                18.2974609375
+            ]
+        },
+        {
+            "name": "title/update-callback",
+            "iterations": 32768,
+            "medianMicroseconds": 0.5426239013671875,
+            "minMicroseconds": 0.53399658203125,
+            "maxMicroseconds": 0.5810394287109375,
+            "bytesPerOperation": 96.0,
+            "samplesMicroseconds": [
+                0.54041748046875,
+                0.53399658203125,
+                0.5499725341796875,
+                0.5387725830078125,
+                0.5426239013671875,
+                0.5810394287109375,
+                0.5494873046875001,
+                0.5679473876953125,
+                0.53641357421875
+            ]
+        },
+        {
+            "name": "menus/native-12-roots",
+            "iterations": 32768,
+            "medianMicroseconds": 0.6059417724609375,
+            "minMicroseconds": 0.597186279296875,
+            "maxMicroseconds": 0.6178131103515625,
+            "bytesPerOperation": 576.0,
+            "samplesMicroseconds": [
+                0.6178131103515625,
+                0.597369384765625,
+                0.6107818603515625,
+                0.597186279296875,
+                0.6156524658203125,
+                0.6028045654296875,
+                0.5990936279296875,
+                0.6059417724609375,
+                0.611517333984375
+            ]
+        }
+    ]
+}

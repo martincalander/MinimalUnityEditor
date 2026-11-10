@@ -23,7 +23,9 @@ filter's own helper frames from displayed stacks.
 
 When active rules exist, the package revisits changed Console rows while the
 Editor is open, skipping unchanged snapshots. A newly written matching row can
-therefore appear briefly before it is removed. Invalid regular expressions are reported beside the rule
+therefore appear briefly before it is removed. Rescans of a very large Console
+wait longer between passes, so its matching rows can take a few seconds to
+disappear. Invalid regular expressions are reported beside the rule
 and are not applied. A regex that exceeds its 50 ms matching limit stops running
 until the settings are saved again; the affected messages remain visible.
 
@@ -140,7 +142,9 @@ without losing your choices. The same toggle is available under
 
 Filtering covers the folder tree, single-column layout, list/grid view, and
 Project-window search results. Changes refresh every open Project window. If a
-newly hidden folder is open, that browser returns to Assets.
+newly hidden folder is open, that browser returns to Assets. A hidden folder
+that does not exist in the project costs nothing; filtering starts once the
+folder is created.
 
 Files remain in place and stay available to imports, builds, AssetDatabase
 queries, and object pickers. Addressables does not need to be installed.
@@ -163,9 +167,10 @@ resolve the project again, including projects with lockfiles disabled.
 There is no confirmation dialog. Commit or otherwise preserve
 intentional lockfile changes before using it, then review the regenerated file.
 
-The Package Manager integration patches exact Unity internals. If those
-internals differ, the affected convenience is left inactive rather than
-changing unrelated Package Manager pages.
+The Package Manager integration patches exact Unity internals when a Package
+Manager window is first open or focused after a code load, not at every code
+load. If those internals differ, the affected convenience is left inactive
+rather than changing unrelated Package Manager pages.
 
 ## FMOD
 
@@ -183,8 +188,10 @@ the same behavior from code:
 
 - `MinimalEditor.Console.Editor.ConsoleLogFilters`;
 - `MinimalEditor.Console.Editor.ConsoleHyperlinks`;
-- `MinimalEditor.MenuItem.Editor.MenuItemFeatureToggles`;
-- `MinimalEditor.Editor.EditorFeatureToggles`.
+- `MinimalEditor.MenuItem.Editor.MenuItemFeatureToggles` for menu hiding,
+  bundles, custom definitions, and path inputs;
+- `MinimalEditor.Editor.EditorFeatureToggles` for the short title and status-bar
+  extras.
 
 Production asmdefs are not auto-referenced. Add the matching `MinimalEditor.*`
 assembly reference to the consuming Editor asmdef. Programmatic path and

@@ -17,6 +17,8 @@ namespace MinimalEditor.Console.Editor
     {
         private const double SyncIntervalSeconds = 0.5d;
         private const double ConsoleRescanIntervalSeconds = 0.25d;
+        // Rescans wait at least this many times as long as the previous scan took.
+        private const double ConsoleRescanCostFactor = 20d;
         private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromMilliseconds(50);
 
         private static readonly FilterLogHandler s_fullStackFilteringLogHandler = new();
@@ -50,15 +52,14 @@ namespace MinimalEditor.Console.Editor
         private static double s_nextSyncTime;
         private static double s_nextConsoleRescanTime;
         private static bool s_isUpdatingConsoleEntries;
-        private static IFilteringLogHandler s_activeFilteringLogHandler = s_cleanStackFilteringLogHandler;
+        private static FilterLogHandler s_activeFilteringLogHandler = s_cleanStackFilteringLogHandler;
         private static bool s_cleanStackTracesEnabled = true;
         // A replacement logger may retain our wrapper. Rewrapping it with the same
         // instance would create a cycle, so only reclaim a wrapper we still own.
         private static bool s_hasInstalledLogHandler;
         private static int s_consoleChangeVersion;
 
-        internal static bool AutomaticConsoleEntryMaintenanceEnabled =>
-            s_activeFilteringLogHandler != null && s_activeFilteringLogHandler.FilteringEnabled;
+        internal static bool AutomaticConsoleEntryMaintenanceEnabled => s_activeFilteringLogHandler.FilteringEnabled;
 
 #if UNITY_6000_5_OR_NEWER
         [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
@@ -79,7 +80,7 @@ namespace MinimalEditor.Console.Editor
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 #endif
-            ApplySettings();
+            ConfigureFromSettings(forceConsoleScan: false);
         }
 
 #if UNITY_6000_5_OR_NEWER
@@ -101,7 +102,7 @@ namespace MinimalEditor.Console.Editor
 
             var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
             if (IsManagedFilteringHandler(currentHandler) &&
-                currentHandler is IFilteringLogHandler filteringHandler &&
+                currentHandler is FilterLogHandler filteringHandler &&
                 filteringHandler.Inner != null && !IsManagedFilteringHandler(filteringHandler.Inner))
             {
                 UnityEngine.Debug.unityLogger.logHandler = filteringHandler.Inner;
@@ -167,15 +168,24 @@ namespace MinimalEditor.Console.Editor
                 return;
 
             s_nextConsoleRescanTime = time + ConsoleRescanIntervalSeconds;
+            var scanStart = EditorApplication.timeSinceStartup;
             TryApplyFiltersToCurrentConsoleEntriesIfNeeded();
+            s_nextConsoleRescanTime = scanStart + GetConsoleRescanDelay(EditorApplication.timeSinceStartup - scanStart);
         }
+
+        // A large changing Console takes longer to scan. Spacing scans by their cost keeps
+        // rescanning at about 5 percent of main-thread time.
+        internal static double GetConsoleRescanDelay(double lastScanSeconds) =>
+            Math.Max(ConsoleRescanIntervalSeconds, lastScanSeconds * ConsoleRescanCostFactor);
 
         private static void OnConsoleLogsChanged()
         {
             Interlocked.Increment(ref s_consoleChangeVersion);
         }
 
-        private static void ApplySettings()
+        private static void ApplySettings() => ConfigureFromSettings(forceConsoleScan: true);
+
+        private static void ConfigureFromSettings(bool forceConsoleScan)
         {
             s_consoleEntryAccess.Invalidate();
             var snapshot = ConsoleLogFilterSettings.Snapshot;
@@ -184,7 +194,10 @@ namespace MinimalEditor.Console.Editor
             SelectActiveLogHandler(snapshot.cleanStackTraces);
             s_activeFilteringLogHandler.Configure(snapshot.enabled, snapshot.warningsOnly, compiledRules);
             EnsureLogHandlerState();
-            TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out _);
+            // At code load only active rules can change rows that are already shown.
+            // A settings change also rescans to clean stack traces.
+            if (forceConsoleScan || AutomaticConsoleEntryMaintenanceEnabled)
+                TryApplyFiltersToCurrentConsoleEntries(force: true, out _, out _);
         }
 
         private static CompiledRule[] BuildCompiledRules(List<ConsoleLogFilterRuleData> rules)
@@ -216,9 +229,7 @@ namespace MinimalEditor.Console.Editor
 
         private static void SelectActiveLogHandler(bool cleanStackTraces)
         {
-            var selectedHandler = cleanStackTraces
-                ? (IFilteringLogHandler)s_cleanStackFilteringLogHandler
-                : s_fullStackFilteringLogHandler;
+            var selectedHandler = cleanStackTraces ? s_cleanStackFilteringLogHandler : s_fullStackFilteringLogHandler;
 
             if (ReferenceEquals(s_activeFilteringLogHandler, selectedHandler))
                 return;
@@ -226,13 +237,10 @@ namespace MinimalEditor.Console.Editor
             var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
             var previousHandler = s_activeFilteringLogHandler;
 
-            if (previousHandler != null)
-            {
-                previousHandler.Configure(false, true, Array.Empty<CompiledRule>());
-                var previousInner = previousHandler.Inner;
-                if (previousInner != null && !IsManagedFilteringHandler(previousInner))
-                    selectedHandler.SetInner(previousInner);
-            }
+            previousHandler.Configure(false, true, Array.Empty<CompiledRule>());
+            var previousInner = previousHandler.Inner;
+            if (previousInner != null && !IsManagedFilteringHandler(previousInner))
+                selectedHandler.SetInner(previousInner);
 
             if (ReferenceEquals(currentHandler, previousHandler))
                 UnityEngine.Debug.unityLogger.logHandler = selectedHandler;
@@ -242,7 +250,7 @@ namespace MinimalEditor.Console.Editor
 
         private static void EnsureLogHandlerState()
         {
-            var activeHandler = s_activeFilteringLogHandler ?? s_cleanStackFilteringLogHandler;
+            var activeHandler = s_activeFilteringLogHandler;
             var currentHandler = UnityEngine.Debug.unityLogger.logHandler;
 
             // In clean-stack mode we avoid wrapping Unity's logger to prevent handler frames
@@ -252,7 +260,7 @@ namespace MinimalEditor.Console.Editor
                 if (!IsManagedFilteringHandler(currentHandler))
                     return;
 
-                if (currentHandler is IFilteringLogHandler filteringHandler)
+                if (currentHandler is FilterLogHandler filteringHandler)
                 {
                     var cleanStackFallbackHandler = filteringHandler.Inner;
                     if (cleanStackFallbackHandler != null && !IsManagedFilteringHandler(cleanStackFallbackHandler))
@@ -274,7 +282,7 @@ namespace MinimalEditor.Console.Editor
                 {
                     if (IsManagedFilteringHandler(currentHandler))
                     {
-                        if (currentHandler is IFilteringLogHandler filteringHandler && filteringHandler.Inner != null)
+                        if (currentHandler is FilterLogHandler filteringHandler && filteringHandler.Inner != null)
                             activeHandler.SetInner(filteringHandler.Inner);
                     }
                     else
@@ -311,34 +319,10 @@ namespace MinimalEditor.Console.Editor
                 return null;
 
             var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-            if (argumentTypes == null || argumentTypes.Length == 0)
+            if (argumentTypes.Length == 0)
                 return s_logEntriesType.GetMethod(methodName, flags);
 
-            for (var i = 0; i < argumentTypes.Length; i++)
-            {
-                if (argumentTypes[i] != null)
-                    continue;
-
-                var methods = s_logEntriesType.GetMethods(flags);
-                for (var methodIndex = 0; methodIndex < methods.Length; methodIndex++)
-                {
-                    var method = methods[methodIndex];
-                    if (!string.Equals(method.Name, methodName, StringComparison.Ordinal))
-                        continue;
-
-                    if (method.GetParameters().Length == argumentTypes.Length)
-                        return method;
-                }
-
-                return null;
-            }
-
-            return s_logEntriesType.GetMethod(
-                methodName,
-                flags,
-                null,
-                argumentTypes ?? Type.EmptyTypes,
-                null);
+            return s_logEntriesType.GetMethod(methodName, flags, null, argumentTypes, null);
         }
 
         private static MethodInfo GetLogEntriesAddMessageMethod()
@@ -409,29 +393,9 @@ namespace MinimalEditor.Console.Editor
             return mask;
         }
 
-        private static bool IsWarningMode(int mode)
-        {
-            if (s_warningModeMask == 0)
-                return false;
-
-            return (mode & s_warningModeMask) != 0;
-        }
-
-        private static bool IsErrorMode(int mode)
-        {
-            if (s_errorModeMask == 0)
-                return false;
-
-            return (mode & s_errorModeMask) != 0;
-        }
-
-        private static bool IsLogMode(int mode)
-        {
-            if (s_logModeMask == 0)
-                return false;
-
-            return (mode & s_logModeMask) != 0;
-        }
+        private static bool IsWarningMode(int mode) => (mode & s_warningModeMask) != 0;
+        private static bool IsErrorMode(int mode) => (mode & s_errorModeMask) != 0;
+        private static bool IsLogMode(int mode) => (mode & s_logModeMask) != 0;
 
         private static void TryApplyFiltersToCurrentConsoleEntriesIfNeeded()
         {

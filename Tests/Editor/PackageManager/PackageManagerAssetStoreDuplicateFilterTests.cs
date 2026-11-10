@@ -14,8 +14,10 @@ namespace MinimalEditor.Tests.Editor.PackageManager
         [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", false)]
         public void ShouldHideAssetStoreDuplicate_RegisteredPath(bool assetStoreBacked, string relativePath, bool expected)
         {
+            var package = CreatePackage("com.vendor.tool", assetStoreBacked);
             Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
-                assetStoreBacked, "com.vendor.tool", ResolvePath(relativePath), ProjectRoot), Is.EqualTo(expected));
+                package, name => name == "com.vendor.tool" ? ResolvePath(relativePath) : null, ProjectRoot),
+                Is.EqualTo(expected));
         }
 
         [TestCase(false, "Library/PackageCache/com.vendor.tool@abc123", true, false)]
@@ -68,8 +70,7 @@ namespace MinimalEditor.Tests.Editor.PackageManager
 
             Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
                 package, _ => resolvedPath, root), Is.False);
-            Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
-                true, "com.vendor.tool", resolvedPath, root), Is.False);
+            Assert.That(PackageManagerAssetStoreDuplicateFilter.IsPathInsideProjectPackages(resolvedPath, root), Is.False);
             Assert.That(PackageManagerAssetStoreDuplicateFilter.TryGetLocalPackageForAssetStorePackage(
                 package, _ => resolvedPath, root, out string packageName, out string localPath), Is.False);
             Assert.That(packageName, Is.Empty);
@@ -138,8 +139,8 @@ namespace MinimalEditor.Tests.Editor.PackageManager
             Assert.That(PackageManagerAssetStoreDuplicateFilter.IsPathInsideProjectPackages(
                 Path.Combine(projectRoot, "Packages", "com.vendor.tool"), projectRoot), Is.True);
             Assert.That(PackageManagerAssetStoreDuplicateFilter.ShouldHideAssetStoreDuplicate(
-                true, "com.vendor.tool", Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.tool"),
-                projectRoot), Is.True);
+                CreatePackage("com.vendor.tool", true),
+                _ => Path.Combine(projectRoot, "Library", "PackageCache", "com.vendor.tool"), projectRoot), Is.True);
         }
 
         static string ResolvePath(string relativePath)

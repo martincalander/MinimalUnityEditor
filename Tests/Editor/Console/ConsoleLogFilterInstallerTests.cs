@@ -267,6 +267,15 @@ namespace MinimalEditor.Tests.Editor.Console
             Assert.That((int)version.GetValue(null), Is.Not.EqualTo(before));
         }
 
+        [TestCase(0d, 0.25d)]
+        [TestCase(0.0125d, 0.25d)]
+        [TestCase(0.05d, 1d)]
+        [TestCase(2d, 40d)]
+        public void ConsoleRescanDelay_WaitsTwentyTimesTheLastScanAndAtLeastAQuarterSecond(double scanSeconds, double expectedDelay)
+        {
+            Assert.That(ConsoleLogFilterInstaller.GetConsoleRescanDelay(scanSeconds), Is.EqualTo(expectedDelay).Within(1e-9));
+        }
+
         [Test]
         public void ConsoleRescan_UnchangedRowsAreNotReadAgainUntilForcedOrInvalidated()
         {

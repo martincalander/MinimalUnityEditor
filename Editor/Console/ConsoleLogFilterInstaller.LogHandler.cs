@@ -54,15 +54,6 @@ namespace MinimalEditor.Console.Editor
             }
         }
 
-        private interface IFilteringLogHandler : ILogHandler
-        {
-            bool FilteringEnabled { get; }
-            ILogHandler Inner { get; }
-            void Configure(bool enabled, bool warningsOnly, CompiledRule[] rules);
-            void SetInner(ILogHandler inner);
-            bool ShouldSuppressMode(int mode, string message);
-        }
-
         private sealed class FilterConfiguration
         {
             internal readonly bool Enabled;
@@ -77,7 +68,7 @@ namespace MinimalEditor.Console.Editor
             }
         }
 
-        private sealed class FilterLogHandler : IFilteringLogHandler
+        private sealed class FilterLogHandler : ILogHandler
         {
             private volatile FilterConfiguration m_configuration = new(false, true, null);
             private volatile ILogHandler m_inner;
