@@ -253,10 +253,13 @@ namespace MinimalEditor.MenuItem.Editor
             s_isApplying = true;
             try
             {
-                var items = isActive ? ResolveMenuPaths() : null;
-                ConfigureNativeRootVisibility(items);
+                var resolvedItems = isActive ? ResolveMenuPaths() : null;
+                ConfigureNativeRootVisibility(resolvedItems);
                 if (!isActive) return;
                 if (RemoveMenuItemMethod == null) return;
+
+                // Rules that only hide a native heading never reach Unity's menu registry.
+                var items = MenuItemPatternMatcher.ExcludeNativeRootOnlyEntries(resolvedItems);
 
                 if (items == null || items.Count == 0) return;
 
@@ -618,8 +621,15 @@ namespace MinimalEditor.MenuItem.Editor
 #endif
     internal static class MenuItemPatternMatcher
     {
+#if UNITY_EDITOR_OSX
         internal const string UnsupportedServicesWarning =
-            "Services entries are not reliable. Unity regenerates Services menu items internally, so they cannot be hidden consistently.";
+            "Unity regenerates Services menu items internally, so they cannot be removed. \"Services/*\" hides the Services heading in the macOS menu bar without removing its commands. Other Services entries are ignored.";
+#else
+        internal const string UnsupportedServicesWarning =
+            "Services entries are ignored. Unity regenerates Services menu items internally, so they cannot be hidden consistently. Hiding the Services heading is only available on macOS.";
+#endif
+
+        const string ServicesRootRule = "Services/*";
 
         static readonly MenuItemBlockedEntry[] BlacklistedMenuItems =
         {
@@ -638,6 +648,30 @@ namespace MinimalEditor.MenuItem.Editor
             if (trimmed.Equals("Services", StringComparison.OrdinalIgnoreCase)) return true;
             if (trimmed.Equals("Services/*", StringComparison.OrdinalIgnoreCase)) return true;
             return trimmed.StartsWith("Services/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // A rule that can only hide a native menu-bar heading. Its commands must stay registered.
+        internal static bool IsNativeRootOnlyEntry(string entry)
+        {
+            return string.Equals(entry?.Trim(), ServicesRootRule, StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static IReadOnlyList<string> ExcludeNativeRootOnlyEntries(IReadOnlyList<string> entries)
+        {
+            if (entries == null) return null;
+
+            List<string> result = null;
+            for (var i = 0; i < entries.Count; i++)
+            {
+                if (!IsNativeRootOnlyEntry(entries[i])) continue;
+                result = new List<string>(entries.Count);
+                break;
+            }
+
+            if (result == null) return entries;
+            for (var i = 0; i < entries.Count; i++)
+                if (!IsNativeRootOnlyEntry(entries[i])) result.Add(entries[i]);
+            return result;
         }
 
         internal static bool IsBlacklistedEntry(string entry)
@@ -734,7 +768,8 @@ namespace MinimalEditor.MenuItem.Editor
                 var trimmed = entry?.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
 
-                if (IsUnsupportedEntry(trimmed)) continue;
+                // Native-root-only rules pass through here and are excluded again before registry removal.
+                if (IsUnsupportedEntry(trimmed) && !IsNativeRootOnlyEntry(trimmed)) continue;
                 if (IsBlacklistedEntry(trimmed)) continue;
 
                 if (!seen.Add(trimmed)) continue;

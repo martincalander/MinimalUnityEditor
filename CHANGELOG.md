@@ -14,6 +14,19 @@ All notable changes to this package are documented in this file.
 - Add an **Icon Style** choice for folder icons. **Full Size** replaces the
   folder icon with the image, and **Badge** keeps the folder icon and shows the
   image small in its bottom-right corner.
+- On macOS, a `Services/*` rule now hides the Services heading in the menu bar.
+  Its commands stay registered because Unity regenerates them, and other
+  Services rules are still ignored. A **Services** bundle, off by default, adds
+  the same rule from **Preferences > Minimal Editor > Menu Item**.
+
+### Changed
+
+- Move Menu Item settings from **Project Settings** to **Preferences > Minimal
+  Editor > Menu Item**. The choices are now user-global and stored in
+  `MinimalEditor/MenuItemSettings.json` in the Unity preferences folder rather
+  than `EditorPrefs`, so several open Editors keep each other's changes. An
+  existing `ProjectSettings/MenuItemSettings.json` is copied once and then no
+  longer read.
 
 ### Fixed
 

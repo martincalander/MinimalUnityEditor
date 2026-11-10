@@ -21,7 +21,7 @@ stays out of scenes, assets, builds, and runtime code.
 | Area | What it controls | Location |
 | --- | --- | --- |
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
-| Menu Item | Built-in bundles and custom menu paths | **Project Settings > Minimal Editor > Menu Item** |
+| Menu Item | Built-in bundles and custom menu paths | **Preferences > Minimal Editor > Menu Item** |
 | Unity Editor | Short title and status-bar extras | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Folder Icons | Full-size or badge folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
@@ -29,9 +29,10 @@ stays out of scenes, assets, builds, and runtime code.
 | FMOD | Automatic menu relocation when FMOD is installed | No settings page |
 
 Console, Unity Editor, and Folder Icons choices use user-global `EditorPrefs`
-and carry across Unity projects opened by the same operating-system user. Menu Item settings are
-shared with the project in `ProjectSettings/MenuItemSettings.json`. Project
-Folders choices are local to the current user and project.
+and carry across Unity projects opened by the same operating-system user. Menu
+Item settings are also user-global, stored in a JSON file in the Unity
+preferences folder. Project Folders choices are local to the current user and
+project.
 
 ## Requirements
 
@@ -75,9 +76,9 @@ gitlink already pins the exact package commit checked out in the parent project.
 ## Quick Start
 
 1. Install the package and let Unity finish its domain reload.
-2. Open **Project Settings > Minimal Editor > Menu Item**. Most available menu
-   bundles are enabled by default, so keep the ones that suit the project and
-   turn off the rest. A removed menu entry returns after the next domain reload
+2. Open **Preferences > Minimal Editor > Menu Item**. Most available menu
+   bundles are enabled by default, so keep the ones that suit you and turn off
+   the rest. A removed menu entry returns after the next domain reload
    or Editor reopen.
 3. Open **Preferences > Console** and add a rule. Filtering defaults to enabled
    when no earlier preference exists, but the default rule list is empty.

@@ -31,7 +31,8 @@ namespace MinimalEditor.MenuItem.Editor
             pattern = pattern?.Trim();
             if (string.IsNullOrEmpty(pattern) || !pattern.EndsWith("/*", StringComparison.Ordinal) ||
                 pattern.IndexOf('/') != pattern.Length - 2 ||
-                MenuItemPatternMatcher.IsUnsupportedEntry(pattern) ||
+                (MenuItemPatternMatcher.IsUnsupportedEntry(pattern) &&
+                 !MenuItemPatternMatcher.IsNativeRootOnlyEntry(pattern)) ||
                 MenuItemPatternMatcher.IsBlacklistedEntry(pattern)) return null;
             var root = pattern.Substring(0, pattern.Length - 2);
             return root.Length == 0 || root.IndexOf('*') >= 0 ? null : root;

@@ -10,7 +10,7 @@ namespace MinimalEditor.MenuItem.Editor
 #endif
     internal static class MenuItemPreferencesProvider
     {
-        internal const string SettingsPath = "Project/Minimal Editor/Menu Item";
+        internal const string SettingsPath = "Preferences/Minimal Editor/Menu Item";
 
         const string CustomDefinitionsControlName = "MinimalEditor.MenuItem.CustomDefinitions";
 
@@ -23,7 +23,7 @@ namespace MinimalEditor.MenuItem.Editor
         [SettingsProvider]
         static SettingsProvider CreateProvider()
         {
-            return new SettingsProvider(SettingsPath, SettingsScope.Project)
+            return new SettingsProvider(SettingsPath, SettingsScope.User)
             {
                 label = "Menu Item",
                 guiHandler = DrawGui,
@@ -47,7 +47,8 @@ namespace MinimalEditor.MenuItem.Editor
                     "xr",
                     "gltf",
                     "dependencies",
-                    "version control"
+                    "version control",
+                    "services"
                 }
             };
         }

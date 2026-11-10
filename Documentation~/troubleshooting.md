@@ -41,9 +41,11 @@ do not support arbitrary glob syntax.
 Bare root paths cannot be removed safely. On macOS, use a whole-root wildcard
 such as `Jobs/*` to hide the native heading as well as its commands. The heading
 is kept hidden when Unity recreates it, without forcing a menu rebuild.
-`Services/**` paths are ignored as unreliable, and known error-prone entries
-produce a warning in Project Settings. If an unexpected apply failure occurs,
-the menu module enters a fail-safe state until the next domain reload.
+Services commands are never removed because Unity regenerates them. On macOS,
+`Services/*` or the **Services** bundle hides only the Services heading; other
+`Services/` paths are ignored. Known error-prone entries produce a warning in
+Preferences. If an unexpected apply failure occurs, the menu module enters
+a fail-safe state until the next domain reload.
 
 ## Menu Hiding Is Disabled on Unity 6.0
 
@@ -105,7 +107,7 @@ every module. Module-specific symbols are listed in
 
 Console filters, the short title, and status-bar choices use user-global
 `EditorPrefs`. They carry across Unity projects opened by the same
-operating-system user. Menu Item choices are different: they live in the
-project-owned `ProjectSettings/MenuItemSettings.json` file. Project Folders uses
-`EditorPrefs` keyed by the project path, so its choices stay local to this user
-and project.
+operating-system user. Menu Item choices are user-global too, stored in
+`MinimalEditor/MenuItemSettings.json` in the Unity preferences folder. Project
+Folders uses `EditorPrefs` keyed by the project path, so its choices stay local
+to this user and project.

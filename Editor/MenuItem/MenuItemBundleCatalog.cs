@@ -86,6 +86,20 @@ namespace MinimalEditor.MenuItem.Editor
                     "Jobs/*"
                 }));
 
+#if UNITY_EDITOR_OSX
+            // Unity regenerates Services commands, so this only hides the native menu-bar heading.
+            // It is off by default because the heading also holds sign-in and account commands.
+            bundles.Add(new MenuItemBundleDefinition(
+                "services",
+                "Services",
+                false,
+                true,
+                new[]
+                {
+                    "Services/*"
+                }));
+#endif
+
             bundles.Add(new MenuItemBundleDefinition(
                 "upm_packaging",
                 "UPM Packaging",

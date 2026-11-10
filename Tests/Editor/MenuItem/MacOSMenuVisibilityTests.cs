@@ -49,6 +49,8 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         [TestCase("Jobs", "Jobs/*")]
         [TestCase("jobs", " Jobs/* ")]
         [TestCase("Tools", "Tools/*")]
+        [TestCase("Services", "Services/*")]
+        [TestCase("Services", " services/* ")]
         public void Apply_HidesExactRoot_AndPreservesOtherRoots(string title, string pattern)
         {
             var root = AddRoot(title);
@@ -72,8 +74,9 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         [TestCase("Jobs/Command")]
         [TestCase("/*")]
         [TestCase("*/*")]
-        [TestCase("Services/*")]
-        [TestCase(" services/* ")]
+        [TestCase("Services")]
+        [TestCase("Services/Explore")]
+        [TestCase("Services/Vivox/*")]
         [TestCase("GameObject/*")]
         [TestCase("Job*/*")]
         [TestCase("Jobs*")]

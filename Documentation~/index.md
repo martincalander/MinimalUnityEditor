@@ -13,8 +13,8 @@ dashboard or any runtime code.
 - [Changelog](../CHANGELOG.md)
 - [Third-party notices](../Third%20Party%20Notices.md)
 
-After installation, review **Project Settings > Minimal Editor > Menu Item** before
-sharing its default bundles with the team. Console rules live under
+After installation, review **Preferences > Minimal Editor > Menu Item** and keep
+the default bundles that suit you. Console rules live under
 **Preferences > Console**, and the title and status-bar choices live under
 **Preferences > Minimal Editor > Unity Editor**. On Unity 7 CoreCLR, folder
 visibility choices live under **Preferences > Minimal Editor > Project Folders**.

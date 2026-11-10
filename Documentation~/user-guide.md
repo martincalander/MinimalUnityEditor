@@ -45,10 +45,12 @@ by the same operating-system user.
 
 ## Menu Item
 
-Open **Project Settings > Minimal Editor > Menu Item**.
+Open **Preferences > Minimal Editor > Menu Item**.
 
 The module starts enabled. Nearly every available built-in bundle also starts
-enabled; **D3D12/Vulkan** is the intentional exception. Unavailable optional
+enabled; **D3D12/Vulkan** and **Services** are the intentional exceptions. The
+**Services** bundle is listed on macOS only and hides the Services heading in
+the menu bar, including its sign-in commands. Unavailable optional
 bundles remain visible, disabled, and marked **not installed**.
 
 The catalog covers TextMeshPro, legacy UI, UI Toolkit, Jobs, UPM packaging,
@@ -95,12 +97,19 @@ or Editor reopen. This changes visibility after registration and does not
 prevent Unity from discovering the commands during startup.
 
 Unity does not expose every menu path safely. Bare root paths such as `Jobs`
-and `Services/**` entries are ignored, and known error-prone entries are reported
-in the settings page. Use `Jobs/*` to hide the whole Jobs menu. Partial rules
-such as `Tools/My Tool/*` do not hide the Tools heading.
+are ignored, and known error-prone entries are reported in the settings page.
+Unity regenerates Services commands, so they are never removed. On macOS,
+`Services/*` or the **Services** bundle hides the Services heading in the menu
+bar. Other `Services/` entries, and `Services/*` on other platforms, are
+ignored. Use `Jobs/*` to hide the whole Jobs menu. Partial rules such as
+`Tools/My Tool/*` do not hide the Tools heading.
 
-Menu choices are saved in `ProjectSettings/MenuItemSettings.json` and should
-be reviewed like any other project setting.
+Menu choices are user-global and apply to every project you open. They are
+saved as `MinimalEditor/MenuItemSettings.json` in the Unity preferences folder
+instead of `EditorPrefs`, so several open Editors do not overwrite each other's
+changes. If that file does not exist yet, Minimal Editor copies the project's
+older `ProjectSettings/MenuItemSettings.json` once. After that, the project file
+is no longer read and can be deleted.
 
 ## Unity Editor Chrome
 

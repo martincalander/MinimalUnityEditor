@@ -41,14 +41,20 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         }
 
         [Test]
-        public void MenuItemSettingsProvider_IsProjectScoped()
+        public void MenuItemSettingsProvider_IsUserScoped()
         {
             var type = Type.GetType(
                 "MinimalEditor.MenuItem.Editor.MenuItemPreferencesProvider, MinimalEditor.MenuItem.Editor", throwOnError: true);
             var provider = (SettingsProvider)RequireMethod(type, "CreateProvider").Invoke(null, null);
             Assert.That(provider, Is.Not.Null);
-            Assert.That(provider.settingsPath, Is.EqualTo("Project/Minimal Editor/Menu Item"));
-            Assert.That(provider.scope, Is.EqualTo(SettingsScope.Project));
+            Assert.That(provider.settingsPath, Is.EqualTo("Preferences/Minimal Editor/Menu Item"));
+            Assert.That(provider.scope, Is.EqualTo(SettingsScope.User));
+
+            var settings = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemModuleSettings, MinimalEditor.MenuItem.Editor", true);
+            var storagePath = (string)settings.GetProperty("StoragePath", AnyStatic).GetValue(null);
+            Assert.That(System.IO.Path.IsPathRooted(storagePath), Is.True);
+            Assert.That(storagePath, Does.StartWith(UnityEditorInternal.InternalEditorUtility.unityPreferencesFolder));
         }
 
         [Test]
@@ -200,6 +206,44 @@ namespace MinimalEditor.Tests.Editor.MenuItem
                 .Invoke(null, new object[] { new[] { rule, "Window/Analysis/*" } });
 
             Assert.That(paths, Is.EqualTo(new[] { "Window/Analysis/*" }));
+        }
+
+        [Test]
+        public void ServicesRootRule_ReachesNativeRootsOnly()
+        {
+            var matcher = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemPatternMatcher, MinimalEditor.MenuItem.Editor", true);
+            var paths = (IReadOnlyList<string>)RequireMethod(matcher, "SanitizeEntries", typeof(IEnumerable<string>))
+                .Invoke(null, new object[]
+                {
+                    new[] { "Services", " services/* ", "Services/Explore", "Services/Vivox/*", "Window/Analysis/*" }
+                });
+
+            Assert.That(paths, Is.EqualTo(new[] { "services/*", "Window/Analysis/*" }));
+
+            var removable = (IEnumerable<string>)RequireMethod(
+                    matcher, "ExcludeNativeRootOnlyEntries", typeof(IReadOnlyList<string>))
+                .Invoke(null, new object[] { paths });
+
+            Assert.That(removable, Is.EqualTo(new[] { "Window/Analysis/*" }));
+        }
+
+        [Test]
+        public void ServicesBundle_IsMacOSOnly_AndOffByDefault()
+        {
+            var catalog = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemBundleCatalog, MinimalEditor.MenuItem.Editor", true);
+            var bundle = RequireMethod(catalog, "Find", typeof(string)).Invoke(null, new object[] { "services" });
+#if UNITY_EDITOR_OSX
+            Assert.That(bundle, Is.Not.Null);
+            var type = bundle.GetType();
+            Assert.That(type.GetProperty("DefaultEnabled", AnyInstance).GetValue(bundle), Is.False);
+            Assert.That(type.GetProperty("IsAvailable", AnyInstance).GetValue(bundle), Is.True);
+            Assert.That((IEnumerable<string>)type.GetProperty("MenuPaths", AnyInstance).GetValue(bundle),
+                Is.EqualTo(new[] { "Services/*" }));
+#else
+            Assert.That(bundle, Is.Null);
+#endif
         }
 
         [Test]

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace MinimalEditor.MenuItem.Editor
@@ -11,12 +12,22 @@ namespace MinimalEditor.MenuItem.Editor
 #endif
     internal static class MenuItemModuleSettings
     {
-        const string SettingsPath = "ProjectSettings/MenuItemSettings.json";
+        // User-global like the other Preferences pages. A file is used instead of EditorPrefs because
+        // several open Editors overwrote each other's EditorPrefs values.
+        static readonly string SettingsPath = Path.Combine(
+            InternalEditorUtility.unityPreferencesFolder, "MinimalEditor", "MenuItemSettings.json");
+
+        // Earlier versions stored the settings with the project. They are copied once when no
+        // user file exists yet.
+        const string LegacyProjectSettingsPath = "ProjectSettings/MenuItemSettings.json";
         const string AdvancedSettingsExpandedKey = "MinimalEditor.MenuItem.AdvancedExpanded";
         const string MinimumSupportedUnity6Version = "6000.0.43f1";
 
         static readonly bool CurrentEditorSupported = !IsKnownUnsafeEditorVersion(Application.unityVersion);
         static MenuItemSettingsData s_data;
+        static DateTime s_loadedWriteTimeUtc;
+        static double s_nextDiskCheck;
+        const double DiskCheckInterval = 1.0;
         static string s_cachedDefinitionText;
         static List<string> s_cachedDefinitionEntries;
         static IReadOnlyList<string> s_cachedUnsupportedWarnings;
@@ -27,6 +38,30 @@ namespace MinimalEditor.MenuItem.Editor
             get
             {
                 if (s_data == null)
+                {
+                    Load();
+                }
+                else
+                {
+                    // Settings pages redraw often, so reads only look at the file about once a second.
+                    var now = EditorApplication.timeSinceStartup;
+                    if (now >= s_nextDiskCheck)
+                    {
+                        s_nextDiskCheck = now + DiskCheckInterval;
+                        if (HasChangedOnDisk()) Load();
+                    }
+                }
+
+                return s_data;
+            }
+        }
+
+        // Changes always start from the latest saved file.
+        static MenuItemSettingsData FreshData
+        {
+            get
+            {
+                if (s_data == null || HasChangedOnDisk())
                 {
                     Load();
                 }
@@ -63,8 +98,9 @@ namespace MinimalEditor.MenuItem.Editor
             get => IsSupportedInCurrentEditor && Data.moduleEnabled;
             set
             {
-                if (Data.moduleEnabled == value) return;
-                Data.moduleEnabled = value;
+                var data = FreshData;
+                if (data.moduleEnabled == value) return;
+                data.moduleEnabled = value;
                 Save();
             }
         }
@@ -74,8 +110,9 @@ namespace MinimalEditor.MenuItem.Editor
             get => Data.customDefinitionsEnabled;
             set
             {
-                if (Data.customDefinitionsEnabled == value) return;
-                Data.customDefinitionsEnabled = value;
+                var data = FreshData;
+                if (data.customDefinitionsEnabled == value) return;
+                data.customDefinitionsEnabled = value;
                 Save();
             }
         }
@@ -86,8 +123,9 @@ namespace MinimalEditor.MenuItem.Editor
             set
             {
                 var normalized = NormalizeDefinitionText(value);
-                if (CustomDefinitionsText == normalized) return;
-                Data.customDefinitionsText = normalized;
+                var data = FreshData;
+                if ((data.customDefinitionsText ?? string.Empty) == normalized) return;
+                data.customDefinitionsText = normalized;
                 Save();
             }
         }
@@ -117,8 +155,9 @@ namespace MinimalEditor.MenuItem.Editor
                 return;
             }
 
-            if (Data.GetBundleEnabled(bundle.Id, bundle.DefaultEnabled) == enabled) return;
-            Data.SetBundleEnabled(bundle.Id, enabled);
+            var data = FreshData;
+            if (data.GetBundleEnabled(bundle.Id, bundle.DefaultEnabled) == enabled) return;
+            data.SetBundleEnabled(bundle.Id, enabled);
             Save();
         }
 
@@ -246,27 +285,52 @@ namespace MinimalEditor.MenuItem.Editor
             return text.Replace("\r\n", "\n").Replace('\r', '\n');
         }
 
+        internal static string StoragePath => SettingsPath;
+
+        // Another Editor may have saved since this one loaded. Reading the file again before each
+        // change keeps that Editor's choices instead of overwriting them with stale values.
+        static bool HasChangedOnDisk()
+        {
+            try
+            {
+                return File.Exists(SettingsPath) && File.GetLastWriteTimeUtc(SettingsPath) != s_loadedWriteTimeUtc;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         static void Load()
         {
             s_data = new MenuItemSettingsData();
             try
             {
-                if (!File.Exists(SettingsPath))
+                if (File.Exists(SettingsPath))
                 {
+                    s_loadedWriteTimeUtc = File.GetLastWriteTimeUtc(SettingsPath);
+                    ReadInto(SettingsPath, s_data);
                     return;
                 }
 
-                var json = File.ReadAllText(SettingsPath);
-                if (string.IsNullOrWhiteSpace(json))
+                if (File.Exists(LegacyProjectSettingsPath))
                 {
-                    return;
+                    ReadInto(LegacyProjectSettingsPath, s_data);
+                    Save();
                 }
-
-                JsonUtility.FromJsonOverwrite(json, s_data);
             }
             catch (Exception e)
             {
                 Debug.LogWarning("[MenuItemSettings] Failed to load settings: " + e.Message);
+            }
+        }
+
+        static void ReadInto(string path, MenuItemSettingsData data)
+        {
+            var json = File.ReadAllText(path);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                JsonUtility.FromJsonOverwrite(json, data);
             }
         }
 
@@ -286,7 +350,14 @@ namespace MinimalEditor.MenuItem.Editor
                     Directory.CreateDirectory(directory);
                 }
 
-                File.WriteAllText(SettingsPath, json);
+                // Write beside the target and swap it in so another Editor never reads half a file.
+                var temporaryPath = SettingsPath + ".tmp";
+                File.WriteAllText(temporaryPath, json);
+                if (File.Exists(SettingsPath))
+                    File.Replace(temporaryPath, SettingsPath, null);
+                else
+                    File.Move(temporaryPath, SettingsPath);
+                s_loadedWriteTimeUtc = File.GetLastWriteTimeUtc(SettingsPath);
             }
             catch (Exception e)
             {

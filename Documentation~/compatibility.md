@@ -196,7 +196,7 @@ title and status-bar features available.
 | Area | Storage |
 | --- | --- |
 | Console | EditorPrefs key `MinimalEditor.Console.HiddenLogFilters` |
-| Menu Item | `ProjectSettings/MenuItemSettings.json` |
+| Menu Item | `MinimalEditor/MenuItemSettings.json` in the Unity preferences folder |
 | Short title | EditorPrefs key `MinimalEditor.Editor.WindowTitleShortener.Enabled` |
 | Status-bar extras | EditorPrefs key `MinimalEditor.Editor.StatusBarExtrasHider.Enabled` |
 | Folder Icons | EditorPrefs keys `MinimalEditor.FolderIcons.Enabled` and `MinimalEditor.FolderIcons.Style` |
