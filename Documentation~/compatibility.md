@@ -199,7 +199,7 @@ title and status-bar features available.
 | Menu Item | `ProjectSettings/MenuItemSettings.json` |
 | Short title | EditorPrefs key `MinimalEditor.Editor.WindowTitleShortener.Enabled` |
 | Status-bar extras | EditorPrefs key `MinimalEditor.Editor.StatusBarExtrasHider.Enabled` |
-| Folder Icons | EditorPrefs key `MinimalEditor.FolderIcons.Enabled` |
+| Folder Icons | EditorPrefs keys `MinimalEditor.FolderIcons.Enabled` and `MinimalEditor.FolderIcons.Style` |
 | Project Folders | EditorPrefs key `com.martincalander.minimaleditor.projectfoldervisibility.settings.` plus the hash of `Application.dataPath` |
 
 The package rename updates keys, public namespaces, and assembly names while

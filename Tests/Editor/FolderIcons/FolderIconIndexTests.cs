@@ -12,6 +12,7 @@ namespace MinimalEditor.Tests.Editor.FolderIcons
     {
         string root;
         (bool HasKey, bool Value) enabledSnapshot;
+        (bool HasKey, int Value) styleSnapshot;
 
         [SetUp]
         public void SetUp()
@@ -20,6 +21,9 @@ namespace MinimalEditor.Tests.Editor.FolderIcons
                 EditorPrefs.HasKey(FolderIconsPreferences.EnabledKey),
                 EditorPrefs.GetBool(FolderIconsPreferences.EnabledKey, FolderIconsPreferences.EnabledDefaultValue));
             FolderIconsPreferences.Enabled = true;
+            styleSnapshot = (
+                EditorPrefs.HasKey(FolderIconsPreferences.StyleKey),
+                EditorPrefs.GetInt(FolderIconsPreferences.StyleKey, 0));
 
             root = "Assets/FolderIconsTests_" + System.Guid.NewGuid().ToString("N").Substring(0, 8);
             AssetDatabase.CreateFolder("Assets", Path.GetFileName(root));
@@ -37,8 +41,54 @@ namespace MinimalEditor.Tests.Editor.FolderIcons
                 : FolderIconsPreferences.EnabledDefaultValue;
             if (!enabledSnapshot.HasKey)
                 EditorPrefs.DeleteKey(FolderIconsPreferences.EnabledKey);
+            if (styleSnapshot.HasKey)
+                EditorPrefs.SetInt(FolderIconsPreferences.StyleKey, styleSnapshot.Value);
+            else
+                EditorPrefs.DeleteKey(FolderIconsPreferences.StyleKey);
             FolderIconsPreferences.Reload();
             FolderIconIndex.Invalidate();
+        }
+
+        [Test]
+        public void Style_DefaultsToFullSize()
+        {
+            EditorPrefs.DeleteKey(FolderIconsPreferences.StyleKey);
+            FolderIconsPreferences.Reload();
+
+            Assert.That(FolderIconsPreferences.Style, Is.EqualTo(FolderIconStyle.Full));
+        }
+
+        [Test]
+        public void Style_PersistsBadgeAndFullSize()
+        {
+            FolderIconsPreferences.Style = FolderIconStyle.Badge;
+            FolderIconsPreferences.Reload();
+            Assert.That(FolderIconsPreferences.Style, Is.EqualTo(FolderIconStyle.Badge));
+            Assert.That(EditorPrefs.GetInt(FolderIconsPreferences.StyleKey, -1), Is.EqualTo((int)FolderIconStyle.Badge));
+
+            FolderIconsPreferences.Style = FolderIconStyle.Full;
+            FolderIconsPreferences.Reload();
+            Assert.That(FolderIconsPreferences.Style, Is.EqualTo(FolderIconStyle.Full));
+        }
+
+        [Test]
+        public void Style_FallsBackToFullSizeForUnknownValues()
+        {
+            EditorPrefs.SetInt(FolderIconsPreferences.StyleKey, 42);
+            FolderIconsPreferences.Reload();
+
+            Assert.That(FolderIconsPreferences.Style, Is.EqualTo(FolderIconStyle.Full));
+        }
+
+        [Test]
+        public void Style_DoesNotAffectLookup()
+        {
+            string folder = CreateFolder("Styled");
+            CreateTexture(folder + "/Icon.png");
+
+            FolderIconsPreferences.Style = FolderIconStyle.Badge;
+
+            Assert.That(TryGetIcon(folder, out _), Is.True);
         }
 
         [Test]

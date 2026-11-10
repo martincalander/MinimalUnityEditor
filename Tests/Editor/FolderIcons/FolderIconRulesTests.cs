@@ -118,6 +118,13 @@ namespace MinimalEditor.Tests.Editor.FolderIcons
         }
 
         [Test]
+        public void GetBadgeRect_SitsInBottomRightCorner()
+        {
+            Assert.That(FolderIconDrawer.GetBadgeRect(new Rect(34, 10, 16, 16), grid: false), Is.EqualTo(new Rect(40, 16, 10, 10)));
+            Assert.That(FolderIconDrawer.GetBadgeRect(new Rect(10, 20, 64, 64), grid: true), Is.EqualTo(new Rect(45, 55, 29, 29)));
+        }
+
+        [Test]
         public void Classify_SeparatesTreeContentListAndGrid()
         {
             var window = new Rect(100, 500, 1000, 300);

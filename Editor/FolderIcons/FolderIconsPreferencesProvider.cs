@@ -16,6 +16,18 @@ namespace MinimalEditor.FolderIcons.Editor
             "Show Folder Icons",
             "Shows an image whose name ends in Icon as the icon of the folder that contains it.");
 
+        static readonly GUIContent StyleContent = new GUIContent(
+            "Icon Style",
+            "Full Size replaces the folder icon with the image. Badge keeps the folder icon "
+            + "and shows the image small in its bottom-right corner.");
+
+        // Indexes match FolderIconStyle values.
+        static readonly GUIContent[] StyleOptions =
+        {
+            new GUIContent("Full Size"),
+            new GUIContent("Badge")
+        };
+
         [SettingsProvider]
         internal static SettingsProvider CreateProvider()
         {
@@ -28,6 +40,7 @@ namespace MinimalEditor.FolderIcons.Editor
                     "minimal editor",
                     "folder",
                     "icon",
+                    "badge",
                     "project window"
                 }
             };
@@ -39,6 +52,15 @@ namespace MinimalEditor.FolderIcons.Editor
             bool enabled = EditorGUILayout.ToggleLeft(EnabledContent, FolderIconsPreferences.Enabled);
             if (EditorGUI.EndChangeCheck())
                 FolderIconsPreferences.Enabled = enabled;
+
+            using (new EditorGUI.DisabledScope(!enabled))
+            {
+                EditorGUI.BeginChangeCheck();
+                int style = EditorGUILayout.Popup(
+                    StyleContent, (int)FolderIconsPreferences.Style, StyleOptions);
+                if (EditorGUI.EndChangeCheck())
+                    FolderIconsPreferences.Style = (FolderIconStyle)style;
+            }
 
             EditorGUILayout.HelpBox(
                 "A folder uses an image directly inside it whose file name ends in \"Icon\", "

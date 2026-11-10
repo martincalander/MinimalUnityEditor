@@ -129,12 +129,34 @@ namespace MinimalEditor.FolderIcons.Editor
             FolderIconRowState state = GetRowState(guid, twoColumnTree, focused);
 
             Rect iconRect = GetIconRect(selectionRect);
-            EditorGUI.DrawRect(iconRect, FolderIconColors.Background(surface, state, EditorGUIUtility.isProSkin));
+            bool badge = FolderIconsPreferences.Style == FolderIconStyle.Badge;
+            if (badge)
+            {
+                // The native folder icon stays visible, so nothing is covered.
+                iconRect = GetBadgeRect(iconRect, surface == FolderIconSurface.Grid);
+            }
+            else
+            {
+                EditorGUI.DrawRect(iconRect, FolderIconColors.Background(surface, state, EditorGUIUtility.isProSkin));
+            }
 
             Color previous = GUI.color;
             GUI.color = previous * FolderIconColors.IconTint(surface, state);
             GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
             GUI.color = previous;
+        }
+
+        // List and tree badges use this share of the row-height icon.
+        internal const float ListBadgeScale = 0.625f;
+
+        // Grid badges use this share of the tile-width icon.
+        internal const float GridBadgeScale = 0.45f;
+
+        // A badge sits in the bottom-right corner of the folder icon area.
+        internal static Rect GetBadgeRect(Rect iconRect, bool grid)
+        {
+            float size = Mathf.Round(iconRect.width * (grid ? GridBadgeScale : ListBadgeScale));
+            return new Rect(iconRect.xMax - size, iconRect.yMax - size, size, size);
         }
 
         static void GetRowPlacement(

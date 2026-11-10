@@ -173,25 +173,33 @@ The image file itself still appears in the folder. Adding, renaming, moving, or
 deleting an image updates the icon on the next repaint without restarting the
 Editor.
 
-Open **Preferences > Minimal Editor > Folder Icons** to turn the feature off.
-It starts enabled when no earlier preference exists, and the choice uses a
-user-global `EditorPrefs` value. Define `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS`
+Open **Preferences > Minimal Editor > Folder Icons** to turn the feature off
+or to choose an **Icon Style**:
+
+- **Full Size**, the default, replaces the folder icon with the image.
+- **Badge** keeps Unity's folder icon and draws the image small in its
+  bottom-right corner.
+
+The feature starts enabled when no earlier preference exists. Both choices use
+user-global `EditorPrefs` values. Define `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS`
 to compile the module out.
 
 The module uses Unity's public Project window item callback and does not patch
-the Project window. It draws the image over Unity's folder icon after covering
-that icon with the row's background color. Known limits:
+the Project window. In **Full Size**, it draws the image over Unity's folder
+icon after covering that icon with the row's background color. **Badge** draws
+over the folder icon without covering it, so the limits below about background
+colors do not apply to it. Known limits:
 
-- Transparent images can show a small square in a different shade where the
+- In **Full Size**, transparent images can show a small square in a different shade where the
   background color is not matched. This can happen while a row is hovered, in
   the light skin, or on Unity versions before Unity 7, whose colors have not
   been sampled.
-- In the two-column layout the folder tree highlights the folder shown on the
-  right. When that highlight was set without selecting anything, for example
-  right after the Editor starts, the tree row is drawn without the highlight
-  behind a transparent image.
-- Grid tiles draw the image at the full tile width, slightly larger than the
-  native folder icon.
+- In **Full Size** and the two-column layout, the folder tree highlights the
+  folder shown on the right. When that highlight was set without selecting
+  anything, for example right after the Editor starts, the tree row is drawn
+  without the highlight behind a transparent image.
+- In **Full Size**, grid tiles draw the image at the full tile width, slightly
+  larger than the native folder icon.
 
 ## Package Manager
 

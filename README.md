@@ -24,7 +24,7 @@ stays out of scenes, assets, builds, and runtime code.
 | Menu Item | Built-in bundles and custom menu paths | **Project Settings > Minimal Editor > Menu Item** |
 | Unity Editor | Short title and status-bar extras | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
-| Folder Icons | Folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
+| Folder Icons | Full-size or badge folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
 | FMOD | Automatic menu relocation when FMOD is installed | No settings page |
 

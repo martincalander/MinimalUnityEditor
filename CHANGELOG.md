@@ -11,6 +11,9 @@ All notable changes to this package are documented in this file.
   or `CharactersIcon.png`. The feature is on by default, has a toggle under
   **Preferences > Minimal Editor > Folder Icons**, and can be compiled out with
   `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS`. It uses only public Editor callbacks.
+- Add an **Icon Style** choice for folder icons. **Full Size** replaces the
+  folder icon with the image, and **Badge** keeps the folder icon and shows the
+  image small in its bottom-right corner.
 
 ### Fixed
 
