@@ -1,0 +1,24 @@
+{
+  "name": "MinimalEditor.FolderIcons.Editor.Tests",
+  "rootNamespace": "MinimalEditor.Tests.Editor.FolderIcons",
+  "references": [
+    "MinimalEditor.FolderIcons.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "!MINIMAL_EDITOR_DISABLE_ALL",
+    "!MINIMAL_EDITOR_DISABLE_FOLDER_ICONS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

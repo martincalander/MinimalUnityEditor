@@ -1,0 +1,19 @@
+{
+  "name": "MinimalEditor.FolderIcons.Editor",
+  "rootNamespace": "MinimalEditor.FolderIcons.Editor",
+  "references": [],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "!MINIMAL_EDITOR_DISABLE_ALL",
+    "!MINIMAL_EDITOR_DISABLE_FOLDER_ICONS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

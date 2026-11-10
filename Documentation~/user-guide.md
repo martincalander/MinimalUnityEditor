@@ -152,6 +152,47 @@ Preferences are saved locally for this user and project and survive Editor
 restarts. When upgrading from the standalone Project Folder Visibility package,
 configure your earlier choices again using the current Minimal Editor settings.
 
+## Folder Icons
+
+A folder in the Project window shows an image as its icon when the image sits
+directly inside that folder and its file name, without the extension, ends in
+`Icon`. Matching ignores case. `Characters/CharactersIcon.png`,
+`Audio/Icon.jpg`, and `UI/menuicon.psd` all qualify. `IconSet.png` and
+`Iconic.png` do not, and an image in a subfolder does not apply to the folders
+above it. Any file that Unity imports as a `Texture2D` can be used, including
+package folders under `Packages/`.
+
+When a folder contains several matching images, the first rule that matches
+wins:
+
+1. a file named exactly `Icon`;
+2. a file named after the folder followed by `Icon`, such as `AudioIcon`;
+3. the first remaining file in ordinal path order.
+
+The image file itself still appears in the folder. Adding, renaming, moving, or
+deleting an image updates the icon on the next repaint without restarting the
+Editor.
+
+Open **Preferences > Minimal Editor > Folder Icons** to turn the feature off.
+It starts enabled when no earlier preference exists, and the choice uses a
+user-global `EditorPrefs` value. Define `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS`
+to compile the module out.
+
+The module uses Unity's public Project window item callback and does not patch
+the Project window. It draws the image over Unity's folder icon after covering
+that icon with the row's background color. Known limits:
+
+- Transparent images can show a small square in a different shade where the
+  background color is not matched. This can happen while a row is hovered, in
+  the light skin, or on Unity versions before Unity 7, whose colors have not
+  been sampled.
+- In the two-column layout the folder tree highlights the folder shown on the
+  right. When that highlight was set without selecting anything, for example
+  right after the Editor starts, the tree row is drawn without the highlight
+  behind a transparent image.
+- Grid tiles draw the image at the full tile width, slightly larger than the
+  native folder icon.
+
 ## Package Manager
 
 This module compiles only on Unity 6 or newer.
@@ -192,6 +233,8 @@ the same behavior from code:
   bundles, custom definitions, and path inputs;
 - `MinimalEditor.Editor.EditorFeatureToggles` for the short title and status-bar
   extras.
+
+Folder Icons has no public scripting API.
 
 Production asmdefs are not auto-referenced. Add the matching `MinimalEditor.*`
 assembly reference to the consuming Editor asmdef. Programmatic path and

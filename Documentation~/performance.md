@@ -1,8 +1,19 @@
 # Performance audits
 
-Two audits are recorded here. The 2026-11-10 follow-up comes first. The
-2026-11-08 audit follows with its original numbers, which describe the code at
-that time.
+Two audits and one feature measurement are recorded here. The 2026-11-10
+Folder Icons measurement and follow-up come first. The 2026-11-08 audit follows
+with its original numbers, which describe the code at that time.
+
+## 2026-11-10 Folder Icons
+
+The Project window calls the Folder Icons callback for every visible row on
+every GUI event. Rows return at once outside Repaint. On Repaint, a row without
+an icon costs one dictionary lookup. In Unity `7000.0.0a16` on macOS Apple
+silicon, after warm-up, the lookup took about 13 ns per row and allocated
+0 bytes over 20,000 calls, measured in the shared workspace with a hit and a
+miss per iteration. The index is rebuilt with one `AssetDatabase.FindAssets`
+query on the first repaint after a project change, not on every change.
+`FolderIconIndexTests.Index_LookupDoesNotAllocate` guards the allocation result.
 
 ## 2026-11-10 follow-up
 

@@ -9,6 +9,7 @@
 | Unity Editor chrome | Declared package baseline |
 | Package Manager | Unity 6 or newer |
 | Project Folders | Unity 7 with the CoreCLR Editor runtime |
+| Folder Icons | Declared package baseline; public Project window callback only |
 | FMOD | Only when `com.fmod.fmod-for-unity-2-03` is installed |
 
 The manifest minimum is not a record of validation against every Unity release.
@@ -138,6 +139,7 @@ The package uses these Editor assembly names:
 - `MinimalEditor.MenuItem.Editor`
 - `MinimalEditor.PackageManager.Editor`
 - `MinimalEditor.ProjectFolderVisibility.Editor`
+- `MinimalEditor.FolderIcons.Editor`
 - `MinimalEditor.FMOD.Editor`
 - `MinimalEditor.Editor`
 
@@ -181,6 +183,7 @@ when upgrading from an earlier package identity.
 | `MINIMAL_EDITOR_DISABLE_MENU_ITEM` | Disables Menu Item |
 | `MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
 | `MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
+| `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS` | Disables Folder Icons |
 | `MINIMAL_EDITOR_DISABLE_FMOD` | Disables FMOD menu relocation |
 | `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
 
@@ -196,6 +199,7 @@ title and status-bar features available.
 | Menu Item | `ProjectSettings/MenuItemSettings.json` |
 | Short title | EditorPrefs key `MinimalEditor.Editor.WindowTitleShortener.Enabled` |
 | Status-bar extras | EditorPrefs key `MinimalEditor.Editor.StatusBarExtrasHider.Enabled` |
+| Folder Icons | EditorPrefs key `MinimalEditor.FolderIcons.Enabled` |
 | Project Folders | EditorPrefs key `com.martincalander.minimaleditor.projectfoldervisibility.settings.` plus the hash of `Application.dataPath` |
 
 The package rename updates keys, public namespaces, and assembly names while

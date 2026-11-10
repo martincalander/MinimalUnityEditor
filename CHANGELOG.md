@@ -4,6 +4,14 @@ All notable changes to this package are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Show an image as a folder's icon in the Project window when the image sits
+  directly in that folder and its file name ends in `Icon`, such as `Icon.png`
+  or `CharactersIcon.png`. The feature is on by default, has a toggle under
+  **Preferences > Minimal Editor > Folder Icons**, and can be compiled out with
+  `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS`. It uses only public Editor callbacks.
+
 ### Fixed
 
 - Keep semicolon-separated examples inside menu comment lines inactive, and

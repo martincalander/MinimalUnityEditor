@@ -34,6 +34,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
         [TestCase("Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef", "3b105bd3244e641d2abbc87499797d3c", "MinimalEditor.PackageManager.Editor", "!MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER")]
         [TestCase("Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b", "MinimalEditor.ProjectFolderVisibility.Editor", "!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY")]
         [TestCase("Editor/FMOD/MinimalEditor.FMOD.Editor.asmdef", "229b6ab1758ff4b53b82e8bfb590fa30", "MinimalEditor.FMOD.Editor", "!MINIMAL_EDITOR_DISABLE_FMOD")]
+        [TestCase("Editor/FolderIcons/MinimalEditor.FolderIcons.Editor.asmdef", "26cee8c59cd4140288b38f7a789dbfdc", "MinimalEditor.FolderIcons.Editor", "!MINIMAL_EDITOR_DISABLE_FOLDER_ICONS")]
         [TestCase("Editor/UnityEditor/MinimalEditor.Editor.asmdef", "16e29f94ad0e4961a9e2f4cf4567b684", "MinimalEditor.Editor", "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR")]
         public void ProductionAssembly_UsesPackageIdentityAndPreservesGuidAndDisableContracts(
             string relativePath,

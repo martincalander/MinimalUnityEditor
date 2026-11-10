@@ -18,6 +18,8 @@ sharing its default bundles with the team. Console rules live under
 **Preferences > Console**, and the title and status-bar choices live under
 **Preferences > Minimal Editor > Unity Editor**. On Unity 7 CoreCLR, folder
 visibility choices live under **Preferences > Minimal Editor > Project Folders**.
+Folder icons from images named `*Icon` can be turned off under
+**Preferences > Minimal Editor > Folder Icons**.
 
 The package changes Editor presentation and a few Editor workflows. It does not
 add runtime components, modify scenes or imported assets, configure Player

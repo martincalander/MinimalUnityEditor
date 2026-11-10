@@ -24,11 +24,12 @@ stays out of scenes, assets, builds, and runtime code.
 | Menu Item | Built-in bundles and custom menu paths | **Project Settings > Minimal Editor > Menu Item** |
 | Unity Editor | Short title and status-bar extras | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
+| Folder Icons | Folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
 | FMOD | Automatic menu relocation when FMOD is installed | No settings page |
 
-Console and Unity Editor choices use user-global `EditorPrefs` and carry across
-Unity projects opened by the same operating-system user. Menu Item settings are
+Console, Unity Editor, and Folder Icons choices use user-global `EditorPrefs`
+and carry across Unity projects opened by the same operating-system user. Menu Item settings are
 shared with the project in `ProjectSettings/MenuItemSettings.json`. Project
 Folders choices are local to the current user and project.
 
@@ -95,7 +96,8 @@ version and package requirements are met.
 
 Use `MINIMAL_EDITOR_DISABLE_ALL` to disable every feature and test
 asmdef without removing the package files. Module symbols provide
-narrower control, and each one disables only its own module.
+narrower control, and each one disables only its own module. For example,
+`MINIMAL_EDITOR_DISABLE_FOLDER_ICONS` removes Folder Icons.
 
 Assembly names, namespaces, and public editor APIs use `MinimalEditor.*`.
 Update consuming code, assembly references, and scripting symbols when upgrading
