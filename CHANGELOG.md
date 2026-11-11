@@ -63,6 +63,14 @@ All notable changes to this package are documented in this file.
   existing `ProjectSettings/MenuItemSettings.json` is copied once and then no
   longer read.
 
+### Deprecated
+
+- **Window > Package Management > Re-resolve All Packages** is deprecated and
+  will be removed in a later release. Github Package Manager now provides
+  **Update Git Packages** in the same menu, which fetches the newest commit of
+  each Git dependency without deleting the lockfile and reports what moved.
+  The existing command still works in this release.
+
 ### Fixed
 
 - Keep semicolon-separated examples inside menu comment lines inactive, and

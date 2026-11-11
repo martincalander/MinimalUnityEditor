@@ -88,6 +88,11 @@ Package Manager resolve even when lockfiles are disabled. Check the Console for
 Package Manager errors if resolution fails. Projects with lockfiles enabled
 should review the regenerated file before committing it.
 
+Run it only while the Editor is idle. If it runs while Unity is compiling or
+reloading, the newer packages can be downloaded without being applied; choose
+the command again once Unity has finished. The command is deprecated in favor
+of **Update Git Packages** in Github Package Manager.
+
 ## A Moved Menu Still Shows Its Old Heading
 
 Open **Preferences > Minimal Editor > Menu Item** and confirm the module and

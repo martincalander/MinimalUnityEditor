@@ -322,6 +322,13 @@ resolve the project again, including projects with lockfiles disabled.
 There is no confirmation dialog. Commit or otherwise preserve
 intentional lockfile changes before using it, then review the regenerated file.
 
+This command is deprecated and will be removed in a later release. To fetch
+the newest commit of the project's Git dependencies, use **Update Git
+Packages** from
+[Github Package Manager](https://github.com/martincalander/Githubpackagemanager)
+instead. It leaves the lockfile and registry packages alone and reports which
+packages moved.
+
 The Package Manager integration patches exact Unity internals when a Package
 Manager window is first open or focused after a code load, not at every code
 load. If those internals differ, the affected convenience is left inactive
