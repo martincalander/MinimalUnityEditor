@@ -152,8 +152,12 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 return true;
             }));
             MethodInfo buildTitle = Method(typeof(EditorApplication), "BuildMainWindowTitle");
+            Type automatedQuit = RequireType("MinimalEditor.Editor.AutomatedEditorQuit, MinimalEditor.Editor");
+            bool automatedQuitInstalled = (bool)Property(automatedQuit, "IsInstalled").GetValue(null);
             assertions.Add(() =>
             {
+                Assert.That(Property(automatedQuit, "IsInstalled").GetValue(null), Is.EqualTo(automatedQuitInstalled),
+                    "The automated quit patch must survive Play Mode unchanged.");
                 AssertCallbackCount(typeof(EditorApplication), "updateMainWindowTitle", title, "OnUpdateMainWindowTitle", 1);
                 AssertCallbackCount(typeof(EditorApplication), "update", statusBar, "PollFallback", 1);
                 int previousCalls = m_titleCalls;

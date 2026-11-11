@@ -22,7 +22,7 @@ stays out of scenes, assets, builds, and runtime code.
 | --- | --- | --- |
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
 | Menu Item | Built-in bundles and custom menu paths | **Preferences > Minimal Editor > Menu Item** |
-| Unity Editor | Short title, status-bar extras, and Asset Labels footer | **Preferences > Minimal Editor > Unity Editor** |
+| Unity Editor | Short title, status-bar extras, Asset Labels footer, and quitting an automated Editor | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Folder Icons | Full-size or badge folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |

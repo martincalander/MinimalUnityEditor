@@ -14,6 +14,13 @@ All notable changes to this package are documented in this file.
 - Add an **Icon Style** choice for folder icons. **Full Size** replaces the
   folder icon with the image, and **Badge** keeps the folder icon and shows the
   image small in its bottom-right corner.
+- Add **Quit Automated Editor** under **Preferences > Minimal Editor > Unity
+  Editor**, on by default and active on Unity 7 and newer. An Editor launched
+  with `-automated` cancels the Save Scene prompt and so refuses to quit while
+  an untitled scene has changes. With this option, Command+Q and the window
+  close button save scenes that already have a file, drop changes in untitled
+  scenes, and quit. Normal and batch mode Editors are not affected and are not
+  patched.
 - Add **Hide Asset Labels** under **Preferences > Minimal Editor > Unity
   Editor** to hide the Asset Labels and AssetBundle fields at the bottom of
   asset Inspectors. Asset previews stay visible. It is on by default when the

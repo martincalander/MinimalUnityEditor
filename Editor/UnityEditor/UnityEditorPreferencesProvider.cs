@@ -25,6 +25,11 @@ namespace MinimalEditor.Editor
             "Hides the Asset Labels and AssetBundle fields at the bottom of asset Inspectors. " +
             "Hidden by default when Addressables is installed.");
 
+        static readonly GUIContent QuitAutomatedEditorContent = new GUIContent(
+            "Quit Automated Editor",
+            "Lets Command+Q and the window close button quit an Editor launched with -automated. " +
+            "Saved scenes are saved again and untitled scenes are dropped. Unity 7 and newer.");
+
         [SettingsProvider]
         internal static SettingsProvider CreateProvider()
         {
@@ -42,7 +47,9 @@ namespace MinimalEditor.Editor
                     "status bar",
                     "asset labels",
                     "assetbundle",
-                    "footer"
+                    "footer",
+                    "quit",
+                    "automated"
                 }
             };
         }
@@ -76,6 +83,19 @@ namespace MinimalEditor.Editor
                     EditorFeatureToggles.HideInspectorAssetLabels);
                 if (EditorGUI.EndChangeCheck())
                     EditorFeatureToggles.HideInspectorAssetLabels = hideAssetLabels;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Automated Editor", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(!AutomatedEditorQuit.IsSupported))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool quitAutomatedEditor = EditorGUILayout.ToggleLeft(
+                    QuitAutomatedEditorContent,
+                    EditorFeatureToggles.QuitAutomatedEditor);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.QuitAutomatedEditor = quitAutomatedEditor;
             }
         }
     }

@@ -22,6 +22,12 @@ namespace MinimalEditor.Editor
             set => InspectorAssetLabelsHider.Active = value;
         }
 
+        public static bool QuitAutomatedEditor
+        {
+            get => AutomatedEditorQuit.Active;
+            set => AutomatedEditorQuit.Active = value;
+        }
+
         public static void SetShortWindowTitleInput(Func<bool> input)
         {
             WindowTitleShortener.ActiveInput = input;

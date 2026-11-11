@@ -138,6 +138,27 @@ and patches the Inspector only while it is enabled. If a Unity release changes
 the internal Inspector contract, the option is shown disabled and the footer is
 left alone.
 
+The **Automated Editor** section has one option, for Unity 7 and newer:
+
+- **Quit Automated Editor** lets a person quit an Editor that was launched
+  with the `-automated` argument, as command-line tools and coding agents
+  often do.
+
+Unity cancels the Save Scene prompt in such an Editor because nobody is
+expected to answer it. When an untitled scene has changes, the cancelled prompt
+also cancels the quit, so Command+Q and the window close button do nothing.
+With this option, a quit request saves every changed scene that already has a
+file, saves an open prefab that has changes, saves assets, and exits. Changes
+in a scene that was never saved to a file are dropped, with a warning in the
+Console. If something cannot be saved, the quit is cancelled and the Console
+lists it.
+
+The option starts enabled. It uses the bundled Harmony and patches Unity's
+quit request only in an Editor launched with `-automated`. It does nothing in
+an Editor launched without that argument or in batch mode. It is shown disabled
+on Editors older than Unity 7, and when a Unity release changes the internal
+quit contract.
+
 ## Project Folders
 
 This module requires Unity 7 with the CoreCLR Editor runtime. Open

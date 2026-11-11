@@ -7,7 +7,9 @@ namespace MinimalEditor.Editor
         internal const string ShortWindowTitleKey = "MinimalEditor.Editor.WindowTitleShortener.Enabled";
         internal const string HideStatusBarExtrasKey = "MinimalEditor.Editor.StatusBarExtrasHider.Enabled";
         internal const string HideInspectorAssetLabelsKey = "MinimalEditor.Editor.InspectorAssetLabelsHider.Enabled";
+        internal const string QuitAutomatedEditorKey = "MinimalEditor.Editor.AutomatedEditorQuit.Enabled";
 
+        internal const bool QuitAutomatedEditorDefaultValue = true;
         internal const bool ShortWindowTitleDefaultValue = true;
         internal const bool HideStatusBarExtrasDefaultValue = true;
         // Addressables replaces AssetBundle names, so the footer is hidden by default alongside it.
@@ -21,6 +23,12 @@ namespace MinimalEditor.Editor
         {
             get => EditorPrefs.GetBool(ShortWindowTitleKey, ShortWindowTitleDefaultValue);
             set => EditorPrefs.SetBool(ShortWindowTitleKey, value);
+        }
+
+        internal static bool QuitAutomatedEditor
+        {
+            get => EditorPrefs.GetBool(QuitAutomatedEditorKey, QuitAutomatedEditorDefaultValue);
+            set => EditorPrefs.SetBool(QuitAutomatedEditorKey, value);
         }
 
         internal static bool HideStatusBarExtras

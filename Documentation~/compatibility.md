@@ -6,7 +6,7 @@
 | --- | --- |
 | Console | Declared package baseline: Unity `2021.3.0f1` |
 | Menu Item | Declared baseline; disabled on Unity 6.0 before `6000.0.43f1` |
-| Unity Editor chrome | Declared package baseline |
+| Unity Editor chrome | Declared package baseline; **Quit Automated Editor** needs Unity 7 or newer |
 | Package Manager | Unity 6 or newer |
 | Project Folders | Unity 7 with the CoreCLR Editor runtime |
 | Folder Icons | Declared package baseline; public Project window callback only |
