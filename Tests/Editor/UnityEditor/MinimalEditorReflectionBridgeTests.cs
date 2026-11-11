@@ -166,6 +166,62 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
         }
 
         [Test]
+        public void InspectorHeaderButtonsHider_HidesHelpAndPresetIndividually_AndRestoresUnityOrder()
+        {
+            var listField = typeof(EditorGUIUtility).GetField("s_EditorHeaderItemsMethods", AnyStatic);
+            Assert.That(listField, Is.Not.Null, "Unity's Inspector header item list must remain reachable.");
+            var help = typeof(EditorGUI).GetMethod("HelpIconButton", AnyStatic);
+            var preset = FindPresetButton();
+            Assert.That(help, Is.Not.Null, "EditorGUI.HelpIconButton must exist for the help button toggle.");
+            Assert.That(preset, Is.Not.Null, "PresetSelector.DrawPresetButton must exist for the preset button toggle.");
+
+            var previousHelp = InspectorHeaderButtonsHider.HideHelp;
+            var previousPreset = InspectorHeaderButtonsHider.HidePreset;
+            try
+            {
+                InspectorHeaderButtonsHider.HideHelp = false;
+                InspectorHeaderButtonsHider.HidePreset = false;
+                EnsureHeaderItemsFilled(listField);
+                var original = Methods(listField);
+                Assert.That(original, Has.Member(help));
+                Assert.That(original, Has.Member(preset));
+
+                InspectorHeaderButtonsHider.HideHelp = true;
+                Assert.That(Methods(listField), Has.No.Member(help));
+                Assert.That(Methods(listField), Has.Member(preset));
+
+                InspectorHeaderButtonsHider.HidePreset = true;
+                Assert.That(Methods(listField), Has.No.Member(help));
+                Assert.That(Methods(listField), Has.No.Member(preset));
+
+                InspectorHeaderButtonsHider.HideHelp = false;
+                Assert.That(Methods(listField), Has.Member(help));
+                Assert.That(Methods(listField), Has.No.Member(preset));
+
+                InspectorHeaderButtonsHider.HidePreset = false;
+                Assert.That(Methods(listField), Is.EqualTo(original), "Restored buttons must keep Unity's order.");
+            }
+            finally
+            {
+                InspectorHeaderButtonsHider.HideHelp = previousHelp;
+                InspectorHeaderButtonsHider.HidePreset = previousPreset;
+            }
+        }
+
+        [TestCase((int)EditorElementHider.Element.AssetPostprocessors)]
+        [TestCase((int)EditorElementHider.Element.StatusBarDebugger)]
+        public void EditorElementHider_TargetExists_AndPatches(int elementIndex)
+        {
+            var element = (EditorElementHider.Element)elementIndex;
+            Assert.That(EditorElementHider.GetTargetMethod(element), Is.Not.Null,
+                "Unity's draw method for this element must stay reachable.");
+            Assert.That(EditorElementHider.IsSupported(element), Is.True, EditorElementHider.LastPatchError);
+
+            EditorElementHider.TryPatch(element);
+            Assert.That(EditorElementHider.IsPatched(element), Is.True, EditorElementHider.LastPatchError);
+        }
+
+        [Test]
         public void InspectorAssetLabelsHider_ReportsNoInspectedAssets_OnlyWhileFooterIsDrawn()
         {
             Assert.That(InspectorAssetLabelsHider.GetDrawMethod(), Is.Not.Null,
@@ -216,6 +272,31 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                 if (!hadKey)
                     EditorPrefs.DeleteKey(UnityEditorPreferences.HideInspectorAssetLabelsKey);
             }
+        }
+
+        static System.Collections.Generic.List<MethodInfo> Methods(FieldInfo listField)
+        {
+            var result = new System.Collections.Generic.List<MethodInfo>();
+            foreach (Delegate callback in (System.Collections.IList)listField.GetValue(null))
+                result.Add(callback.Method);
+            return result;
+        }
+
+        static MethodInfo FindPresetButton()
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType("UnityEditor.Presets.PresetSelector", false);
+                if (type != null) return type.GetMethod("DrawPresetButton", AnyStatic);
+            }
+            return null;
+        }
+
+        static void EnsureHeaderItemsFilled(FieldInfo listField)
+        {
+            // Unity fills the list while drawing the first Inspector header after a reload.
+            Assume.That(listField.GetValue(null), Is.Not.Null,
+                "Unity has not drawn an Inspector header since the last reload.");
         }
 
         static object BuildMainWindowTitle()

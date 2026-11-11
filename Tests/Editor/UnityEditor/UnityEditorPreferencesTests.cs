@@ -8,14 +8,22 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
     {
         (bool HasKey, bool Value) shortWindowTitleSnapshot;
         (bool HasKey, bool Value) hideStatusBarExtrasSnapshot;
+        (bool HasKey, bool Value) hideInspectorHelpSnapshot;
+        (bool HasKey, bool Value) hideInspectorPresetSnapshot;
         (bool HasKey, bool Value) hideInspectorAssetLabelsSnapshot;
+        (bool HasKey, bool Value) hideAssetPostprocessorsSnapshot;
+        (bool HasKey, bool Value) hideStatusBarDebuggerSnapshot;
 
         [SetUp]
         public void SetUp()
         {
             shortWindowTitleSnapshot = Capture(UnityEditorPreferences.ShortWindowTitleKey);
             hideStatusBarExtrasSnapshot = Capture(UnityEditorPreferences.HideStatusBarExtrasKey);
+            hideInspectorHelpSnapshot = Capture(UnityEditorPreferences.HideInspectorHelpButtonKey);
+            hideInspectorPresetSnapshot = Capture(UnityEditorPreferences.HideInspectorPresetButtonKey);
             hideInspectorAssetLabelsSnapshot = Capture(UnityEditorPreferences.HideInspectorAssetLabelsKey);
+            hideAssetPostprocessorsSnapshot = Capture(UnityEditorPreferences.HideAssetPostprocessorsKey);
+            hideStatusBarDebuggerSnapshot = Capture(UnityEditorPreferences.HideStatusBarDebuggerKey);
         }
 
         [TearDown]
@@ -32,10 +40,30 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                 hideStatusBarExtrasSnapshot,
                 value => EditorFeatureToggles.HideStatusBarExtras = value);
             Restore(
+                UnityEditorPreferences.HideInspectorHelpButtonKey,
+                UnityEditorPreferences.HideInspectorHelpButtonDefaultValue,
+                hideInspectorHelpSnapshot,
+                value => EditorFeatureToggles.HideInspectorHelpButton = value);
+            Restore(
+                UnityEditorPreferences.HideInspectorPresetButtonKey,
+                UnityEditorPreferences.HideInspectorPresetButtonDefaultValue,
+                hideInspectorPresetSnapshot,
+                value => EditorFeatureToggles.HideInspectorPresetButton = value);
+            Restore(
                 UnityEditorPreferences.HideInspectorAssetLabelsKey,
                 UnityEditorPreferences.HideInspectorAssetLabelsDefaultValue,
                 hideInspectorAssetLabelsSnapshot,
                 value => EditorFeatureToggles.HideInspectorAssetLabels = value);
+            Restore(
+                UnityEditorPreferences.HideAssetPostprocessorsKey,
+                UnityEditorPreferences.HideAssetPostprocessorsDefaultValue,
+                hideAssetPostprocessorsSnapshot,
+                value => EditorFeatureToggles.HideAssetPostprocessors = value);
+            Restore(
+                UnityEditorPreferences.HideStatusBarDebuggerKey,
+                UnityEditorPreferences.HideStatusBarDebuggerDefaultValue,
+                hideStatusBarDebuggerSnapshot,
+                value => EditorFeatureToggles.HideStatusBarDebugger = value);
         }
 
         [Test]
@@ -74,6 +102,26 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
         }
 
         [Test]
+        public void InspectorButtons_AreVisibleByDefault_AndPersistIndependently()
+        {
+            EditorFeatureToggles.HideInspectorHelpButton = false;
+            EditorFeatureToggles.HideInspectorPresetButton = false;
+            EditorPrefs.DeleteKey(UnityEditorPreferences.HideInspectorHelpButtonKey);
+            EditorPrefs.DeleteKey(UnityEditorPreferences.HideInspectorPresetButtonKey);
+            Assert.That(EditorFeatureToggles.HideInspectorHelpButton, Is.False);
+            Assert.That(EditorFeatureToggles.HideInspectorPresetButton, Is.False);
+
+            EditorFeatureToggles.HideInspectorHelpButton = true;
+            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideInspectorHelpButtonKey, false), Is.True);
+            Assert.That(EditorFeatureToggles.HideInspectorPresetButton, Is.False);
+
+            EditorFeatureToggles.HideInspectorPresetButton = true;
+            EditorFeatureToggles.HideInspectorHelpButton = false;
+            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideInspectorHelpButtonKey, true), Is.False);
+            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideInspectorPresetButtonKey, false), Is.True);
+        }
+
+        [Test]
         public void InspectorAssetLabels_DefaultFollowsAddressables_AndStoresExplicitChoice()
         {
             var addressablesInstalled =
@@ -91,6 +139,31 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
             Assert.That(
                 EditorPrefs.GetBool(UnityEditorPreferences.HideInspectorAssetLabelsKey, addressablesInstalled),
                 Is.EqualTo(!addressablesInstalled));
+        }
+
+        [Test]
+        public void ElementHiders_AreOffByDefault_PersistIndependently_AndSkipOnlyWhileHidden()
+        {
+            EditorFeatureToggles.HideAssetPostprocessors = false;
+            EditorFeatureToggles.HideStatusBarDebugger = false;
+            EditorPrefs.DeleteKey(UnityEditorPreferences.HideAssetPostprocessorsKey);
+            EditorPrefs.DeleteKey(UnityEditorPreferences.HideStatusBarDebuggerKey);
+            Assert.That(EditorFeatureToggles.HideAssetPostprocessors, Is.False);
+            Assert.That(EditorFeatureToggles.HideStatusBarDebugger, Is.False);
+            Assert.That(EditorElementHider.AssetPostprocessorsPrefix(), Is.True);
+            Assert.That(EditorElementHider.StatusBarDebuggerPrefix(), Is.True);
+
+            EditorFeatureToggles.HideAssetPostprocessors = true;
+            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideAssetPostprocessorsKey, false), Is.True);
+            Assert.That(EditorElementHider.AssetPostprocessorsPrefix(), Is.False, "Unity's list must be skipped.");
+            Assert.That(EditorElementHider.StatusBarDebuggerPrefix(), Is.True);
+            Assert.That(EditorFeatureToggles.HideStatusBarDebugger, Is.False);
+
+            EditorFeatureToggles.HideStatusBarDebugger = true;
+            EditorFeatureToggles.HideAssetPostprocessors = false;
+            Assert.That(EditorPrefs.GetBool(UnityEditorPreferences.HideStatusBarDebuggerKey, false), Is.True);
+            Assert.That(EditorElementHider.StatusBarDebuggerPrefix(), Is.False, "Unity's button must be skipped.");
+            Assert.That(EditorElementHider.AssetPostprocessorsPrefix(), Is.True);
         }
 
         static (bool HasKey, bool Value) Capture(string key)

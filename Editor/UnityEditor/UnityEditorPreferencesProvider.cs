@@ -20,6 +20,14 @@ namespace MinimalEditor.Editor
             "Hide Status Bar Extras",
             "Hides Unity's animation and memory statistics from the Editor status bar.");
 
+        static readonly GUIContent HideInspectorHelpButtonContent = new GUIContent(
+            "Hide Help Button",
+            "Hides the ? Open Reference button from Inspector headers.");
+
+        static readonly GUIContent HideInspectorPresetButtonContent = new GUIContent(
+            "Hide Preset Button",
+            "Hides the preset button from Inspector headers.");
+
         static readonly GUIContent HideInspectorAssetLabelsContent = new GUIContent(
             "Hide Asset Labels",
             "Hides the Asset Labels and AssetBundle fields at the bottom of asset Inspectors. " +
@@ -29,6 +37,14 @@ namespace MinimalEditor.Editor
             "Quit Automated Editor",
             "Lets Command+Q and the window close button quit an Editor launched with -automated. " +
             "Saved scenes are saved again and untitled scenes are dropped. Unity 7 and newer.");
+
+        static readonly GUIContent HideAssetPostprocessorsContent = new GUIContent(
+            "Hide Asset PostProcessors",
+            "Hides the Asset PostProcessors list at the bottom of importer Inspectors.");
+
+        static readonly GUIContent HideStatusBarDebuggerContent = new GUIContent(
+            "Hide Debugger Button",
+            "Hides the debug mode button from the Editor status bar.");
 
         [SettingsProvider]
         internal static SettingsProvider CreateProvider()
@@ -45,11 +61,17 @@ namespace MinimalEditor.Editor
                     "window",
                     "title",
                     "status bar",
+                    "inspector",
+                    "help",
+                    "reference",
+                    "preset",
                     "asset labels",
                     "assetbundle",
                     "footer",
                     "quit",
-                    "automated"
+                    "automated",
+                    "postprocessors",
+                    "debugger"
                 }
             };
         }
@@ -72,6 +94,39 @@ namespace MinimalEditor.Editor
             if (EditorGUI.EndChangeCheck())
                 EditorFeatureToggles.HideStatusBarExtras = hideStatusBarExtras;
 
+            using (new EditorGUI.DisabledScope(!EditorElementHider.IsSupported(EditorElementHider.Element.StatusBarDebugger)))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool hideDebugger = EditorGUILayout.ToggleLeft(
+                    HideStatusBarDebuggerContent,
+                    EditorFeatureToggles.HideStatusBarDebugger);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.HideStatusBarDebugger = hideDebugger;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Inspector Header", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(!InspectorHeaderButtonsHider.IsButtonSupported(InspectorHeaderButtonsHider.Button.Help)))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool hideHelp = EditorGUILayout.ToggleLeft(
+                    HideInspectorHelpButtonContent,
+                    EditorFeatureToggles.HideInspectorHelpButton);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.HideInspectorHelpButton = hideHelp;
+            }
+
+            using (new EditorGUI.DisabledScope(!InspectorHeaderButtonsHider.IsButtonSupported(InspectorHeaderButtonsHider.Button.Preset)))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool hidePreset = EditorGUILayout.ToggleLeft(
+                    HideInspectorPresetButtonContent,
+                    EditorFeatureToggles.HideInspectorPresetButton);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.HideInspectorPresetButton = hidePreset;
+            }
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Inspector Footer", EditorStyles.boldLabel);
 
@@ -83,6 +138,16 @@ namespace MinimalEditor.Editor
                     EditorFeatureToggles.HideInspectorAssetLabels);
                 if (EditorGUI.EndChangeCheck())
                     EditorFeatureToggles.HideInspectorAssetLabels = hideAssetLabels;
+            }
+
+            using (new EditorGUI.DisabledScope(!EditorElementHider.IsSupported(EditorElementHider.Element.AssetPostprocessors)))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool hidePostprocessors = EditorGUILayout.ToggleLeft(
+                    HideAssetPostprocessorsContent,
+                    EditorFeatureToggles.HideAssetPostprocessors);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.HideAssetPostprocessors = hidePostprocessors;
             }
 
             EditorGUILayout.Space();

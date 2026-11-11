@@ -208,7 +208,7 @@ namespace MinimalEditor.Editor
         }
 
         // Unity keeps the footer's last layout until its Inspector is rebuilt, so a repaint is not enough.
-        static void RefreshInspectors()
+        internal static void RefreshInspectors()
         {
             if (PropertyEditorType == null)
                 return;

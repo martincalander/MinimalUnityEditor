@@ -118,25 +118,42 @@ Open **Preferences > Minimal Editor > Unity Editor**.
 - **Short Window Title** uses `PlayerSettings.productName` as the main Editor
   window title.
 - **Hide Status Bar Extras** hides Unity's animation and memory statistics.
+- **Hide Debugger Button** hides the debug mode button from the status bar.
+  It starts disabled.
 
-Both options start enabled when no earlier preference exists. Their user-global
-`EditorPrefs` values carry across Unity projects. If a Unity release changes
-the internal status-bar contract, that refinement does not apply.
+The first two options start enabled when no earlier preference exists. Their
+user-global `EditorPrefs` values carry across Unity projects. If a Unity
+release changes the internal status-bar contract, that refinement does not
+apply.
 Turning off **Hide Status Bar Extras** restores only bars changed by Minimal
 Editor, preserving extras that Unity had already hidden.
 
-The **Inspector Footer** section has one option:
+The **Inspector Header** section hides buttons from the right side of each
+Inspector header. Use either option alone or both together:
+
+- **Hide Help Button** hides the **?** button that opens the reference page.
+- **Hide Preset Button** hides the preset button.
+
+Both options start disabled. Turning one off puts its button back in Unity's
+usual place. If a Unity release removes or renames a button, its option is
+shown disabled and that button is left alone.
+
+The **Inspector Footer** section has two options:
 
 - **Hide Asset Labels** hides the Asset Labels and AssetBundle fields that
   Unity shows at the bottom of every asset Inspector. Asset previews stay
   visible.
+- **Hide Asset PostProcessors** hides the Asset PostProcessors list that
+  Unity shows at the bottom of importer Inspectors. It starts disabled.
 
-It starts enabled when the Addressables package is installed, because
-Addressables replaces AssetBundle names, and disabled otherwise. A choice made
-here is stored and wins over that default. The option uses the bundled Harmony
-and patches the Inspector only while it is enabled. If a Unity release changes
-the internal Inspector contract, the option is shown disabled and the footer is
-left alone.
+**Hide Asset Labels** starts enabled when the Addressables package is
+installed, because Addressables replaces AssetBundle names, and disabled
+otherwise. A choice made here is stored and wins over that default.
+
+These options and **Hide Debugger Button** use the bundled Harmony and patch
+the Editor only while they are enabled. If a Unity release changes the
+internal method an option relies on, that option is shown disabled and its
+element is left alone.
 
 The **Automated Editor** section has one option, for Unity 7 and newer:
 

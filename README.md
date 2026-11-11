@@ -22,7 +22,7 @@ stays out of scenes, assets, builds, and runtime code.
 | --- | --- | --- |
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
 | Menu Item | Built-in bundles and custom menu paths | **Preferences > Minimal Editor > Menu Item** |
-| Unity Editor | Short title, status-bar extras, Asset Labels footer, and quitting an automated Editor | **Preferences > Minimal Editor > Unity Editor** |
+| Unity Editor | Short title, status-bar extras, Inspector header buttons, Asset Labels footer, and quitting an automated Editor | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Folder Icons | Full-size or badge folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
@@ -84,7 +84,8 @@ gitlink already pins the exact package commit checked out in the parent project.
    when no earlier preference exists, but the default rule list is empty.
 4. Open **Preferences > Minimal Editor > Unity Editor** to adjust the title and
    status-bar options, which default to enabled when no earlier preference
-   exists, or to hide the Asset Labels footer.
+   exists, or to hide the Inspector help and preset buttons and the Asset
+   Labels footer.
 5. On Unity 7, open **Preferences > Minimal Editor > Project Folders** to hide
    `Assets/AddressableAssetsData`, `Assets/StreamingAssets`, `Assets/Plugins`,
    `Assets/Gizmos`, `Assets/Settings`, or custom folders. Addressables data starts
