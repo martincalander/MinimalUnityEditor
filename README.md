@@ -21,12 +21,11 @@ stays out of scenes, assets, builds, and runtime code.
 | Area | What it controls | Location |
 | --- | --- | --- |
 | Console | Filters, stack-trace cleanup, Assistant button | **Preferences > Console** |
-| Menu Item | Built-in bundles and custom menu paths | **Preferences > Minimal Editor > Menu Item** |
+| Menu Item | Built-in bundles and custom menu paths to hide or move | **Preferences > Minimal Editor > Menu Item** |
 | Unity Editor | Short title, status-bar extras, Inspector header buttons, Asset Labels footer, and quitting an automated Editor | **Preferences > Minimal Editor > Unity Editor** |
 | Project Folders | Built-in and custom folder visibility | **Preferences > Minimal Editor > Project Folders** |
 | Folder Icons | Full-size or badge folder icons from an image named `*Icon` inside the folder | **Preferences > Minimal Editor > Folder Icons** |
 | Package Manager | Unity 6 **In Project** duplicate filtering and **Go To Local Package** | No settings page |
-| FMOD | Automatic menu relocation when FMOD is installed | No settings page |
 
 Console, Unity Editor, and Folder Icons choices use user-global `EditorPrefs`
 and carry across Unity projects opened by the same operating-system user. Menu
@@ -79,7 +78,8 @@ gitlink already pins the exact package commit checked out in the parent project.
 2. Open **Preferences > Minimal Editor > Menu Item**. Most available menu
    bundles are enabled by default, so keep the ones that suit you and turn off
    the rest. A removed menu entry returns after the next domain reload
-   or Editor reopen.
+   or Editor reopen. The **FMOD** and **Steam Audio** bundles move those
+   plugins' menu-bar headings under **Tools** instead of hiding them.
 3. Open **Preferences > Console** and add a rule. Filtering defaults to enabled
    when no earlier preference exists, but the default rule list is empty.
 4. Open **Preferences > Minimal Editor > Unity Editor** to adjust the title and
@@ -91,8 +91,8 @@ gitlink already pins the exact package commit checked out in the parent project.
    `Assets/Gizmos`, `Assets/Settings`, or custom folders. Addressables data starts
    hidden; the other built-in folders start visible.
 
-The Package Manager and FMOD refinements activate automatically when their
-version and package requirements are met.
+The Package Manager refinements activate automatically when their version
+requirements are met.
 
 ## Compatibility and Opt-Outs
 

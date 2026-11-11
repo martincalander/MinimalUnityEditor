@@ -88,13 +88,15 @@ Package Manager resolve even when lockfiles are disabled. Check the Console for
 Package Manager errors if resolution fails. Projects with lockfiles enabled
 should review the regenerated file before committing it.
 
-## FMOD Still Has Root Menu Items
+## A Moved Menu Still Shows Its Old Heading
 
-Confirm the installed FMOD package ID is
-`com.fmod.fmod-for-unity-2-03`. Minimal Editor retries removal of the original
-FMOD entries a limited number of times; API or menu changes in another FMOD
-release can leave some originals in place. An original stays available when
-Minimal Editor cannot call its replacement.
+Open **Preferences > Minimal Editor > Menu Item** and confirm the module and
+the bundle or custom rule are enabled. The settings page lists move rules it
+ignores. Spell the source heading exactly as it appears in the menu bar.
+
+A command stays under its old heading when it is not declared with a
+`MenuItem` attribute or when another command already uses the new path. The
+heading is removed only once every command below it has moved.
 
 ## A Whole Module Is Missing
 

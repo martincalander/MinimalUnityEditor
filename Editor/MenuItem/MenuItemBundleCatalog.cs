@@ -261,6 +261,28 @@ namespace MinimalEditor.MenuItem.Editor
                     "Window/Version Control"
                 }));
 
+            // These plugins add their own heading to the menu bar. A move rule does nothing while
+            // the plugin is not installed, so the bundles are always listed.
+            bundles.Add(new MenuItemBundleDefinition(
+                "fmod",
+                "FMOD (move to Tools)",
+                true,
+                true,
+                new[]
+                {
+                    "FMOD/* => Tools/FMOD"
+                }));
+
+            bundles.Add(new MenuItemBundleDefinition(
+                "steam_audio",
+                "Steam Audio (move to Tools)",
+                true,
+                true,
+                new[]
+                {
+                    "Steam Audio/* => Tools/Steam Audio"
+                }));
+
             return bundles;
         }
 

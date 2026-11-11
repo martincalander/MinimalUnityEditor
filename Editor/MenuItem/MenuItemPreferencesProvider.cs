@@ -48,7 +48,10 @@ namespace MinimalEditor.MenuItem.Editor
                     "gltf",
                     "dependencies",
                     "version control",
-                    "services"
+                    "services",
+                    "move",
+                    "fmod",
+                    "steam audio"
                 }
             };
         }
@@ -164,7 +167,8 @@ namespace MinimalEditor.MenuItem.Editor
             {
                 EditorGUILayout.LabelField("Custom Path Definitions", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox(
-                    "One path per line or ';' separated. Supports wildcard suffix '*'. Lines starting with # or // are ignored.",
+                    "One path per line or ';' separated. Supports wildcard suffix '*'. Lines starting with # or // are ignored.\n" +
+                    "To move commands instead of hiding them, write 'Source/* => Destination', such as 'Vendor/* => Tools/Vendor'.",
                     MessageType.None);
 
                 EditorGUI.BeginChangeCheck();
@@ -208,6 +212,7 @@ namespace MinimalEditor.MenuItem.Editor
 
                 DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.Unsupported);
                 DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind.ErrorProne);
+                DrawWarnings(MenuItemModuleSettings.GetCustomDefinitionMoveWarnings());
             }
         }
 
@@ -226,7 +231,11 @@ namespace MinimalEditor.MenuItem.Editor
 
         static void DrawCustomDefinitionWarnings(MenuItemBlockedEntryKind kind)
         {
-            var warnings = MenuItemModuleSettings.GetCustomDefinitionWarnings(kind);
+            DrawWarnings(MenuItemModuleSettings.GetCustomDefinitionWarnings(kind));
+        }
+
+        static void DrawWarnings(IReadOnlyList<string> warnings)
+        {
             for (var i = 0; i < warnings.Count; i++)
             {
                 if (string.IsNullOrWhiteSpace(warnings[i])) continue;

@@ -253,8 +253,11 @@ namespace MinimalEditor.MenuItem.Editor
             s_isApplying = true;
             try
             {
-                var resolvedItems = isActive ? ResolveMenuPaths() : null;
+                var resolvedItems = MenuItemMoveRules.Split(isActive ? ResolveMenuPaths() : null, out var moveRules);
                 ConfigureNativeRootVisibility(resolvedItems);
+                // Moves run first so hide rules can also target the new paths. Without active
+                // rules this puts moved commands back.
+                ApplyMoveRules(isActive ? (IReadOnlyList<MenuItemMoveRule>)moveRules ?? Array.Empty<MenuItemMoveRule>() : null);
                 if (!isActive) return;
                 if (RemoveMenuItemMethod == null) return;
 
@@ -687,6 +690,7 @@ namespace MinimalEditor.MenuItem.Editor
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in entries)
             {
+                if (MenuItemMoveRules.IsMoveEntry(entry)) continue;
                 if (!TryGetWarningMessage(entry, kind, out var warning)) continue;
                 if (!seen.Add(warning)) continue;
                 warnings.Add(warning);
@@ -767,6 +771,13 @@ namespace MinimalEditor.MenuItem.Editor
             {
                 var trimmed = entry?.Trim();
                 if (string.IsNullOrEmpty(trimmed)) continue;
+
+                if (MenuItemMoveRules.IsMoveEntry(trimmed))
+                {
+                    // Move rules are validated on their own and split from hide rules before applying.
+                    if (MenuItemMoveRules.TryParse(trimmed, out _, out _) && seen.Add(trimmed)) result.Add(trimmed);
+                    continue;
+                }
 
                 // Native-root-only rules pass through here and are excluded again before registry removal.
                 if (IsUnsupportedEntry(trimmed) && !IsNativeRootOnlyEntry(trimmed)) continue;

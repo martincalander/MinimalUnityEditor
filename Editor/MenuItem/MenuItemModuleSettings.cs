@@ -32,6 +32,7 @@ namespace MinimalEditor.MenuItem.Editor
         static List<string> s_cachedDefinitionEntries;
         static IReadOnlyList<string> s_cachedUnsupportedWarnings;
         static IReadOnlyList<string> s_cachedErrorProneWarnings;
+        static IReadOnlyList<string> s_cachedMoveWarnings;
 
         static MenuItemSettingsData Data
         {
@@ -217,6 +218,12 @@ namespace MinimalEditor.MenuItem.Editor
             return Array.Empty<string>();
         }
 
+        internal static IReadOnlyList<string> GetCustomDefinitionMoveWarnings()
+        {
+            var entries = GetCustomDefinitionEntries();
+            return s_cachedMoveWarnings ?? (s_cachedMoveWarnings = MenuItemMoveRules.GetWarningMessages(entries));
+        }
+
         static List<string> GetCustomDefinitionEntries()
         {
             var text = CustomDefinitionsText;
@@ -226,6 +233,7 @@ namespace MinimalEditor.MenuItem.Editor
                 s_cachedDefinitionEntries = ParseDefinitionEntries(text);
                 s_cachedUnsupportedWarnings = null;
                 s_cachedErrorProneWarnings = null;
+                s_cachedMoveWarnings = null;
             }
 
             return s_cachedDefinitionEntries;

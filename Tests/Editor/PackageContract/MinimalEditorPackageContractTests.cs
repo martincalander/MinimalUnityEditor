@@ -33,7 +33,6 @@ namespace MinimalEditor.Tests.Editor.PackageContract
         [TestCase("Editor/MenuItem/MinimalEditor.MenuItem.Editor.asmdef", "6dc2dc88be2f04b369efaca8770557e3", "MinimalEditor.MenuItem.Editor", "!MINIMAL_EDITOR_DISABLE_MENU_ITEM")]
         [TestCase("Editor/PackageManager/MinimalEditor.PackageManager.Editor.asmdef", "3b105bd3244e641d2abbc87499797d3c", "MinimalEditor.PackageManager.Editor", "!MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER")]
         [TestCase("Editor/ProjectFolderVisibility/MinimalEditor.ProjectFolderVisibility.Editor.asmdef", "eb78ef6201f214b1e9d2fa0eb4ae142b", "MinimalEditor.ProjectFolderVisibility.Editor", "!MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY")]
-        [TestCase("Editor/FMOD/MinimalEditor.FMOD.Editor.asmdef", "229b6ab1758ff4b53b82e8bfb590fa30", "MinimalEditor.FMOD.Editor", "!MINIMAL_EDITOR_DISABLE_FMOD")]
         [TestCase("Editor/FolderIcons/MinimalEditor.FolderIcons.Editor.asmdef", "26cee8c59cd4140288b38f7a789dbfdc", "MinimalEditor.FolderIcons.Editor", "!MINIMAL_EDITOR_DISABLE_FOLDER_ICONS")]
         [TestCase("Editor/UnityEditor/MinimalEditor.Editor.asmdef", "16e29f94ad0e4961a9e2f4cf4567b684", "MinimalEditor.Editor", "!MINIMAL_EDITOR_DISABLE_UNITY_EDITOR")]
         public void ProductionAssembly_UsesPackageIdentityAndPreservesGuidAndDisableContracts(
@@ -76,10 +75,7 @@ namespace MinimalEditor.Tests.Editor.PackageContract
                 Assert.That(definition.defineConstraints, Is.Unique);
                 Assert.That(definition.includePlatforms, Is.EqualTo(new[] { "Editor" }), definition.name);
                 Assert.That(definition.autoReferenced, Is.False, definition.name);
-                if (definition.name == "MinimalEditor.FMOD.Editor")
-                    Assert.That(definition.references, Is.EqualTo(new[] { "FMODUnityEditor" }));
-                else
-                    Assert.That(definition.references, Is.SubsetOf(assemblyNames));
+                Assert.That(definition.references, Is.SubsetOf(assemblyNames));
                 if (definition.name.StartsWith("MinimalEditor.PackageManager.", StringComparison.Ordinal))
                     Assert.That(definition.defineConstraints, Does.Contain("UNITY_6000_0_OR_NEWER"), definition.name);
                 if (definition.name.StartsWith("MinimalEditor.ProjectFolderVisibility.", StringComparison.Ordinal))

@@ -63,6 +63,11 @@ Turning off a bundle stops its removal on the next apply pass, but Unity does
 not safely expose a live menu rebuild for this module. Already removed entries
 return after a normal domain reload or Editor reopen.
 
+The **FMOD (move to Tools)** and **Steam Audio (move to Tools)** bundles move
+commands instead of hiding them. They are always listed and start enabled. A
+bundle does nothing while its plugin is not installed. See
+[Moving Commands](#moving-commands).
+
 ### Custom Paths
 
 Expand **Advanced Settings** to enter custom definitions.
@@ -88,6 +93,47 @@ Assets/Import Package/Custom Package...
 # Hide one submenu
 Window/Analysis/*
 ```
+
+### Moving Commands
+
+A definition with `=>` moves commands to another menu instead of hiding them.
+Write the source on the left and the new location on the right:
+
+```text
+# Move a plugin's whole menu-bar heading under Tools
+Vendor/* => Tools/Vendor
+
+# Move one submenu
+Vendor/Help/* => Help/Vendor
+
+# Move and rename one command
+Vendor/Open Settings => Tools/Vendor Settings
+```
+
+- `Vendor/* => Tools/Vendor` and `Vendor => Tools/Vendor` mean the same. Every
+  command below the source keeps its relative path, order, and hotkey.
+- Spell the source heading as the plugin registers it. Matching below the
+  heading is case-insensitive.
+- A heading or submenu left empty by a move is removed.
+- Moves apply before hide rules, so a hide rule can target the new path.
+- Removing or changing a rule, turning off its bundle, or turning off the
+  module puts the commands back right away. No domain reload is needed.
+
+A moved command calls the same method as the original. Some things do not carry
+over:
+
+- Only commands declared with a `MenuItem` attribute can be moved. Others stay
+  where they are.
+- A command stays in place when another command already uses the new path.
+- A checkmark that the plugin sets on the original path does not show on the
+  moved command.
+- A shortcut reassigned in the Shortcut Manager belongs to the original path
+  and has to be assigned again.
+- Scripts that call `EditorApplication.ExecuteMenuItem` with the original path
+  no longer find the command.
+- Commands under `Assets`, `GameObject`, `Component`, `CONTEXT`, and
+  `Services` cannot be moved, and nothing can be moved into those menus. The
+  settings page reports rules it ignores.
 
 On macOS, a whole-root rule such as `Jobs/*` also hides the native menu-bar
 heading without needing to hover over it. Minimal Editor reapplies that
@@ -280,15 +326,6 @@ The Package Manager integration patches exact Unity internals when a Package
 Manager window is first open or focused after a code load, not at every code
 load. If those internals differ, the affected convenience is left inactive
 rather than changing unrelated Package Manager pages.
-
-## FMOD
-
-When `com.fmod.fmod-for-unity-2-03` is installed, equivalent FMOD commands are
-registered under **Tools > FMOD** and the original root entries are removed on
-a best-effort basis. If a matching FMOD API is unavailable, its original command
-stays in place and the replacement is disabled or absent.
-
-There is no FMOD settings page in Minimal Editor.
 
 ## Scripting
 

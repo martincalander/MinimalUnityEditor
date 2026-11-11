@@ -39,8 +39,23 @@ All notable changes to this package are documented in this file.
   Services rules are still ignored. A **Services** bundle, off by default, adds
   the same rule from **Preferences > Minimal Editor > Menu Item**.
 
+- Add move rules to Menu Item. A custom definition such as
+  `Vendor/* => Tools/Vendor` moves commands to another menu instead of hiding
+  them, keeping their order and hotkeys. Removing the rule puts the commands
+  back without a domain reload. Commands under `Assets`, `GameObject`,
+  `Component`, `CONTEXT`, and `Services` cannot be moved.
+- Add a **Steam Audio (move to Tools)** bundle, on by default, that moves the
+  Steam Audio heading to **Tools > Steam Audio**.
+
 ### Changed
 
+- Replace the separate FMOD module with an **FMOD (move to Tools)** bundle
+  under **Preferences > Minimal Editor > Menu Item**. It is on by default,
+  uses the general move rule `FMOD/* => Tools/FMOD`, and also covers FMOD
+  installed outside the Package Manager. It now follows the Menu Item module
+  toggle and `MINIMAL_EDITOR_DISABLE_MENU_ITEM`. The
+  `MinimalEditor.FMOD.Editor` assembly and the `MINIMAL_EDITOR_DISABLE_FMOD`
+  symbol are removed.
 - Move Menu Item settings from **Project Settings** to **Preferences > Minimal
   Editor > Menu Item**. The choices are now user-global and stored in
   `MinimalEditor/MenuItemSettings.json` in the Unity preferences folder rather

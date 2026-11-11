@@ -330,6 +330,243 @@ namespace MinimalEditor.Tests.Editor.MenuItem
             }
         }
 
+        [TestCase("Vendor/* => Tools/Vendor", "Vendor", "Tools/Vendor")]
+        [TestCase("  Vendor => Tools/Vendor/  ", "Vendor", "Tools/Vendor")]
+        [TestCase("Vendor/Help/ => Help/Vendor", "Vendor/Help", "Help/Vendor")]
+        [TestCase("Vendor/Open Settings => Tools/Vendor Settings", "Vendor/Open Settings", "Tools/Vendor Settings")]
+        public void MoveRules_ParseSourceAndDestination(string entry, string source, string destination)
+        {
+            var arguments = new object[] { entry, null, null };
+            Assert.That(RequireMoveRuleMethod("TryParse").Invoke(null, arguments), Is.True);
+            Assert.That(arguments[2], Is.Null);
+            var type = arguments[1].GetType();
+            Assert.That(type.GetProperty("Source", AnyInstance).GetValue(arguments[1]), Is.EqualTo(source));
+            Assert.That(type.GetProperty("Destination", AnyInstance).GetValue(arguments[1]), Is.EqualTo(destination));
+        }
+
+        [TestCase("Vendor/* =>")]
+        [TestCase("=> Tools/Vendor")]
+        [TestCase("Vend* => Tools/Vendor")]
+        [TestCase("Vendor/* => Tools/*")]
+        [TestCase("Vendor/* => Tools => Other")]
+        [TestCase("Vendor/* => Vendor/Old")]
+        [TestCase("Vendor/* => vendor")]
+        [TestCase("GameObject/Vendor/* => Tools/Vendor")]
+        [TestCase("Assets/Vendor => Tools/Vendor")]
+        [TestCase("CONTEXT/Transform/Reset => Tools/Reset")]
+        [TestCase("Services/* => Tools/Services")]
+        [TestCase("Vendor/* => Assets/Vendor")]
+        [TestCase("Vendor/* => /Tools")]
+        public void MoveRules_RejectUnsafeOrMalformedEntries(string entry)
+        {
+            var arguments = new object[] { entry, null, null };
+            Assert.That(RequireMoveRuleMethod("TryParse").Invoke(null, arguments), Is.False);
+            Assert.That(arguments[2], Is.Not.Null.And.Not.Empty);
+
+            var matcher = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemPatternMatcher, MinimalEditor.MenuItem.Editor", true);
+            var paths = (IEnumerable<string>)RequireMethod(matcher, "SanitizeEntries", typeof(IEnumerable<string>))
+                .Invoke(null, new object[] { new[] { entry, "Vendor/* => Tools/Vendor", "Window/Analysis/*" } });
+            Assert.That(paths, Is.EqualTo(new[] { "Vendor/* => Tools/Vendor", "Window/Analysis/*" }));
+        }
+
+        [TestCase("Vendor/Help/About", "Tools/Vendor/Help/About")]
+        [TestCase("vendor/Open", "Tools/Vendor/Open")]
+        [TestCase("Vendor", "Tools/Vendor")]
+        [TestCase("Vendors/Open", null)]
+        [TestCase("Other/Vendor/Open", null)]
+        public void MoveRules_MapOnlyCommandsBelowTheSource(string path, string expected)
+        {
+            var arguments = new object[] { "Vendor/* => Tools/Vendor", null, null };
+            RequireMoveRuleMethod("TryParse").Invoke(null, arguments);
+            var map = arguments[1].GetType().GetMethod("Map", AnyInstance);
+            Assert.That(map.Invoke(arguments[1], new object[] { path }), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void MoveRules_AreSplitFromHideRules()
+        {
+            var arguments = new object[] { new[] { "Jobs/*", "Vendor/* => Tools/Vendor", "Window/Analysis/*" }, null };
+            var hidden = RequireMoveRuleMethod("Split").Invoke(null, arguments);
+            Assert.That((IEnumerable<string>)hidden, Is.EqualTo(new[] { "Jobs/*", "Window/Analysis/*" }));
+            Assert.That(((ICollection)arguments[1]).Count, Is.EqualTo(1));
+
+            var hideOnly = new[] { "Jobs/*" };
+            arguments = new object[] { hideOnly, null };
+            Assert.That(RequireMoveRuleMethod("Split").Invoke(null, arguments), Is.SameAs(hideOnly));
+            Assert.That(arguments[1], Is.Null);
+        }
+
+        [TestCase("Window/General/Console %#c", "Window/General/Console", "%#c")]
+        [TestCase("Window/General/Undo History  %u", "Window/General/Undo History", "%u")]
+        [TestCase("Tools/Run _F5", "Tools/Run", "_F5")]
+        [TestCase("Tools/Open Settings", "Tools/Open Settings", "")]
+        public void MenuItemNames_SplitIntoPathAndHotkey(string name, string path, string hotkey)
+        {
+            var arguments = new object[] { name, null, null };
+            Hider.GetMethod("SplitMenuItemName", AnyStatic).Invoke(null, arguments);
+            Assert.That(arguments[1], Is.EqualTo(path));
+            Assert.That(arguments[2], Is.EqualTo(hotkey));
+        }
+
+        [TestCase("fmod", "FMOD/* => Tools/FMOD")]
+        [TestCase("steam_audio", "Steam Audio/* => Tools/Steam Audio")]
+        public void MoveBundles_AreAlwaysAvailable_AndOnByDefault(string id, string rule)
+        {
+            var catalog = Type.GetType(
+                "MinimalEditor.MenuItem.Editor.MenuItemBundleCatalog, MinimalEditor.MenuItem.Editor", true);
+            var bundle = RequireMethod(catalog, "Find", typeof(string)).Invoke(null, new object[] { id });
+            Assert.That(bundle, Is.Not.Null);
+            var type = bundle.GetType();
+            Assert.That(type.GetProperty("DefaultEnabled", AnyInstance).GetValue(bundle), Is.True);
+            Assert.That(type.GetProperty("IsAvailable", AnyInstance).GetValue(bundle), Is.True);
+            Assert.That((IEnumerable<string>)type.GetProperty("MenuPaths", AnyInstance).GetValue(bundle),
+                Is.EqualTo(new[] { rule }));
+        }
+
+        [Test]
+        public void MovedCommands_RunFromTheNewPath_AndReturnWhenTheRuleIsRemoved()
+        {
+            const string destinationRoot = "Tools/Minimal Editor Moved";
+            const string movedCommand = destinationRoot + "/Group/Command";
+            const string movedGuarded = destinationRoot + "/Guarded";
+            Assert.That(MenuExists(MenuItemMoveTestCommands.Root), Is.False,
+                "The fixture heading must stay out of the menu bar outside this test.");
+
+            WithMoveFixture(() =>
+            {
+                AddPlaceholder(MenuItemMoveTestCommands.Command, 3);
+                AddPlaceholder(MenuItemMoveTestCommands.Guarded, 40);
+                AddPlaceholder(MenuItemMoveTestCommands.Root + "/Unregistered", 50);
+
+                ApplyRules(MenuItemMoveTestCommands.Root + "/* => " + destinationRoot);
+                Assert.That(MenuExists(movedCommand), Is.True);
+                Assert.That(MenuExists(movedGuarded), Is.True);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Command), Is.False);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Root + "/Group"), Is.False);
+                // A command without a MenuItem method cannot be called from a new path, so it stays.
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Root + "/Unregistered"), Is.True);
+                Assert.That(MenuExists(destinationRoot + "/Unregistered"), Is.False);
+
+                Assert.That(EditorApplication.ExecuteMenuItem(movedCommand), Is.True);
+                Assert.That(MenuItemMoveTestCommands.Executed, Is.EqualTo(1));
+                Assert.That(Menu.GetEnabled(movedGuarded), Is.False);
+                MenuItemMoveTestCommands.GuardedEnabled = true;
+                Assert.That(Menu.GetEnabled(movedGuarded), Is.True);
+                Assert.That(EditorApplication.ExecuteMenuItem(movedGuarded), Is.True);
+                Assert.That(MenuItemMoveTestCommands.Executed, Is.EqualTo(11));
+
+                // Unity can register the original again. The next pass removes it without a second copy.
+                AddPlaceholder(MenuItemMoveTestCommands.Command, 3);
+                ApplyRules(MenuItemMoveTestCommands.Root + "/* => " + destinationRoot);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Command), Is.False);
+                Assert.That(MenuPaths("Tools").Count(path => path == movedCommand), Is.EqualTo(1));
+
+                RemoveMenu(MenuItemMoveTestCommands.Root + "/Unregistered");
+                ApplyRules();
+                Assert.That(MenuExists(destinationRoot), Is.False);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Command), Is.True);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Guarded), Is.True);
+                Assert.That(EditorApplication.ExecuteMenuItem(MenuItemMoveTestCommands.Command), Is.True);
+                Assert.That(MenuItemMoveTestCommands.Executed, Is.EqualTo(12));
+            }, destinationRoot);
+        }
+
+        [Test]
+        public void MovedCommands_EmptySourceHeadingIsRemoved_AndRestoredOnDeactivation()
+        {
+            const string destinationRoot = "Tools/Minimal Editor Moved";
+            WithMoveFixture(() =>
+            {
+                AddPlaceholder(MenuItemMoveTestCommands.Command, 3);
+                AddPlaceholder(MenuItemMoveTestCommands.Guarded, 40);
+
+                ApplyRules(MenuItemMoveTestCommands.Root + " => " + destinationRoot);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Root), Is.False);
+                Assert.That(MenuExists(destinationRoot + "/Group/Command"), Is.True);
+                Assert.That(MenuExists("Tools"), Is.True);
+
+                RequireField("s_activeInput").SetValue(null, new Func<bool>(() => false));
+                SetBool("s_mutationSuppressed", false);
+                Invoke("ApplyCore", true);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Command), Is.True);
+                Assert.That(MenuExists(destinationRoot), Is.False);
+            }, destinationRoot);
+        }
+
+        [Test]
+        public void MovedCommands_NeverReplaceAnExistingCommand()
+        {
+            const string destinationRoot = "Tools/Minimal Editor Moved";
+            WithMoveFixture(() =>
+            {
+                AddPlaceholder(MenuItemMoveTestCommands.Command, 3);
+                AddPlaceholder(destinationRoot + "/Group/Command", 3);
+
+                ApplyRules(MenuItemMoveTestCommands.Root + "/* => " + destinationRoot);
+                Assert.That(MenuExists(MenuItemMoveTestCommands.Command), Is.True);
+                Assert.That(EditorApplication.ExecuteMenuItem(destinationRoot + "/Group/Command"), Is.True);
+                Assert.That(MenuItemMoveTestCommands.Executed, Is.Zero);
+            }, destinationRoot);
+        }
+
+        static void WithMoveFixture(Action test, string destinationRoot)
+        {
+            var activeInput = RequireField("s_activeInput").GetValue(null);
+            var pathsInput = RequireField("s_menuItemsInput").GetValue(null);
+            MenuItemMoveTestCommands.Executed = 0;
+            MenuItemMoveTestCommands.GuardedEnabled = false;
+            try
+            {
+                RequireField("s_activeInput").SetValue(null, new Func<bool>(() => true));
+                RequireField("s_menuItemsInput").SetValue(null, null);
+                WithManualRules(_ => test());
+            }
+            finally
+            {
+                ((IDictionary)RequireField("s_movedItems").GetValue(null)).Clear();
+                ((IDictionary)RequireField("s_moveDestinationOwners").GetValue(null)).Clear();
+                RemoveMenu(destinationRoot);
+                RemoveMenu(MenuItemMoveTestCommands.Root);
+                RequireField("s_activeInput").SetValue(null, activeInput);
+                RequireField("s_menuItemsInput").SetValue(null, pathsInput);
+            }
+        }
+
+        static void ApplyRules(params string[] rules)
+        {
+            SetMenuItems(rules);
+            SetBool("s_mutationSuppressed", false);
+            Invoke("ApplyCore", true);
+            Invoke("SuppressMutationForTeardown");
+        }
+
+        static void AddPlaceholder(string path, int priority) =>
+            RequireMethod(typeof(Menu), "AddMenuItem", typeof(string), typeof(string), typeof(bool), typeof(int),
+                    typeof(Action), typeof(Func<bool>))
+                .Invoke(null, new object[] { path, "", false, priority, (Action)(() => { }), (Func<bool>)(() => true) });
+
+        static bool MenuExists(string path) =>
+            (bool)RequireMethod(typeof(Menu), "MenuItemExists", typeof(string)).Invoke(null, new object[] { path });
+
+        static void RemoveMenu(string path) =>
+            RequireMethod(typeof(Menu), "RemoveMenuItem", typeof(string)).Invoke(null, new object[] { path });
+
+        static IEnumerable<string> MenuPaths(string root)
+        {
+            var items = (Array)RequireMethod(typeof(Menu), "GetMenuItems", typeof(string), typeof(bool), typeof(bool))
+                .Invoke(null, new object[] { root, false, false });
+            return items.Cast<object>().Select(item => (string)item.GetType().GetProperty("path", AnyInstance).GetValue(item));
+        }
+
+        static MethodInfo RequireMoveRuleMethod(string name)
+        {
+            var method = Type.GetType("MinimalEditor.MenuItem.Editor.MenuItemMoveRules, MinimalEditor.MenuItem.Editor", true)
+                .GetMethod(name, AnyStatic);
+            Assert.That(method, Is.Not.Null, name);
+            return method;
+        }
+
 #if UNITY_EDITOR_OSX
         [Test]
         public void NativeRootPolling_OnlySubscribesOnceWhileWholeRootRulesExist()
@@ -432,6 +669,44 @@ namespace MinimalEditor.Tests.Editor.MenuItem
             var method = type.GetMethod(name, AnyStatic, null, arguments, null);
             Assert.That(method, Is.Not.Null, type.FullName + "." + name);
             return method;
+        }
+    }
+
+    // Commands the move tests look up by their MenuItem attributes. The heading is removed as
+    // soon as code loads, so it only exists in the menu bar while a test adds it back.
+    static partial class MenuItemMoveTestCommands
+    {
+        internal const string Root = "Minimal Editor Move Test";
+        internal const string Command = Root + "/Group/Command";
+        internal const string Guarded = Root + "/Guarded";
+
+        internal static int Executed;
+        internal static bool GuardedEnabled;
+
+        [global::UnityEditor.MenuItem(Command, false, 3)]
+        static void Execute() => Executed++;
+
+        [global::UnityEditor.MenuItem(Guarded, false, 40)]
+        static void ExecuteGuarded(MenuCommand command) => Executed += 10;
+
+        [global::UnityEditor.MenuItem(Guarded, true)]
+        static bool ValidateGuarded() => GuardedEnabled;
+
+#if UNITY_6000_5_OR_NEWER
+        [Unity.Scripting.LifecycleManagement.OnCodeInitializing]
+#else
+        [InitializeOnLoadMethod]
+#endif
+        static void HideHeadingOutsideTests()
+        {
+            EditorApplication.delayCall -= RemoveHeading;
+            EditorApplication.delayCall += RemoveHeading;
+        }
+
+        static void RemoveHeading()
+        {
+            typeof(Menu).GetMethod("RemoveMenuItem", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                null, new[] { typeof(string) }, null)?.Invoke(null, new object[] { Root });
         }
     }
 }

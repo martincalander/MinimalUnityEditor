@@ -10,7 +10,6 @@
 | Package Manager | Unity 6 or newer |
 | Project Folders | Unity 7 with the CoreCLR Editor runtime |
 | Folder Icons | Declared package baseline; public Project window callback only |
-| FMOD | Only when `com.fmod.fmod-for-unity-2-03` is installed |
 
 The manifest minimum is not a record of validation against every Unity release.
 Several refinements use guarded reflection against Editor internals. When a
@@ -55,6 +54,14 @@ FMOD was not installed, so its optional assembly was not compiled. The older
 Editor results below predate these lifecycle changes.
 
 ### Verified Editors
+
+On 2026-11-11, after menu move rules replaced the FMOD module, the 66 Menu
+Item tests and 11 package contract tests passed in a visible Unity
+`7000.0.0a16` Editor on macOS Apple silicon after successful compilation. The
+move tests use test commands; FMOD and Steam Audio were not installed, so their
+real menus were not exercised. Move rules were not run in Unity 2021.3, 2022.3,
+Unity 6, Windows, or Linux. They are skipped with a warning when an Editor
+lacks the internal menu calls they need.
 
 The 2026-11-08 performance audit passed all 229 tests in an isolated visible
 Unity `7000.0.0a16` Editor on macOS Apple silicon after successful compilation.
@@ -140,7 +147,6 @@ The package uses these Editor assembly names:
 - `MinimalEditor.PackageManager.Editor`
 - `MinimalEditor.ProjectFolderVisibility.Editor`
 - `MinimalEditor.FolderIcons.Editor`
-- `MinimalEditor.FMOD.Editor`
 - `MinimalEditor.Editor`
 
 They are Editor-only and have `autoReferenced` disabled. A consuming Editor
@@ -184,7 +190,6 @@ when upgrading from an earlier package identity.
 | `MINIMAL_EDITOR_DISABLE_PACKAGE_MANAGER` | Disables Unity 6 Package Manager refinements |
 | `MINIMAL_EDITOR_DISABLE_PROJECT_FOLDER_VISIBILITY` | Disables Project Folders |
 | `MINIMAL_EDITOR_DISABLE_FOLDER_ICONS` | Disables Folder Icons |
-| `MINIMAL_EDITOR_DISABLE_FMOD` | Disables FMOD menu relocation |
 | `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` | Disables short title and status-bar features |
 
 Module symbols are independent. `MINIMAL_EDITOR_DISABLE_UNITY_EDITOR` leaves
