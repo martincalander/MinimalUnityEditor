@@ -42,7 +42,8 @@ All notable changes to this package are documented in this file.
 - Add move rules to Menu Item. A custom definition such as
   `Vendor/* => Tools/Vendor` moves commands to another menu instead of hiding
   them, keeping their order and hotkeys. Removing the rule puts the commands
-  back without a domain reload. Commands under `Assets`, `GameObject`,
+  back without a domain reload. A destination that ends with `/`, such as
+  `Vendor/* => Tools/`, keeps the source name. Commands under `Assets`, `GameObject`,
   `Component`, `CONTEXT`, and `Services` cannot be moved.
 - Add a **Steam Audio (move to Tools)** bundle, on by default, that moves the
   Steam Audio heading to **Tools > Steam Audio**.

@@ -331,7 +331,11 @@ namespace MinimalEditor.Tests.Editor.MenuItem
         }
 
         [TestCase("Vendor/* => Tools/Vendor", "Vendor", "Tools/Vendor")]
-        [TestCase("  Vendor => Tools/Vendor/  ", "Vendor", "Tools/Vendor")]
+        [TestCase("  Vendor => Tools/Vendor  ", "Vendor", "Tools/Vendor")]
+        [TestCase("Vendor/* => Tools/", "Vendor", "Tools/Vendor")]
+        [TestCase("Cave Expedition/* => Tools/", "Cave Expedition", "Tools/Cave Expedition")]
+        [TestCase("Vendor/Audio/* => Tools/", "Vendor/Audio", "Tools/Audio")]
+        [TestCase("Vendor/Open Settings => Tools/Vendor/", "Vendor/Open Settings", "Tools/Vendor/Open Settings")]
         [TestCase("Vendor/Help/ => Help/Vendor", "Vendor/Help", "Help/Vendor")]
         [TestCase("Vendor/Open Settings => Tools/Vendor Settings", "Vendor/Open Settings", "Tools/Vendor Settings")]
         public void MoveRules_ParseSourceAndDestination(string entry, string source, string destination)

@@ -51,9 +51,14 @@ namespace MinimalEditor.MenuItem.Editor
             if (arrowIndex < 0) return false;
 
             var source = trimmed.Substring(0, arrowIndex).Trim();
-            var destination = trimmed.Substring(arrowIndex + Arrow.Length).Trim().TrimEnd('/').TrimEnd();
+            var destination = trimmed.Substring(arrowIndex + Arrow.Length).Trim();
+            var keepsSourceName = destination.EndsWith("/", StringComparison.Ordinal);
+            destination = destination.TrimEnd('/').TrimEnd();
             if (source.EndsWith("/*", StringComparison.Ordinal)) source = source.Substring(0, source.Length - 2);
             source = source.TrimEnd('/').TrimEnd();
+            // "Vendor/* => Tools/" moves the menu into Tools under its own name, "Tools/Vendor".
+            if (keepsSourceName && source.Length > 0 && destination.Length > 0)
+                destination += "/" + source.Substring(source.LastIndexOf('/') + 1);
 
             if (source.Length == 0 || destination.Length == 0)
                 warning = "\"" + trimmed + "\" needs a menu path on both sides of \"=>\".";

@@ -112,6 +112,10 @@ Vendor/Open Settings => Tools/Vendor Settings
 
 - `Vendor/* => Tools/Vendor` and `Vendor => Tools/Vendor` mean the same. Every
   command below the source keeps its relative path, order, and hotkey.
+- A destination that ends with `/` keeps the name of the source.
+  `Vendor/* => Tools/` is the same as `Vendor/* => Tools/Vendor`. Without the
+  final `/`, `Vendor/* => Tools` puts the commands and submenus directly in
+  Tools.
 - Spell the source heading as the plugin registers it. Matching below the
   heading is case-insensitive.
 - A heading or submenu left empty by a move is removed.

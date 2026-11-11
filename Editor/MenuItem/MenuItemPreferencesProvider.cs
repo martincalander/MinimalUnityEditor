@@ -168,7 +168,7 @@ namespace MinimalEditor.MenuItem.Editor
                 EditorGUILayout.LabelField("Custom Path Definitions", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox(
                     "One path per line or ';' separated. Supports wildcard suffix '*'. Lines starting with # or // are ignored.\n" +
-                    "To move commands instead of hiding them, write 'Source/* => Destination', such as 'Vendor/* => Tools/Vendor'.",
+                    "To move commands instead of hiding them, write 'Source/* => Destination', such as 'Vendor/* => Tools/Vendor' or the shorter 'Vendor/* => Tools/'.",
                     MessageType.None);
 
                 EditorGUI.BeginChangeCheck();
