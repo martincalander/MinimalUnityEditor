@@ -329,7 +329,7 @@ intentional lockfile changes before using it, then review the regenerated file.
 This command is deprecated and will be removed in a later release. To fetch
 the newest commit of the project's Git dependencies, use **Update Git
 Packages** from
-[Github Package Manager](https://github.com/martincalander/Githubpackagemanager)
+[Github Package Manager](https://github.com/martincalander/GithubPackageManager)
 instead. It leaves the lockfile and registry packages alone and reports which
 packages moved.
 
