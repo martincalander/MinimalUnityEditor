@@ -14,6 +14,10 @@ All notable changes to this package are documented in this file.
 - Add an **Icon Style** choice for folder icons. **Full Size** replaces the
   folder icon with the image, and **Badge** keeps the folder icon and shows the
   image small in its bottom-right corner.
+- Add **Hide Asset Labels** under **Preferences > Minimal Editor > Unity
+  Editor** to hide the Asset Labels and AssetBundle fields at the bottom of
+  asset Inspectors. Asset previews stay visible. It is on by default when the
+  Addressables package is installed and off otherwise.
 - On macOS, a `Services/*` rule now hides the Services heading in the menu bar.
   Its commands stay registered because Unity regenerates them, and other
   Services rules are still ignored. A **Services** bundle, off by default, adds

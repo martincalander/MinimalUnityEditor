@@ -8,12 +8,14 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
     {
         (bool HasKey, bool Value) shortWindowTitleSnapshot;
         (bool HasKey, bool Value) hideStatusBarExtrasSnapshot;
+        (bool HasKey, bool Value) hideInspectorAssetLabelsSnapshot;
 
         [SetUp]
         public void SetUp()
         {
             shortWindowTitleSnapshot = Capture(UnityEditorPreferences.ShortWindowTitleKey);
             hideStatusBarExtrasSnapshot = Capture(UnityEditorPreferences.HideStatusBarExtrasKey);
+            hideInspectorAssetLabelsSnapshot = Capture(UnityEditorPreferences.HideInspectorAssetLabelsKey);
         }
 
         [TearDown]
@@ -29,6 +31,11 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                 UnityEditorPreferences.HideStatusBarExtrasDefaultValue,
                 hideStatusBarExtrasSnapshot,
                 value => EditorFeatureToggles.HideStatusBarExtras = value);
+            Restore(
+                UnityEditorPreferences.HideInspectorAssetLabelsKey,
+                UnityEditorPreferences.HideInspectorAssetLabelsDefaultValue,
+                hideInspectorAssetLabelsSnapshot,
+                value => EditorFeatureToggles.HideInspectorAssetLabels = value);
         }
 
         [Test]
@@ -64,6 +71,26 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
                     EditorFeatureToggles.HideStatusBarExtras = value;
                 Assert.That(EditorPrefs.GetBool(key, !value), Is.EqualTo(value));
             }
+        }
+
+        [Test]
+        public void InspectorAssetLabels_DefaultFollowsAddressables_AndStoresExplicitChoice()
+        {
+            var addressablesInstalled =
+                global::UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.addressables") != null;
+            Assert.That(UnityEditorPreferences.HideInspectorAssetLabelsDefaultValue, Is.EqualTo(addressablesInstalled));
+
+            EditorPrefs.DeleteKey(UnityEditorPreferences.HideInspectorAssetLabelsKey);
+            Assert.That(EditorFeatureToggles.HideInspectorAssetLabels, Is.EqualTo(addressablesInstalled));
+
+            // Choosing the current default must still be stored, so it survives a later default change.
+            EditorFeatureToggles.HideInspectorAssetLabels = addressablesInstalled;
+            Assert.That(EditorPrefs.HasKey(UnityEditorPreferences.HideInspectorAssetLabelsKey), Is.True);
+
+            EditorFeatureToggles.HideInspectorAssetLabels = !addressablesInstalled;
+            Assert.That(
+                EditorPrefs.GetBool(UnityEditorPreferences.HideInspectorAssetLabelsKey, addressablesInstalled),
+                Is.EqualTo(!addressablesInstalled));
         }
 
         static (bool HasKey, bool Value) Capture(string key)

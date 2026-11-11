@@ -165,6 +165,59 @@ namespace MinimalEditor.Tests.Editor.UnityEditor
             }
         }
 
+        [Test]
+        public void InspectorAssetLabelsHider_ReportsNoInspectedAssets_OnlyWhileFooterIsDrawn()
+        {
+            Assert.That(InspectorAssetLabelsHider.GetDrawMethod(), Is.Not.Null,
+                "PropertyEditor.DrawPreviewAndLabels must exist for the Asset Labels toggle.");
+#if UNITY_7000_0_OR_NEWER
+            Assert.That(InspectorAssetLabelsHider.GetFooterMethod(), Is.Not.Null,
+                "PropertyEditor.DrawFooter draws the footer of assets without a preview.");
+#endif
+            var inspectedAssets = InspectorAssetLabelsHider.GetInspectedAssetsMethod();
+            Assert.That(inspectedAssets, Is.Not.Null,
+                "PropertyEditor.GetInspectedAssets must return Object[] for the Asset Labels toggle.");
+            Assert.That(InspectorAssetLabelsHider.IsSupported, Is.True, InspectorAssetLabelsHider.LastPatchError);
+
+            var inspectors = UnityEngine.Resources.FindObjectsOfTypeAll(inspectedAssets.DeclaringType);
+            Assume.That(inspectors, Is.Not.Empty, "The test needs an open Inspector window.");
+            var asset = AssetDatabase.LoadMainAssetAtPath("Packages/com.martincalander.minimaleditor/package.json");
+            Assume.That(asset, Is.Not.Null);
+
+            var hadKey = EditorPrefs.HasKey(UnityEditorPreferences.HideInspectorAssetLabelsKey);
+            var previous = InspectorAssetLabelsHider.Active;
+            var previousSelection = Selection.objects;
+            try
+            {
+                Selection.objects = new[] { asset };
+                InspectorAssetLabelsHider.Active = true;
+                Assert.That(InspectorAssetLabelsHider.IsPatched, Is.True, InspectorAssetLabelsHider.LastPatchError);
+                Assert.That(inspectedAssets.Invoke(inspectors[0], null), Is.Not.Empty,
+                    "Other Inspector code must still see the inspected assets.");
+                Assert.That(InspectorAssetLabelsHider.FooterPrefix(), Is.False, "The footer must be skipped while hidden.");
+
+                InspectorAssetLabelsHider.DrawPrefix();
+                try
+                {
+                    Assert.That(inspectedAssets.Invoke(inspectors[0], null), Is.Empty);
+                    InspectorAssetLabelsHider.Active = false;
+                    Assert.That(InspectorAssetLabelsHider.FooterPrefix(), Is.True);
+                    Assert.That(inspectedAssets.Invoke(inspectors[0], null), Is.Not.Empty);
+                }
+                finally
+                {
+                    InspectorAssetLabelsHider.DrawFinalizer();
+                }
+            }
+            finally
+            {
+                Selection.objects = previousSelection;
+                InspectorAssetLabelsHider.Active = previous;
+                if (!hadKey)
+                    EditorPrefs.DeleteKey(UnityEditorPreferences.HideInspectorAssetLabelsKey);
+            }
+        }
+
         static object BuildMainWindowTitle()
         {
             var method = typeof(EditorApplication).GetMethod("BuildMainWindowTitle", AnyStatic);

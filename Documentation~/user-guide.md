@@ -125,6 +125,19 @@ the internal status-bar contract, that refinement does not apply.
 Turning off **Hide Status Bar Extras** restores only bars changed by Minimal
 Editor, preserving extras that Unity had already hidden.
 
+The **Inspector Footer** section has one option:
+
+- **Hide Asset Labels** hides the Asset Labels and AssetBundle fields that
+  Unity shows at the bottom of every asset Inspector. Asset previews stay
+  visible.
+
+It starts enabled when the Addressables package is installed, because
+Addressables replaces AssetBundle names, and disabled otherwise. A choice made
+here is stored and wins over that default. The option uses the bundled Harmony
+and patches the Inspector only while it is enabled. If a Unity release changes
+the internal Inspector contract, the option is shown disabled and the footer is
+left alone.
+
 ## Project Folders
 
 This module requires Unity 7 with the CoreCLR Editor runtime. Open

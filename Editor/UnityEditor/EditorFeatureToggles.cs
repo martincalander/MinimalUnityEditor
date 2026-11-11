@@ -16,6 +16,12 @@ namespace MinimalEditor.Editor
             set => StatusBarExtrasHider.Active = value;
         }
 
+        public static bool HideInspectorAssetLabels
+        {
+            get => InspectorAssetLabelsHider.Active;
+            set => InspectorAssetLabelsHider.Active = value;
+        }
+
         public static void SetShortWindowTitleInput(Func<bool> input)
         {
             WindowTitleShortener.ActiveInput = input;

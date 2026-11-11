@@ -20,6 +20,11 @@ namespace MinimalEditor.Editor
             "Hide Status Bar Extras",
             "Hides Unity's animation and memory statistics from the Editor status bar.");
 
+        static readonly GUIContent HideInspectorAssetLabelsContent = new GUIContent(
+            "Hide Asset Labels",
+            "Hides the Asset Labels and AssetBundle fields at the bottom of asset Inspectors. " +
+            "Hidden by default when Addressables is installed.");
+
         [SettingsProvider]
         internal static SettingsProvider CreateProvider()
         {
@@ -34,7 +39,10 @@ namespace MinimalEditor.Editor
                     "editor",
                     "window",
                     "title",
-                    "status bar"
+                    "status bar",
+                    "asset labels",
+                    "assetbundle",
+                    "footer"
                 }
             };
         }
@@ -57,6 +65,18 @@ namespace MinimalEditor.Editor
             if (EditorGUI.EndChangeCheck())
                 EditorFeatureToggles.HideStatusBarExtras = hideStatusBarExtras;
 
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Inspector Footer", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(!InspectorAssetLabelsHider.IsSupported))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool hideAssetLabels = EditorGUILayout.ToggleLeft(
+                    HideInspectorAssetLabelsContent,
+                    EditorFeatureToggles.HideInspectorAssetLabels);
+                if (EditorGUI.EndChangeCheck())
+                    EditorFeatureToggles.HideInspectorAssetLabels = hideAssetLabels;
+            }
         }
     }
 }
